@@ -143,10 +143,18 @@ class Hand:
         return False
 
     def _is_royal_flush(self):
-        return self._is_straight_flush() and self.has_rank(Rank.ACE)
+        if self._is_straight_flush() and self.has_rank(Rank.ACE):
+            self.rank = Rank.ACE
+            return True
+        else:
+            return False
 
     def _is_straight_flush(self):
-        return self._is_straight() and self._is_flush()
+        if self._is_straight() and self._is_flush():
+            self.rank = self.highest_rank()
+            return True
+        else:
+            return False
 
     def _is_n_of_a_kind(self, n):
         """Returns true if the hand is a n-of-a-kind.
@@ -163,17 +171,19 @@ class Hand:
                 if card.rank == rank:
                     counter += 1
             if counter == n:
+                self.rank = rank
                 return True
         return False
-
-    # TODO: Also return the rank of the type instead of just the type.
-    # For example, a two pair of aces is greater than a two pair of fours.
 
     def _is_four_of_a_kind(self):
         return self._is_n_of_a_kind(4)
 
     def _is_full_house(self):
-        return self._is_pair() and self._is_three_of_a_kind()
+        if self._is_pair() and self._is_three_of_a_kind():
+            self.rank = self.highest_rank()
+            return True
+        else:
+            return False
 
     def _is_flush(self):
         for i, card in enumerate(self.cards):
@@ -181,6 +191,7 @@ class Hand:
                 suit = card.suit
             else:
                 if card.suit != suit:
+                    self.rank = self.highest_rank()
                     return False
         return True
 
@@ -190,6 +201,7 @@ class Hand:
         for i, card in enumerate(sorted_cards):
             if card.rank != first_rank + i:
                 return False
+        self.rank = self.highest_card()
         return True
 
     def _is_three_of_a_kind(self):
@@ -207,6 +219,7 @@ class Hand:
                     counter += 1
             if counter == 2:
                 num_pairs_found += 1
+                self.rank = rank  # Works because Rank iterates from low to high
         return num_pairs_found == 2
 
     def _is_pair(self):
@@ -214,25 +227,25 @@ class Hand:
 
     def _identify(self):
         if self._is_royal_flush():
-            hand, rank = HandType.ROYAL_FLUSH
+            hand = HandType.ROYAL_FLUSH
         elif self._is_straight_flush():
-            hand, rank = HandType.STRAIGHT_FLUSH
+            hand = HandType.STRAIGHT_FLUSH
         elif self._is_four_of_a_kind():
-            hand, rank = HandType.FOUR_OF_A_KIND
+            hand = HandType.FOUR_OF_A_KIND
         elif self._is_full_house():
-            hand, rank = HandType.FULL_HOUSE
+            hand = HandType.FULL_HOUSE
         elif self._is_flush():
-            hand, rank  = HandType.FLUSH
+            hand  = HandType.FLUSH
         elif self._is_straight():
-            hand, rank = HandType.STRAIGHT
+            hand = HandType.STRAIGHT
         elif self._is_three_of_a_kind():
-            hand, rank = HandType.THREE_OF_A_KIND
+            hand = HandType.THREE_OF_A_KIND
         elif self._is_two_pair():
-            hand, rank = HandType.TWO_PAIR
+            hand = HandType.TWO_PAIR
         elif self._is_pair():
-            hand, rank = HandType.PAIR
+            hand = HandType.PAIR
         else:
-            hand, rank = HandType.HIGH_CARD
+            hand = HandType.HIGH_CARD
         return hand
 
 
