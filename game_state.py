@@ -1,7 +1,6 @@
 from enum import Enum
-import card
-import hand
-import helpers
+import poker_utils
+from poker_utils import Card, Hand, Rank, Suit, HandType
 
 
 TEST_MODE = True
@@ -60,14 +59,14 @@ class GameState:
 
     def play_turn(self):
         if TEST_MODE:
-            self.turn = card.Card(card.Suit.CLUBS, card.Rank.FOUR)
+            self.turn = Card(Suit.CLUBS, Rank.FOUR)
         else:
             print('Input the turn card.')
             self.turn = read_card()
 
     def play_river(self):
         if TEST_MODE:
-            self.river = card.Card(card.Suit.DIAMONDS, card.Rank.ACE)
+            self.river = Card(Suit.DIAMONDS, Rank.ACE)
         else:
             print('Input the river.')
             self.river = read_card()
@@ -75,9 +74,9 @@ class GameState:
     def play_flop(self):
         self.flop = []
         if TEST_MODE:
-            self.flop.append(card.Card(card.Suit.DIAMONDS, card.Rank.QUEEN))
-            self.flop.append(card.Card(card.Suit.HEARTS, card.Rank.KING))
-            self.flop.append(card.Card(card.Suit.CLUBS, card.Rank.KING))
+            self.flop.append(Card(Suit.DIAMONDS, Rank.QUEEN))
+            self.flop.append(Card(Suit.HEARTS, Rank.KING))
+            self.flop.append(Card(Suit.CLUBS, Rank.KING))
         else:
             print('Input the flop cards.')
             print('First card: ')
@@ -90,8 +89,8 @@ class GameState:
     def preflop(self):
         self.hole = []
         if TEST_MODE:
-            self.hole.append(card.Card(card.Suit.DIAMONDS, card.Rank.FOUR))
-            self.hole.append(card.Card(card.Suit.SPADES, card.Rank.TWO))
+            self.hole.append(Card(Suit.DIAMONDS, Rank.FOUR))
+            self.hole.append(Card(Suit.SPADES, Rank.TWO))
         else:
             print('Input your hold cards.')
             print('Frist card: ')
@@ -203,19 +202,19 @@ class GameState:
         # TODO: rewrite in a non-stupid way
         probability_sum = 0
         num_reps = 0
-        for suit3 in card.Suit:
-            for rank3 in card.Rank:
-                card3 = card.Card(suit3, rank3)
+        for suit3 in Suit:
+            for rank3 in Rank:
+                card3 = Card(suit3, rank3)
                 if card3 != self.hole[0] and card3 != self.hole[1]:
-                    for suit4 in card.Suit:
-                        for rank4 in card.Rank:
-                            card4 = card.Card(suit4, rank4)
+                    for suit4 in Suit:
+                        for rank4 in Rank:
+                            card4 = Card(suit4, rank4)
                             if card4 != card3 and card4 != self.hole[1] and card4 != self.hole[0]:
-                                 for suit5 in card.Suit:
-                                    for rank5 in card.Rank:
-                                        card5 = card.Card(suit5, rank5)
+                                 for suit5 in Suit:
+                                    for rank5 in Rank:
+                                        card5 = Card(suit5, rank5)
                                         if card5 != card4 and card5 != card3 and card5 != self.hole[1] and card5 !=self.hole[0]:
-                                            opponent_hand = hand.Hand([self.hole[0], self.hole[1], card3, card4, card5])
+                                            opponent_hand = Hand([self.hole[0], self.hole[1], card3, card4, card5])
                                             assert opponent_hand.chance_of_winning(self.num_opponents) <= 1  # TODO: remove
                                             probability_sum += opponent_hand.chance_of_winning(self.num_opponents)
                                             num_reps += 1

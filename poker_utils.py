@@ -1,5 +1,6 @@
-from enum import Enum
+from enum import Enum, IntEnum
 import itertools
+import numpy as np
 
 # TODO: Prepend _ to all private methods
 
@@ -11,7 +12,7 @@ class Suit(Enum):
     SPADES = 'spades'
 
 
-class Rank(Enum):
+class Rank(IntEnum):
     TWO = 2
     THREE = 3
     FOUR = 4
@@ -27,8 +28,7 @@ class Rank(Enum):
     ACE = 14
 
 
-# TODO: Rename this class. There are 2 Hand classes.
-class Hand(Enum):
+class HandType(Enum):
     ROYAL_FLUSH = 9
     STRAIGHT_FLUSH = 8
     FOUR_OF_A_KIND = 7
@@ -53,29 +53,33 @@ class Card:
         return self.suit == card2.suit and self.rank == card2.rank
 
     def __str__(self):
+        # TODO: implement
         return ""
 
     def __hash__(self):
-        return str(self)
+        if self.suit == Suit.HEARTS:
+            result = 0
+        elif self.suit == Suit.CLUBS:
+            result = 20
+        elif self.suit == Suit.SPADES:
+            result = 40
+        else:
+            result = 60
+        result += self.rank
+        return result
 
     def __lt__(self, card2):
         return self.rank < card2.rank
 
-class HandType:
 
-    def __init__(self, _type, rank):
-        self.type = _type
-        self.rank = rank
-
-
-# For now, Hand is guaranteed to only have 5 cards
 class Hand:
+    """Represents a standard 5-card poker hand."""
 
     def __init__(self, cards):
         if len(cards) != 5:
             raise ValueError('Hand does not contain 5 cards.')
         self.cards = set(cards)
-        self.identify()
+        self.type = self._identify()
 
     def __str__(self):
         # TODO: Add example string output
@@ -101,29 +105,30 @@ class Hand:
         """
         chance_against_one = 0
         # TODO: Explain this confusing code
-        if self.type == Hand.HIGH_CARD:
+        if self.type == HandType.HIGH_CARD:
             chance_against_one = 0.038552 * (self.type.rank - 1.5)
-        elif self.type == Hand.PAIR:
+        elif self.type == HandType.PAIR:
             chance_against_one = 0.501177 + 0.422569 / 13 * (self.type.rank - 1.5)
-        elif self.type == Hand.TWO_PAIR:
+        elif self.type == HandType.TWO_PAIR:
             chance_against_one = 0.923746 + 0.047539 / 13 * (self.type.rank - 1.5)
-        elif self.type == Hand.THREE_OF_A_KIND:
-            chance_against_one = 0.971285 + 0.0211285 / 13 * (self.type.rank - 1.5);
-        elif self.type == Hand.FULL_HOUSE:
-            chance_against_one = 0.992414 + 0.00144058 / 13 * (self.type.rank - 1.5);
-        elif self.type == Hand.FOUR_OF_A_KIND:
-            chance_against_one = 0.993854 + 0.00024 / 13 * (self.type.rank - 1.5);
-        elif self.type == Hand.STRAIGHT:
-            chance_against_one = 0.994094 + 0.00392465 / 13 * (self.type.rank - 1.5);
-        elif self.type == Hand.FLUSH:
-            chance_against_one = 0.998019 + 0.0019654 / 13 * (self.type.rank - 1.5);
-        elif self.type == Hand.STRAIGHT_FLUSH:
-            chance_against_one = 0.999984 + 0.0000138517 / 13 * (self.type.rank - 1.5);
-        elif self.type == Hand.ROYAL_FLUSH:
-            chance_against_one = 0.999986 + 0.00000153908 / 13 * (self.type.rank - 1.5);
+        elif self.type == HandType.THREE_OF_A_KIND:
+            chance_against_one = 0.971285 + 0.0211285 / 13 * (self.type.rank - 1.5)
+        elif self.type == HandType.FULL_HOUSE:
+            chance_against_one = 0.992414 + 0.00144058 / 13 * (self.type.rank - 1.5)
+        elif self.type == HandType.FOUR_OF_A_KIND:
+            chance_against_one = 0.993854 + 0.00024 / 13 * (self.type.rank - 1.5)
+        elif self.type == HandType.STRAIGHT:
+            chance_against_one = 0.994094 + 0.00392465 / 13 * (self.type.rank - 1.5)
+        elif self.type == HandType.FLUSH:
+            chance_against_one = 0.998019 + 0.0019654 / 13 * (self.type.rank - 1.5)
+        elif self.type == HandType.STRAIGHT_FLUSH:
+            chance_against_one = 0.999984 + 0.0000138517 / 13 * (self.type.rank - 1.5)
+        elif self.type == HandType.ROYAL_FLUSH:
+            chance_against_one = 0.999986 + 0.00000153908 / 13 * (self.type.rank - 1.5)
         return chance_against_one ** num_opponents
 
     def highest_rank(self):
+        """Return the highest rank found in self.cards."""
         return max(self.cards)
 
     def has_rank(self, rank):
@@ -138,7 +143,7 @@ class Hand:
         return False
 
     def _is_royal_flush(self):
-        return self._is_straight_flush() and self.has_rank(Ranks.ACE):
+        return self._is_straight_flush() and self.has_rank(Rank.ACE)
 
     def _is_straight_flush(self):
         return self._is_straight() and self._is_flush()
@@ -152,7 +157,7 @@ class Hand:
         Input:
             n - How many cards need to be the same rank to return True
         """
-        for rank in Ranks:
+        for rank in Rank:
             counter = 0
             for card in self.cards:
                 if card.rank == rank:
@@ -164,14 +169,14 @@ class Hand:
     # TODO: Also return the rank of the type instead of just the type.
     # For example, a two pair of aces is greater than a two pair of fours.
 
-    def _is_four_of_a_kind():
+    def _is_four_of_a_kind(self):
         return self._is_n_of_a_kind(4)
 
-    def _is_full_house():
-        return self.is_pair() and self.is_three_of_a_kind()
+    def _is_full_house(self):
+        return self._is_pair() and self._is_three_of_a_kind()
 
-    def _is_flush():
-        for i, card in enumerate(cards):
+    def _is_flush(self):
+        for i, card in enumerate(self.cards):
             if i == 0:
                 suit = card.suit
             else:
@@ -179,18 +184,18 @@ class Hand:
                     return False
         return True
 
-    def _is_straight():
-        sorted_cards = sort(list(cards))
+    def _is_straight(self):
+        sorted_cards = np.sort(list(self.cards))
         first_rank = sorted_cards[0].rank
         for i, card in enumerate(sorted_cards):
-            if sorted_cards[i].rank != first_rank + i:
+            if card.rank != first_rank + i:
                 return False
         return True
 
-    def _is_three_of_a_kind():
+    def _is_three_of_a_kind(self):
         return self._is_n_of_a_kind(3)
 
-    def _is_two_pair():
+    def _is_two_pair(self):
         # TODO: Isn't a two pair also technically a pair?
         if self._is_four_of_a_kind() or self._is_pair():
             return False
@@ -204,37 +209,31 @@ class Hand:
                 num_pairs_found += 1
         return num_pairs_found == 2
 
-    def _is_pair():
+    def _is_pair(self):
         return self._is_n_of_a_kind(2)
 
-    def _identify():
+    def _identify(self):
         if self._is_royal_flush():
-            _type = Hand.ROYAL_FLUSH
+            hand, rank = HandType.ROYAL_FLUSH
         elif self._is_straight_flush():
-            _type = Hand.STRAIGHT_FLUSH
+            hand, rank = HandType.STRAIGHT_FLUSH
         elif self._is_four_of_a_kind():
-            _type = Hand.FOUR_OF_A_KIND
+            hand, rank = HandType.FOUR_OF_A_KIND
         elif self._is_full_house():
-            _type = Hand.FULL_HOUSE
+            hand, rank = HandType.FULL_HOUSE
         elif self._is_flush():
-            _type = Hand.FLUSH
+            hand, rank  = HandType.FLUSH
         elif self._is_straight():
-            _type = Hand.STRAIGHT
+            hand, rank = HandType.STRAIGHT
         elif self._is_three_of_a_kind():
-            _type = Hand.THREE_OF_A_KIND
+            hand, rank = HandType.THREE_OF_A_KIND
         elif self._is_two_pair():
-            _type = Hand.TWO_PAIR
+            hand, rank = HandType.TWO_PAIR
         elif self._is_pair():
-            _type = Hand.PAIR
+            hand, rank = HandType.PAIR
         else:
-            _type = Hand.HIGH_CARD
-            rank = self.highest_rank()
-        # TODO: Figure out how to get the rank thing working. Find a better name
-        # for _type.
-        self.type = HandType(_type, rank)
-
-
-
+            hand, rank = HandType.HIGH_CARD
+        return hand
 
 
 def get_deck():
