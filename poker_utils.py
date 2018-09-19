@@ -53,8 +53,7 @@ class Card:
         return self.suit == card2.suit and self.rank == card2.rank
 
     def __str__(self):
-        # TODO: implement
-        return ""
+        return "%s of %s" % (self.rank.name, self.suit.name)
 
     def __hash__(self):
         if self.suit == Suit.HEARTS:
@@ -96,6 +95,12 @@ class Hand:
                 pass
                 # The greatest card in both hands is the same. See if the 2nd
                 # biggest cards are the same.
+
+    def get_type(self):
+        return self.type
+
+    def get_rank(self):
+        return self.rank
 
     def chance_of_winning(self, num_opponents):
         """Returns the chance of the hand beating the specified number of opponents.
