@@ -206,15 +206,14 @@ class Hand:
         for i, card in enumerate(sorted_cards):
             if card.rank != first_rank + i:
                 return False
-        self.rank = self.highest_card()
+        self.rank = self.highest_rank()
         return True
 
     def _is_three_of_a_kind(self):
         return self._is_n_of_a_kind(3)
 
     def _is_two_pair(self):
-        # TODO: Isn't a two pair also technically a pair?
-        if self._is_four_of_a_kind() or self._is_pair():
+        if self._is_four_of_a_kind():
             return False
         num_pairs_found = 0
         for rank in Rank:
@@ -259,7 +258,7 @@ def get_deck():
     deck = []
     for suit in Suit:
         for rank in Rank:
-            deck.append(Card(Suit[suit], Rank[rank]))
+            deck.append(Card(suit, rank))
     return deck
 
 
