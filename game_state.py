@@ -1,13 +1,14 @@
-from enum import Enum
+from enum import IntEnum
 import poker_utils
-from poker_utils import Card, Hand, Rank, Suit, HandType
+from poker_utils import Card, Hand, Rank, Suit, HandType, best_hand
+import pdb
 
 
 TEST_MODE = True
 MINIMUM_BET = 20
 
 
-class GameStages(Enum):
+class GameStages(IntEnum):
     PREFLOP = 0
     FLOP = 1
     TURN = 2
@@ -21,6 +22,9 @@ class GameState:
         self.stage = GameStages.PREFLOP
         self.num_opponents = num_opponents
         self.pot = 0
+        self.hole = None
+        self.turn = None
+        self.river = None
         self.read_seat()
         self.read_players()
 
@@ -42,7 +46,7 @@ class GameState:
 
     # TODO: Make this remember the opponents' names so you don't
     # have to keep typing them in.
-    # Sets this.playerNames to the opponent's names.
+    # Sets self.playerNames to the opponent's names.
     # this.playerNames is of length this.numOpponents.
     def read_players(self):
         if TEST_MODE:
@@ -119,7 +123,9 @@ class GameState:
         self.stage += 1
 
     # TODO: add an UNDO capability to all inputs
+    # TODO: Make a GUI
 
+    # TODO: Make player bets be ints, not doubles
     def init_player_bets(self):
         result = {}
         for i in range(self.num_opponents):
@@ -140,8 +146,7 @@ class GameState:
         while True:
             # Players before me
             for i in range(self.seat):
-                # TODO: add support for player names
-                ante = this.process_player_bet(i, ante, player_bets)
+                ante = self.process_player_bet(self.player_names[i], ante, player_bets)
             chance_of_winning = self.chance_of_winning()
             need_to_bet = ante - my_bet
             # // TODO: Experiment with what happens to the expected value when it is assumed that nobody folds.
@@ -153,15 +158,19 @@ class GameState:
                 self.fold()
                 return
             else:
+                # TODO: Add the option to raise the bet
                 print("Bet %f" % need_to_bet)
                 my_bet += need_to_bet
+                if my_bet < MINIMUM_BET:
+                    my_bet = MINIMUM_BET
+                # TODO: Make it choose a bet value more intelligently
             # players after me
             for i in range(self.seat, self.num_opponents):
-                import pdb; pdb.set_trace()
-                ante = self.process_player_bet(i, ante, player_bets)
+                name = self.player_names[i]
+                ante = self.process_player_bet(name, ante, player_bets)
                 print("ante: %f" % ante)
-                print("player_bets %f" % player_bets)
-            if this.betting_done(player_bets, my_bet):
+                print("%s's bet: %f" % (name, player_bets[name]))
+            if self.betting_done(player_bets, my_bet):
                 break
 
     # // TODO: make an expected value function (bet to maximize expected value assuming some other players bet too)
@@ -171,16 +180,14 @@ class GameState:
         # Advance the game stage to the end
         self.stage = GameStages.river
 
-    def betting_done(player_bets, my_bet):
+    def betting_done(self, player_bets, my_bet):
         # Betting is over if every bet in playerBets and myBet are equal.
-        # START HERE: figure out what the hell is wrong with this code. Also
-        for bet in player_bets:
+        for bet in player_bets.values():
             if bet != my_bet:
                 return False
         return True
 
     # Returns the new ante
-    # TODO: Make code use player names instead of numbers
     def process_player_bet(self, name, ante, player_bets):
         if TEST_MODE:
             action = 20
@@ -190,7 +197,7 @@ class GameState:
             # self.seat--   TODO: This should happen in some cases. Fix
             self.num_opponents -= 1
         else:
-            # TODO: what the hell is action?
+            # TODO: Add 'check' option
             bet = int(action)
             self.pot += bet
             player_bets[name] += bet
@@ -227,23 +234,29 @@ class GameState:
         elif self.stage == GameStages.FLOP:
             return Hand(self.hole + self.flop)
         elif self.stage == GameStages.TURN:
-            return best_hand(self.hole + self.flop + self.turn)
+            return best_hand(self.hole + self.flop + [self.turn])
         elif self.stage == GameStages.RIVER:
-            return best_hand(self.hole + self.flop + self.turn + self.river)
+            return best_hand(self.hole + self.flop + [self.turn, self.river])
         else:
             raise Exception('whoops')   # TODO: better exception handling
 
     def opponent_chance_of_winning(self):
+        # TODO: Rewrite using itertools combinations
         num_opponent_wins = 0
         num_iterations = 0
-        deck = helpers.get_deck()
+        deck = poker_utils.get_deck()
         for i in range(len(deck)):
             opponent_hole1 = deck[i]
             if self.card_is_unique(opponent_hole1):
                 for j in range(len(deck)):
                     opponent_hole2 = deck[j]
                     if self.card_is_unique(opponent_hole2) and opponent_hole1 != opponent_hole2:
-                        hand = best_hand(self.flop + self.turn + self.river + opponent_hole1 + opponent_hole2)
+                        opponent_cards = self.flop + [opponent_hole1, opponent_hole2]
+                        if self.turn is not None:
+                            opponent_cards.append(self.turn)
+                            if self.river is not None:
+                                opponent_cards.append(self.river)
+                        hand = best_hand(opponent_cards)
                         if hand > self.get_hand():
                             num_opponent_wins += 1
                         num_iterations += 1

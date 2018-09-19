@@ -28,7 +28,7 @@ class Rank(IntEnum):
     ACE = 14
 
 
-class HandType(Enum):
+class HandType(IntEnum):
     ROYAL_FLUSH = 9
     STRAIGHT_FLUSH = 8
     FOUR_OF_A_KIND = 7
@@ -90,11 +90,15 @@ class Hand:
     def __gt__(self, hand2):
         """Returns True if the hand is a better hand than hand2."""
         # TODO: Implement
-        if self.type.type == hand2.type.type:
-            if self.type.rank == hand2.type.rank:
-                pass
-                # The greatest card in both hands is the same. See if the 2nd
-                # biggest cards are the same.
+        if self.type > hand2.type:
+            return True
+        elif self.type < hand2.type:
+            return False
+        elif self.type == hand2.type:
+            # NOTE: This ignores the case in which both hands have the same type
+            # and rank. I think this is okay for now.
+            return self.rank > hand2.rank
+                
 
     def get_type(self):
         return self.type
@@ -111,30 +115,30 @@ class Hand:
         chance_against_one = 0
         # TODO: Explain this confusing code
         if self.type == HandType.HIGH_CARD:
-            chance_against_one = 0.038552 * (self.type.rank - 1.5)
+            chance_against_one = 0.038552 * (self.rank.value - 1.5)
         elif self.type == HandType.PAIR:
-            chance_against_one = 0.501177 + 0.422569 / 13 * (self.type.rank - 1.5)
+            chance_against_one = 0.501177 + 0.422569 / 13 * (self.rank.value - 1.5)
         elif self.type == HandType.TWO_PAIR:
-            chance_against_one = 0.923746 + 0.047539 / 13 * (self.type.rank - 1.5)
+            chance_against_one = 0.923746 + 0.047539 / 13 * (self.rank.value - 1.5)
         elif self.type == HandType.THREE_OF_A_KIND:
-            chance_against_one = 0.971285 + 0.0211285 / 13 * (self.type.rank - 1.5)
+            chance_against_one = 0.971285 + 0.0211285 / 13 * (self.rank.value - 1.5)
         elif self.type == HandType.FULL_HOUSE:
-            chance_against_one = 0.992414 + 0.00144058 / 13 * (self.type.rank - 1.5)
+            chance_against_one = 0.992414 + 0.00144058 / 13 * (self.rank.value - 1.5)
         elif self.type == HandType.FOUR_OF_A_KIND:
-            chance_against_one = 0.993854 + 0.00024 / 13 * (self.type.rank - 1.5)
+            chance_against_one = 0.993854 + 0.00024 / 13 * (self.rank.value - 1.5)
         elif self.type == HandType.STRAIGHT:
-            chance_against_one = 0.994094 + 0.00392465 / 13 * (self.type.rank - 1.5)
+            chance_against_one = 0.994094 + 0.00392465 / 13 * (self.rank.value - 1.5)
         elif self.type == HandType.FLUSH:
-            chance_against_one = 0.998019 + 0.0019654 / 13 * (self.type.rank - 1.5)
+            chance_against_one = 0.998019 + 0.0019654 / 13 * (self.rank.value- 1.5)
         elif self.type == HandType.STRAIGHT_FLUSH:
-            chance_against_one = 0.999984 + 0.0000138517 / 13 * (self.type.rank - 1.5)
+            chance_against_one = 0.999984 + 0.0000138517 / 13 * (self.rank.value  - 1.5)
         elif self.type == HandType.ROYAL_FLUSH:
-            chance_against_one = 0.999986 + 0.00000153908 / 13 * (self.type.rank - 1.5)
+            chance_against_one = 0.999986 + 0.00000153908 / 13 * (self.rank.value - 1.5)
         return chance_against_one ** num_opponents
 
     def highest_rank(self):
         """Return the highest rank found in self.cards."""
-        return max(self.cards)
+        return max(self.cards).rank
 
     def has_rank(self, rank):
         """Returns True if the hand contains a card with the given rank.
@@ -297,7 +301,7 @@ def generate_all_hands(cards):
     Returns:
         hands - list of Hand instances
     """
-    if cards.length < 5:
+    if len(cards) < 5:
         raise ValueError('Too few cards')
     card_arrays = itertools.combinations(cards, 5)
     hands = []
