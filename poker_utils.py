@@ -200,8 +200,8 @@ class Hand:
                 suit = card.suit
             else:
                 if card.suit != suit:
-                    self.rank = self.highest_rank()
                     return False
+        self.rank = self.highest_rank()
         return True
 
     def _is_straight(self):
@@ -253,6 +253,7 @@ class Hand:
         elif self._is_pair():
             hand = HandType.PAIR
         else:
+            self.rank = self.highest_rank()
             hand = HandType.HIGH_CARD
         return hand
 
@@ -267,17 +268,23 @@ def get_deck():
 
 
 def read_card():
-    """Inputs a card from the command line."""
+    """Returns a card instance inputted from the command line."""
     suit_is_valid = False
     while not suit_is_valid:
-        suit_input = input('Suit: ')
-        if suit_input in Suit:
-            suit_is_valid = True
+        suit_input = input('Suit: ').upper()
+        for suit in Suit:
+            if suit_input == suit.name:
+                card_suit = suit
+                suit_is_valid = True
+
     rank_is_valid = False
     while not rank_is_valid:
-        rank_input = input('Rank: ')
-        rank_is_valid = rank_input in Rank
-    return Card(suit_input, rank_input)
+        rank_input = input('Rank: ').upper()
+        for rank in Rank:
+            if rank_input == rank.name:
+                card_rank = rank
+                rank_is_valid = True
+    return Card(card_suit, card_rank)
 
 
 def best_hand(cards):

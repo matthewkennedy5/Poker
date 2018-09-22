@@ -1,11 +1,12 @@
 from enum import IntEnum
 import poker_utils
-from poker_utils import Card, Hand, Rank, Suit, HandType, best_hand
+from poker_utils import Card, Hand, Rank, Suit, HandType, best_hand, read_card
 import pdb
 
 
-TEST_MODE = True
-MINIMUM_BET = 20
+TEST_MODE = False
+MINIMUM_BET = 10
+MAXIMUM_BET = 100
 
 
 class GameStages(IntEnum):
@@ -15,6 +16,7 @@ class GameStages(IntEnum):
     RIVER = 3
     GAME_OVER = 4
 
+DEALER = -1
 
 class GameState:
 
@@ -34,7 +36,11 @@ class GameState:
         elif self.num_opponents == 1:
             # If it's a 1v1 poker match, there is nobody between you and the 
             # dealer.
-            self.seat = 0
+            dealer = input('Are you the dealer [y/n]? ').lower()
+            if dealer == 'y' or dealer == 'yes':
+                self.seat = DEALER
+            else:
+                self.seat = 0
         else:
             while True:
                 # TODO: Make this input better
@@ -56,7 +62,7 @@ class GameState:
             print("Enter your opponents' names.")
             for i in range(self.num_opponents):
                 name = input('> ')
-                self.player_names += name
+                self.player_names.append(name)
 
     def game_is_over(self):
         return self.stage == GameStages.GAME_OVER
@@ -97,7 +103,7 @@ class GameState:
             self.hole.append(Card(Suit.SPADES, Rank.TWO))
         else:
             print('Input your hold cards.')
-            print('Frist card: ')
+            print('First card: ')
             self.hole.append(read_card())
             print('Second card: ')
             self.hole.append(read_card())
@@ -105,8 +111,8 @@ class GameState:
     def advance(self):
         print()
         if self.stage == GameStages.PREFLOP:
-            self.preflop()
             print('Pre-flop: ')
+            self.preflop()
         elif self.stage == GameStages.FLOP:
             print('Flop: ')
             self.play_flop()
@@ -132,9 +138,36 @@ class GameState:
             result[self.player_names[i]] = 0
         return result
 
-    # // TODO: make playerBets a Map of player name -> bet instead of an array.
-
     # // TODO: make it keep track of how much money you have 
+
+    def _opponent_expected_value(self):
+        # Iterate over opponent's possible hands
+        # See how many beat me
+        # Find optimal opponent bet given my bet
+
+
+    def _expected_value(self):
+        if self.seat != DEALER:
+            expected_opponent_bet = 10  # TODO: Implement an opponent expected value function
+        else:
+            chance_of_winning = self._chance_of_winning()
+            return chance_of_winning * self.pot - (1 - chance_of_winning) * need_to_bet
+
+    def _opponent_optimal_bet(self):
+
+    def _optimal_bet(self, need_to_bet):
+        learning_rate = 1
+        optimal_bet = need_to_bet
+        chance_of_winning = self._chance_of_winning()
+        for i in range(100):
+            expected_opponent_bet = self._opponent_optimal_bet(my_bet)
+            
+
+
+
+
+
+
 
     def bet(self):
         print()
@@ -144,32 +177,26 @@ class GameState:
         my_bet = 0
         player_bets = self.init_player_bets()
         while True:
-            # Players before me
-            for i in range(self.seat):
-                ante = self.process_player_bet(self.player_names[i], ante, player_bets)
-            chance_of_winning = self.chance_of_winning()
+            if self.seat == DEALER:
+                ante = self.process_player_bet(self.player_names[0], ante, player_bets)
             need_to_bet = ante - my_bet
             # // TODO: Experiment with what happens to the expected value when it is assumed that nobody folds.
-            expected_value = chance_of_winning * self.pot - (1 - chance_of_winning) * need_to_bet
-            if TEST_MODE:
+            expected_value = self._expected_value()
+            if True:
                 print('Chance of winning: %f' % chance_of_winning)
-                print('Expected value: $%f' % expected_value)
-            if expected_value < 0 and self.stage != GameStages.PREFLOP:
+                print('Expected value: $%.2f' % expected_value)
+            if expected_value < 0:
                 self.fold()
                 return
             else:
-                # TODO: Add the option to raise the bet
-                print("Bet %f" % need_to_bet)
+                # TODO: Add the option to raise the bet to maximize expected value
+                print("Bet $%.2f" % need_to_bet)
                 my_bet += need_to_bet
                 if my_bet < MINIMUM_BET:
                     my_bet = MINIMUM_BET
-                # TODO: Make it choose a bet value more intelligently
-            # players after me
-            for i in range(self.seat, self.num_opponents):
-                name = self.player_names[i]
+            if self.seat != DEALER:
+                name = self.player_names[0]
                 ante = self.process_player_bet(name, ante, player_bets)
-                print("ante: %f" % ante)
-                print("%s's bet: %f" % (name, player_bets[name]))
             if self.betting_done(player_bets, my_bet):
                 break
 
@@ -192,7 +219,7 @@ class GameState:
         if TEST_MODE:
             action = 20
         else:
-            action = input("%s's bet: " % name)
+            action = input("%s's bet: $" % name)
         if action == 'fold':
             # self.seat--   TODO: This should happen in some cases. Fix
             self.num_opponents -= 1
@@ -222,8 +249,10 @@ class GameState:
                                         card5 = Card(suit5, rank5)
                                         if card5 != card4 and card5 != card3 and card5 != self.hole[1] and card5 !=self.hole[0]:
                                             opponent_hand = Hand([self.hole[0], self.hole[1], card3, card4, card5])
-                                            assert opponent_hand.chance_of_winning(self.num_opponents) <= 1  # TODO: remove
-                                            probability_sum += opponent_hand.chance_of_winning(self.num_opponents)
+                                            try:
+                                                probability_sum += opponent_hand.chance_of_winning(self.num_opponents)
+                                            except:
+                                                import pdb; pdb.set_trace()
                                             num_reps += 1
         average_probability = probability_sum / (50 * 49 * 48)  # TODO: Fix magic numbers
         return average_probability
