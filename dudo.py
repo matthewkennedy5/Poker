@@ -4,6 +4,7 @@ import progressbar
 import pdb
 
 # TODO: Why is the strategy always the same?
+# TODO: What is the proper outcome when the max bet is called?
 
 NUM_SIDES = 6
 NUM_ACTIONS = 2 * NUM_SIDES + 1
@@ -44,6 +45,7 @@ def action_is_valid(history, action):
         return True
     return not history[action] and action > strongest_claim(history)
 
+
 class Node:
 
     def __init__(self, info_set):
@@ -62,7 +64,10 @@ class Node:
         return strategy
 
     def average_strategy(self):
-        return self.strategy_sum / np.sum(self.strategy_sum)
+        if np.sum(self.strategy_sum) > 0:
+            return self.strategy_sum / np.sum(self.strategy_sum)
+        else:
+            return np.ones(NUM_ACTIONS) / NUM_ACTIONS
 
     def add_regret(self, regret, action):
         self.regret_sum[action] += regret
@@ -91,7 +96,7 @@ class DudoTrainer:
 
 
     def _dudo(self, player, history, dice):
-        # The opponent called dudo
+        # This is called when the opponent called dudo
         opponent = 1 - player
         claim = strongest_claim(history)
         claim_num = CLAIM_NUM[claim]
@@ -108,9 +113,12 @@ class DudoTrainer:
 
     def _cfr(self, dice, history, p0, p1):
         # Return terminal states
-        player = np.sum(history == True) % 2
+        player = np.sum(history) % 2
         # The possible terminal states are DUDO and the strongest claim
-        if history[DUDO] or history[NUM_ACTIONS - 2]:
+        if history[NUM_ACTIONS-2]:
+            # TODO: What should happen here?
+            return 0
+        if history[DUDO]:
             # Showdown
             return self._dudo(player, history, dice)
         # Retrieve / init the node
@@ -148,4 +156,4 @@ class DudoTrainer:
 
 if __name__ == '__main__':
     trainer = DudoTrainer()
-    trainer.train(int(1e0))
+    trainer.train(int(1e2))
