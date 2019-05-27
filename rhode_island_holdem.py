@@ -6,7 +6,7 @@ import numpy as np
 import pdb
 
 PREFLOP, FLOP, TURN = range(3)
-STRAIGHT_FLUSH, THREE_OF_KIND, STRAIGHT, FLUSH, PAIR, HIGH_CARD = range(6)
+HIGH_CARD, PAIR, FLUSH, STRAIGHT, THREE_OF_KIND, STRAIGHT_FLUSH = range(6)
 
 RANKS = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, 'T': 10, '9': 9, '8': 8, '7': 7,
          '6': 6, '5': 5, '4': 4, '3': 3, '2': 2}
@@ -122,10 +122,13 @@ class RhodeHand:
                 or self.cards[0].rank == self.cards[2].rank)
 
     def __lt__(self, other):
-        return False
+        if self.type == other.type:
+            return self.rank < other.rank   # TODO: same pair, kicker wins
+        else:
+            return self.type < other.type
 
     def __eq__(self, other):
-        return True
+        return self.type == other.type and self.rank == other.rank
 
 
 class Game:
@@ -173,13 +176,27 @@ class Game:
 
 if __name__ == '__main__':
 
+    hand1 = RhodeHand('8h', '8c', '9d')
+    hand5 = RhodeHand('8c', '8d', '9s')
+    hand2 = RhodeHand('8d', '7s', '7h')
+    hand3 = RhodeHand('Ah', 'Qh', 'Kh')
+    hand4 = RhodeHand('3h', '3d', 'Ac')
+    hand7 = RhodeHand('3s', '3c', 'Qc')
+    assert(hand2 < hand1)
+    assert(hand1 > hand2)
+    assert(hand1 < hand3)
+    assert(hand5 == hand1)
+    assert(hand5 != hand2)
+    assert(hand7 < hand4)
     three = RhodeHand('Th', 'Td', 'Tc')
     assert(three.type == THREE_OF_KIND)
     not_three = RhodeHand('Th', 'Jh', 'Tc')
     assert(not_three.type != THREE_OF_KIND)
     straight_flush = RhodeHand('Ah', '3h', '2h')
+    straight_flush2 = RhodeHand('Ah', 'Qh', 'Kh')
     not_straight_flush = RhodeHand('Kd', '2d', 'Ad')
     assert(straight_flush.type == STRAIGHT_FLUSH)
+    assert(straight_flush2.type == STRAIGHT_FLUSH)
     assert(not_straight_flush.type != STRAIGHT_FLUSH)
     straight = RhodeHand('Tc', '8s', '9c')
     assert(straight.type == STRAIGHT)
