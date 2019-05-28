@@ -5,11 +5,14 @@ import functools
 import numpy as np
 import pdb
 
+BET_SIZES = 10, 20
+INITIAL_STACK_SIZE = 1000
 PREFLOP, FLOP, TURN = range(3)
 HIGH_CARD, PAIR, FLUSH, STRAIGHT, THREE_OF_KIND, STRAIGHT_FLUSH = range(6)
 
 RANKS = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, 'T': 10, '9': 9, '8': 8, '7': 7,
          '6': 6, '5': 5, '4': 4, '3': 3, '2': 2}
+SUITS = ('c', 'd', 'h', 's')
 
 @functools.total_ordering
 class Card:
@@ -33,7 +36,7 @@ class Card:
     """
 
     def __init__(self, card_str):
-        if card_str[0] not in RANKS or card_str[1] not in ['h', 's', 'c', 'd']:
+        if card_str[0] not in RANKS or card_str[1] not in SUITS:
             raise ValueError('card_str must be in the format like "Kc", "4h"')
         self.card_str = card_str
         self.rank = RANKS[self.card_str[0]]
@@ -123,88 +126,196 @@ class RhodeHand:
 
     def __lt__(self, other):
         if self.type == other.type:
-            return self.rank < other.rank   # TODO: same pair, kicker wins
+            if self.rank == other.rank:
+                # If the kicker is what determines the hand
+                our_ranks = sorted(card.rank for card in self.cards)
+                other_ranks = sorted(card.rank for card in other.cards)
+                for i in range(len(our_ranks)):
+                    if our_ranks[i] != other_ranks[i]:
+                        return our_ranks[i] < other_ranks[i]
+                return False    # The hand ranks are totally equivalent
+            return self.rank < other.rank
         else:
             return self.type < other.type
 
     def __eq__(self, other):
-        return self.type == other.type and self.rank == other.rank
+        if self.type != other.type:
+            return False
+        our_ranks = sorted(card.rank for card in self.cards)
+        other_ranks = sorted(card.rank for card in other.cards)
+        return our_ranks == other_ranks
+
+    def __str__(self):
+        return ' '.join([str(card) for card in self.cards])
 
 
 class Game:
 
     def __init__(self):
         self.pot = 0
-        self.player1card = None
-        self.player2card = None
+        self.player1_card = None
+        self.player2_card = None
         self.board = []
         self.street = PREFLOP
         self.hand_is_over = False
+        self.player_folded = False
+        self.deck = [rank + suit for suit in SUITS for rank in RANKS]
+        self.stacks = [INITIAL_STACK_SIZE, INITIAL_STACK_SIZE]
 
     def play(self):
         """Initiate a sequence of hands for human vs. human play."""
-        print('Welcome to Rhode Island Holdem!')
+        print("Welcome to Rhode Island Hold'em!")
         while not self.hand_is_over:
             self.advance_hand()
+            self.betting()
+            print()
+            self.street += 1
+        if not self.player_folded:
+            self.showdown()
+        print(self.stacks)
 
     def advance_hand(self):
         if self.street == PREFLOP:
-            pass
+            self.preflop()
         elif self.street == FLOP:
-            pass
+            self.flop()
         elif self.street == TURN:
-            pass
-        else:
+            self.turn()
             self.hand_is_over = True
 
     def preflop(self):
-        # Deal cards
-        # Issue: both players will see both cards. Welp.
-        # Betting round
-        pass
+        np.random.shuffle(self.deck)
+        self.pot = 0
+        self.player1_card = self.deck[0]
+        self.player2_card = self.deck[1]
+        print("Player 1's card:", self.player1_card)
+        print("Player 2's card:", self.player2_card)
 
     def flop(self):
-        # Deal flop
-        # Betting round
-        pass
+        self.board.append(self.deck[2])
+        print('Flop:', self.board[0])
 
     def turn(self):
-        # Deal turn
-        # Betting round
-        pass
+        self.board.append(self.deck[3])
+        print('Turn:', self.board[1])
+
+    def betting(self):
+        """Process player inputs for a round of betting."""
+        if self.street == PREFLOP:
+            bet_size = BET_SIZES[0]
+        else:
+            bet_size = BET_SIZES[1]
+        # bet, check
+        # fold, call, raise | check, bet
+
+        betting_over = False
+        action = False     # Whether a player has bet (as opposed to checking)
+        n_raises = 0
+        n_checks = 0
+        player = 0
+        while not betting_over:
+            player_action = self.input_action('Player ' + str(player+1), action, n_raises == 3)
+            if player_action == 'bet':
+                self.pot += bet_size
+                self.stacks[player] -= bet_size
+                action = True
+                n_raises += 1
+            elif player_action == 'check':
+                n_checks += 1
+            elif player_action == 'call':
+                self.pot += bet_size
+                self.stacks[player] -= bet_size
+                action = False
+                betting_over = True
+            elif player_action == 'fold':
+                self.hand_is_over = True
+                self.player_folded = True
+                self.stacks[1 - player] += self.pot
+                return
+            elif player_action == 'raise':
+                self.pot += 2 * bet_size
+                self.stacks[player] -= 2 * bet_size
+                n_raises += 1
+
+            if not action and (n_checks == 2 or n_raises == 3):
+                betting_over = True
+            player = 1 - player
+
+    def showdown(self):
+        """Gives the pot to the player with the best hand."""
+        player1_hand = RhodeHand(self.player1_card, self.board[0], self.board[1])
+        player2_hand = RhodeHand(self.player2_card, self.board[0], self.board[1])
+        if player1_hand > player2_hand:
+            self.stacks[0] += self.pot
+        elif player2_hand > player1_hand:
+            self.stacks[1] += self.pot
+        elif player1_hand == player2_hand:
+            self.stacks[0] += self.pot / 2
+            self.stacks[1] += self.pot / 2
+
+    @staticmethod
+    def input_action(name, previous_bet, bet_limit_reached):
+        """Get a bet input from the user.
+
+        Inputs:
+            name - The name of the player
+            previous_bet - There has been a bet and the player needs to call,
+                raise, or fold
+            bet_limit_reached - Whether the max number of bets (3) have already
+                been bet and the player can only call or fold.
+        """
+        allowed_actions = []
+        if previous_bet:
+            allowed_actions += ['call', 'fold']
+            if not bet_limit_reached:
+                allowed_actions += ['raise']
+        else:
+            allowed_actions += ['check', 'bet']
+
+        while True:
+            print(name + ' action: ')
+            action = input('> ').lower()
+            if action in allowed_actions:
+                return action
+            else:
+                actions_string = ', '.join(allowed_actions[:-1]) + ' or ' + allowed_actions[-1] + '.'
+                print(actions_string)
 
 
 if __name__ == '__main__':
 
-    hand1 = RhodeHand('8h', '8c', '9d')
-    hand5 = RhodeHand('8c', '8d', '9s')
-    hand2 = RhodeHand('8d', '7s', '7h')
-    hand3 = RhodeHand('Ah', 'Qh', 'Kh')
-    hand4 = RhodeHand('3h', '3d', 'Ac')
-    hand7 = RhodeHand('3s', '3c', 'Qc')
-    assert(hand2 < hand1)
-    assert(hand1 > hand2)
-    assert(hand1 < hand3)
-    assert(hand5 == hand1)
-    assert(hand5 != hand2)
-    assert(hand7 < hand4)
-    three = RhodeHand('Th', 'Td', 'Tc')
-    assert(three.type == THREE_OF_KIND)
-    not_three = RhodeHand('Th', 'Jh', 'Tc')
-    assert(not_three.type != THREE_OF_KIND)
-    straight_flush = RhodeHand('Ah', '3h', '2h')
-    straight_flush2 = RhodeHand('Ah', 'Qh', 'Kh')
-    not_straight_flush = RhodeHand('Kd', '2d', 'Ad')
-    assert(straight_flush.type == STRAIGHT_FLUSH)
-    assert(straight_flush2.type == STRAIGHT_FLUSH)
-    assert(not_straight_flush.type != STRAIGHT_FLUSH)
-    straight = RhodeHand('Tc', '8s', '9c')
-    assert(straight.type == STRAIGHT)
-    flush = RhodeHand('2h', '4h', 'Ah')
-    assert(flush.type == FLUSH)
-    pair = RhodeHand('Ks', 'Kd', 'Js')
-    assert(pair.type == PAIR)
-    nothing = RhodeHand('Jd', 'Tc', 'As')
-    assert(nothing.type == HIGH_CARD)
-    # game = game()
-    # game.play()
+    game = Game()
+    game.play()
+
+
+# Graveyard of passed unit tests
+    # hand1 = RhodeHand('8h', '8c', '9d')
+    # hand5 = RhodeHand('8c', '8d', '9s')
+    # hand2 = RhodeHand('8d', '7s', '7h')
+# hand3 = RhodeHand('Ah', 'Qh', 'Kh')
+# hand4 = RhodeHand('3h', '3d', 'Ac')
+# hand7 = RhodeHand('3s', '3c', 'Qc')
+# assert(hand2 < hand1)
+# assert(hand1 > hand2)
+# assert(hand1 < hand3)
+    # assert(hand5 == hand1)
+    # assert(hand5 != hand2)
+# assert(hand7 < hand4)
+# three = RhodeHand('Th', 'Td', 'Tc')
+# assert(three.type == THREE_OF_KIND)
+# not_three = RhodeHand('Th', 'Jh', 'Tc')
+# assert(not_three.type != THREE_OF_KIND)
+# straight_flush = RhodeHand('Ah', '3h', '2h')
+# straight_flush2 = RhodeHand('Ah', 'Qh', 'Kh')
+# not_straight_flush = RhodeHand('Kd', '2d', 'Ad')
+# assert(straight_flush.type == STRAIGHT_FLUSH)
+# assert(straight_flush2.type == STRAIGHT_FLUSH)
+# assert(not_straight_flush.type != STRAIGHT_FLUSH)
+# straight = RhodeHand('Tc', '8s', '9c')
+# assert(straight.type == STRAIGHT)
+# flush = RhodeHand('2h', '4h', 'Ah')
+# assert(flush.type == FLUSH)
+# pair = RhodeHand('Ks', 'Kd', 'Js')
+# assert(pair.type == PAIR)
+# nothing = RhodeHand('Jd', 'Tc', 'As')
+# assert(nothing.type == HIGH_CARD)
