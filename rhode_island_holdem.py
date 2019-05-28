@@ -9,6 +9,8 @@ BET_SIZES = 10, 20
 INITIAL_STACK_SIZE = 1000
 PREFLOP, FLOP, TURN = range(3)
 HIGH_CARD, PAIR, FLUSH, STRAIGHT, THREE_OF_KIND, STRAIGHT_FLUSH = range(6)
+N_ACTIONS = 5
+ACTIONS = 'fold', 'check', 'call', 'bet', 'raise'
 
 RANKS = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, 'T': 10, '9': 9, '8': 8, '7': 7,
          '6': 6, '5': 5, '4': 4, '3': 3, '2': 2}
@@ -149,6 +151,10 @@ class RhodeHand:
         return ' '.join([str(card) for card in self.cards])
 
 
+def get_deck():
+    """Returns the standard 52-card deck, represented as a list of strings."""
+    return [rank + suit for suit in SUITS for rank in RANKS]
+
 class Game:
 
     def __init__(self):
@@ -159,7 +165,7 @@ class Game:
         self.street = PREFLOP
         self.hand_is_over = False
         self.player_folded = False
-        self.deck = [rank + suit for suit in SUITS for rank in RANKS]
+        self.deck = get_deck()
         self.stacks = [INITIAL_STACK_SIZE, INITIAL_STACK_SIZE]
 
     def play(self):
@@ -282,40 +288,108 @@ class Game:
                 print(actions_string)
 
 
+class InfoSet:
+    """Represents all of everything a player can know about the game.
+
+    All attributes that don't exist yet in the game (like the turn bets if we're
+    on the flop) are None.
+
+    Attributes:
+        self.hole - The player's hole card
+        self.flop - The flop card (None if not dealt yet)
+        self.turn - The turn card (None if not dealt yet)
+        self.preflop_bets - Preflop bet history, ['check', 'bet', 'call']
+        self.flop_bets - Flop bet history
+        self.turn_bets - Turn bet history
+    """
+
+    def __init__(self, hole, flop=None, turn=None, preflop_bets=None,
+                 flop_bets=None, turn_bets=None):
+
+        # TODO: Either forget about input checking, or make sure the bet histories
+        # all represent legal bet histories.
+        deck = get_deck()
+        if hole not in deck:
+            raise ValueError('Invalid hole card.')
+        if flop is not None and flop not in deck:
+            raise ValueError('Invalid flop card.')
+        if turn is not None and turn not in deck:
+            raise ValueError('Invalid turn card.')
+
+        all_actions = preflop_bets
+        if flop_bets is not None:
+            all_actions += flop_bets
+        if turn_bets is not None:
+            all_actions += turn_bets
+        for action in all_actions:
+            if action not in ACTIONS:
+                raise ValueError('Invalid action.')
+
+        self.hole = hole
+        self.flop = flop
+        self.preflop_bets = preflop_bets
+        self.flop_bets = flop_bets
+        self.turn_bets = turn_bets
+
+    def legal_actions(self):
+        """Returns the legal next actions at this infoset."""
+        raise NotImplementedError
+
+    def __eq__(self):
+        raise NotImplementedError
+
+    def __hash__(self):
+        raise NotImplementedError
+
+
+class CFRPNode:
+    """Stores the counterfactual regret and calculates strategies for an infoset."""
+
+    def __init__(self, infoset):
+        self.infoset = infoset
+        # Not all actions are legal at every node in the game tree. We will just
+        # store zeros for illegal action regrets and make sure their probabilities
+        # are zero.
+        self.regrets = np.zeros(N_ACTIONS)
+        self.weighted_strategy_sum = np.zero(N_ACTIONS)
+        self.t = 1      # Number of times this node has been reached by CFR+
+
+    def get_strategy(self):
+        """Returns the current CFR+ strategy at this node.
+
+        Returns:
+            strategy - A probability distribution over all actions. Illegal actions
+                will have zero probability. With enough training, this strategy
+                should be an approximate Nash equilibrium.
+        """
+        if np.sum(self.regrets) == 0:
+            strategy = np.ones(N_ACTIONS)   # Unnormalized uniform distribution
+        else:
+            strategy = self.regrets
+        # Zero the illegal moves
+
+        # Normalize
+        # Update the weighted strategy sum
+
+        # In CFR, the average of all strategies over time converges to the Nash
+        # equilibrium, not the current strategy. This method calculates that
+        # average but uses a special weighted average described on page 3 of
+        # http://johanson.ca/publications/poker/2015-ijcai-cfrplus/2015-ijcai-cfrplus.pdf
+
+class CFRPTrainer:
+    """Runs CFR+ over the game tree to find an approximate Nash equilibrium."""
+
+    def __init__(self, n_iters):
+        self.nodes = {}     # Each node corresponds to an information set.
+
+
+
+
 if __name__ == '__main__':
 
-    game = Game()
-    game.play()
+    infoset = InfoSet(hole='8s', preflop_bets=['check'])
+    infoset = InfoSet(hole='8s', preflop_bets=['check', 'check'])
 
+    # game = Game()
+    # game.play()
 
-# Graveyard of passed unit tests
-    # hand1 = RhodeHand('8h', '8c', '9d')
-    # hand5 = RhodeHand('8c', '8d', '9s')
-    # hand2 = RhodeHand('8d', '7s', '7h')
-# hand3 = RhodeHand('Ah', 'Qh', 'Kh')
-# hand4 = RhodeHand('3h', '3d', 'Ac')
-# hand7 = RhodeHand('3s', '3c', 'Qc')
-# assert(hand2 < hand1)
-# assert(hand1 > hand2)
-# assert(hand1 < hand3)
-    # assert(hand5 == hand1)
-    # assert(hand5 != hand2)
-# assert(hand7 < hand4)
-# three = RhodeHand('Th', 'Td', 'Tc')
-# assert(three.type == THREE_OF_KIND)
-# not_three = RhodeHand('Th', 'Jh', 'Tc')
-# assert(not_three.type != THREE_OF_KIND)
-# straight_flush = RhodeHand('Ah', '3h', '2h')
-# straight_flush2 = RhodeHand('Ah', 'Qh', 'Kh')
-# not_straight_flush = RhodeHand('Kd', '2d', 'Ad')
-# assert(straight_flush.type == STRAIGHT_FLUSH)
-# assert(straight_flush2.type == STRAIGHT_FLUSH)
-# assert(not_straight_flush.type != STRAIGHT_FLUSH)
-# straight = RhodeHand('Tc', '8s', '9c')
-# assert(straight.type == STRAIGHT)
-# flush = RhodeHand('2h', '4h', 'Ah')
-# assert(flush.type == FLUSH)
-# pair = RhodeHand('Ks', 'Kd', 'Js')
-# assert(pair.type == PAIR)
-# nothing = RhodeHand('Jd', 'Tc', 'As')
-# assert(nothing.type == HIGH_CARD)
