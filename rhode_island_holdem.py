@@ -498,7 +498,7 @@ class CFRPTrainer:
         # cards because that's all we need.
         deck = get_deck()
         for i in trange(iterations):
-            # shuffle deck
+            np.random.shuffle(deck)
             self.cfrplus(deck)
         pickle.dump(self.nodes, open(SAVE_PATH, 'wb'))
 
@@ -583,7 +583,7 @@ if __name__ == '__main__':
     assert(infoset.legal_actions() is not None)
     assert(game_is_over(['check'] * 6) == True)
     trainer = CFRPTrainer()
-    trainer.train(10)
+    trainer.train(1000)
     print(len(trainer.nodes))
     # infoset = InfoSet(hole='8s', bet_history=[['check']])
     # node = CFRPNode(infoset)
