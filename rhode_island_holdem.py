@@ -4,17 +4,87 @@
 import functools
 import numpy as np
 import pdb
+from tqdm import trange
+import pickle
 
-BET_SIZES = 10, 20
+BET_SIZES = 10, 20, 20
 INITIAL_STACK_SIZE = 1000
+STRATEGY_DELAY = 250    # How many iterations to wait before starting to keep
+                        # track of the cumulative strategy
 PREFLOP, FLOP, TURN = range(3)
 HIGH_CARD, PAIR, FLUSH, STRAIGHT, THREE_OF_KIND, STRAIGHT_FLUSH = range(6)
 N_ACTIONS = 5
 ACTIONS = 'fold', 'check', 'call', 'bet', 'raise'
+FOLD, CHECK, CALL, BET, RAISE = range(5)
+SAVE_PATH = 'rhode_island_nodes.pkl'
+FLOP_CARD = 2
+TURN_CARD = 3
 
 RANKS = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, 'T': 10, '9': 9, '8': 8, '7': 7,
          '6': 6, '5': 5, '4': 4, '3': 3, '2': 2}
 SUITS = ('c', 'd', 'h', 's')
+
+
+### Functions ###
+
+def get_deck():
+    """Returns the standard 52-card deck, represented as a list of strings."""
+    return [rank + suit for suit in SUITS for rank in RANKS]
+
+def game_is_over(bet_history):
+    """Returns True if the hand has reached a terminal state (fold or showdown)."""
+    return get_street(bet_history)[1]
+
+def get_street(bet_history):
+    """Returns the current street given by the bet history.
+
+    If bets are completed for a street, then this method will return the next
+    street.
+
+    Inputs:
+        bet_history - A list of previous bets in the hand.
+
+    Returns:
+        street - one of PREFLOP, FLOP, or TURN
+        game_is_over - Whether the hand has reached a terminal state (fold or showdown)
+    """
+    street = PREFLOP
+    previous_bet = None
+    for bet in bet_history:
+        if bet == 'fold':
+            return street, True
+        if bet == 'call' or (bet == 'check' and previous_bet == 'check'):
+            street += 1
+            previous_bet = None
+        else:
+            previous_bet = bet
+        if street > TURN:
+            return street, True
+    return street, False  # Reached the end of the bet history without the game being over
+
+# TODO: There's an ante that both players have to post. Add that, otherwise a Nash
+# equilibrium is just checking and folding.
+def pot_size(bet_history):
+    """Returns the number of chips in the pot given this bet history."""
+    pot = 0
+    street = PREFLOP
+    previous_action = None
+    for action in bet_history:
+        if street > TURN:
+            raise ValueError('Bet history is too long: %s' % (bet_history,))
+        if action == 'bet' or action == 'call':
+            pot += BET_SIZES[street]
+        elif action == 'raise':
+            pot += 2 * BET_SIZES[street]
+
+        if action == 'call' or (action == 'check' and previous_action == 'check'):
+            street += 1
+            previous_action = None
+        else:
+            previous_action = action
+    return pot
+
+### Classes ###
 
 @functools.total_ordering
 class Card:
@@ -151,9 +221,6 @@ class RhodeHand:
         return ' '.join([str(card) for card in self.cards])
 
 
-def get_deck():
-    """Returns the standard 52-card deck, represented as a list of strings."""
-    return [rank + suit for suit in SUITS for rank in RANKS]
 
 class Game:
 
@@ -298,48 +365,54 @@ class InfoSet:
         self.hole - The player's hole card
         self.flop - The flop card (None if not dealt yet)
         self.turn - The turn card (None if not dealt yet)
-        self.preflop_bets - Preflop bet history, ['check', 'bet', 'call']
-        self.flop_bets - Flop bet history
-        self.turn_bets - Turn bet history
+        self.bet_history - Contains the betting history up to this point.
+
+    Inputs:
+        deck - The shuffled deck of cards, the first few of which
+            characterize this information set (not including the opponent's card)
+        bet_history - All of the bets up to this point in the hand.
     """
 
-    def __init__(self, hole, flop=None, turn=None, preflop_bets=None,
-                 flop_bets=None, turn_bets=None):
+    def __init__(self, deck, bet_history):
+        self.bet_history = bet_history
+        player = len(bet_history) % 2
+        hole = deck[player]
+        flop = deck[2]
+        turn = deck[3]
+        street = get_street(bet_history)[0]
+        self.cards = [hole]
+        if street >= FLOP:
+            self.cards.append(flop)
+        if street >= TURN:
+            self.cards.append(turn)
 
-        # TODO: Either forget about input checking, or make sure the bet histories
-        # all represent legal bet histories.
-        deck = get_deck()
-        if hole not in deck:
-            raise ValueError('Invalid hole card.')
-        if flop is not None and flop not in deck:
-            raise ValueError('Invalid flop card.')
-        if turn is not None and turn not in deck:
-            raise ValueError('Invalid turn card.')
-
-        all_actions = preflop_bets
-        if flop_bets is not None:
-            all_actions += flop_bets
-        if turn_bets is not None:
-            all_actions += turn_bets
-        for action in all_actions:
-            if action not in ACTIONS:
-                raise ValueError('Invalid action.')
-
-        self.hole = hole
-        self.flop = flop
-        self.preflop_bets = preflop_bets
-        self.flop_bets = flop_bets
-        self.turn_bets = turn_bets
-
+    # TODO: I'm sometimes using the BET form to store actions, and sometimes
+    # using 'bet'. The first form is more compact and works well with numpy, but
+    # is less human-readable.
     def legal_actions(self):
-        """Returns the legal next actions at this infoset."""
-        raise NotImplementedError
+        """Returns the legal next actions at this infoset.
 
-    def __eq__(self):
-        raise NotImplementedError
+        Three possibilities here:
+        1. First to act, or previous player checked: check or bet
+        2. Previous player bet (<3 bets): fold, call, or raise
+        3. Previous player bet (>3 bets): fold or call.
+        """
+        if len(self.bet_history) == 0 or self.bet_history[-1] == 'check' or self.bet_history[-1] == 'call':
+            return [CHECK, BET]
+        if self.bet_history[-1] == 'bet' or self.bet_history[-1] == 'raise':
+            if self.bet_history.count('raise') >= 2:    # Max 3 bets (2 raises) allowed
+                return [FOLD, CALL]
+            else:
+                return [FOLD, CALL, RAISE]
+
+    def __eq__(self, other):
+        return self.cards == other.cards and self.bet_history == other.bet_history
 
     def __hash__(self):
-        raise NotImplementedError
+        return hash(str(self))
+
+    def __str__(self):
+        return '%s, %s' % (self.cards, self.bet_history)
 
 
 class CFRPNode:
@@ -351,45 +424,173 @@ class CFRPNode:
         # store zeros for illegal action regrets and make sure their probabilities
         # are zero.
         self.regrets = np.zeros(N_ACTIONS)
-        self.weighted_strategy_sum = np.zero(N_ACTIONS)
-        self.t = 1      # Number of times this node has been reached by CFR+
+        self.weighted_strategy_sum = np.zeros(N_ACTIONS)
+        self.t = 0      # Number of times this node has been reached by CFR+
 
-    def get_strategy(self):
+    def get_current_strategy(self, probability):
         """Returns the current CFR+ strategy at this node.
+
+        Inputs:
+            probability - The probability of reaching this node given the previous history.
+                This is the product of the players' strategies of each node up
+                until this one in the hand history.
 
         Returns:
             strategy - A probability distribution over all actions. Illegal actions
                 will have zero probability. With enough training, this strategy
                 should be an approximate Nash equilibrium.
         """
+        legal_actions = self.infoset.legal_actions()
+        strategy = np.zeros(N_ACTIONS)
         if np.sum(self.regrets) == 0:
-            strategy = np.ones(N_ACTIONS)   # Unnormalized uniform distribution
+            strategy[legal_actions] = np.ones(N_ACTIONS)[legal_actions]   # Unnormalized uniform distribution
         else:
-            strategy = self.regrets
-        # Zero the illegal moves
+            strategy[legal_actions] = self.regrets[legal_actions]
 
-        # Normalize
-        # Update the weighted strategy sum
+        strategy /= np.sum(strategy)
+        self.weighted_strategy_sum += np.maximum(self.t - STRATEGY_DELAY, 0) * strategy * probability
+        self.t += 1
+        return strategy
 
-        # In CFR, the average of all strategies over time converges to the Nash
-        # equilibrium, not the current strategy. This method calculates that
-        # average but uses a special weighted average described on page 3 of
-        # http://johanson.ca/publications/poker/2015-ijcai-cfrplus/2015-ijcai-cfrplus.pdf
+    def get_cumulative_strategy(self):
+        """Returns the weighted average CFR+ strategy at this node.
+
+        In CFR, the average of all strategies over time converges to the Nash
+        equilibrium, not the current strategy. This method calculates that
+        average but uses a special weighted average described on page 3 of
+        http://johanson.ca/publications/poker/2015-ijcai-cfrplus/2015-ijcai-cfrplus.pdf
+        and in the CFR+ paper. Given enough training iterations, this strategy
+        should approximate a Nash equilibrium.
+        """
+        legal_actions = self.infoset.legal_actions()
+        strategy = np.zeros(N_ACTIONS)
+        if np.sum(self.weighted_strategy_sum) == 0:
+            strategy[legal_actions] = np.ones(N_ACTIONS)[legal_actions]
+        else:
+            strategy = self.weighted_strategy_sum
+        strategy /= np.sum(strategy)
+        return strategy
+
+    def add_regret(self, action, regret):
+        """Updates the regret tables at this node by adding the new regret value.
+
+        CFR+ does not allow negative cumulative regrets and sets them to 0.
+
+        Inputs:
+            action - The action to add regret to, as an integer (FOLD, BET, etc.)
+            regret - The amount of regret to add
+        """
+        self.regrets[action] = np.maximum(self.regrets[action] + regret, 0)
+
+    def __str__(self):
+        return '%s:\n%s' % (self.infoset, str(self.get_cumulative_strategy()))
+
 
 class CFRPTrainer:
     """Runs CFR+ over the game tree to find an approximate Nash equilibrium."""
 
-    def __init__(self, n_iters):
+    def __init__(self):
         self.nodes = {}     # Each node corresponds to an information set.
 
+    def train(self, iterations):
+        """Runs the CFR+ algorithm for the given number of iterations."""
+        # TODO: If shuffling 52 cards takes too long, just sample the first 4
+        # cards because that's all we need.
+        deck = get_deck()
+        for i in trange(iterations):
+            # shuffle deck
+            self.cfrplus(deck)
+        pickle.dump(self.nodes, open(SAVE_PATH, 'wb'))
 
+    def cfrplus(self, deck, bet_history=[], p0=1, p1=1):
+        """Runs an iteration of the CFR+ algorithm on Rhode Island Hold'em.
+
+        Inputs:
+            deck - A shuffled 52 card deck. In this implementation, the first
+                four deck cards are: [player1 hole, player2 hole, flop, turn]
+            bet_history - All the actions up to this point.
+            p0 - Prior probability that player 1 reaches the root node.
+            p1 - Prior probability that player 2 reaches the root node
+
+        Returns:
+            node_utility - The utility of reaching this node in the game tree.
+        """
+        player = len(bet_history) % 2
+        opponent = 1 - player
+        # Return terminal utilities if we are at a leaf node of the game tree
+        if game_is_over(bet_history):
+            return self.terminal_utility(deck, bet_history)
+
+        infoset = InfoSet(deck, bet_history)
+        if infoset not in self.nodes:
+            self.nodes[infoset] = CFRPNode(infoset)
+        node = self.nodes[infoset]
+
+        if player == 0:
+            player_weight = p0
+            opponent_weight = p1
+        else:
+            player_weight = p1
+            opponent_weight = p0
+        strategy = node.get_current_strategy(player_weight)
+        utility = np.zeros(N_ACTIONS)
+        node_utility = 0
+        for action in infoset.legal_actions():
+            next_history = bet_history + [ACTIONS[action]]
+            if player == 0:
+                utility[action] = -self.cfrplus(deck, next_history, p0*strategy[action], p1)
+            elif player == 1:
+                utility[action] = -self.cfrplus(deck, next_history, p0, p1*strategy[action])
+            node_utility += strategy[action] * utility[action]
+
+        # Accumulate counterfactual regret
+        for action in infoset.legal_actions():
+            regret = utility[action] - node_utility
+            node.add_regret(action, opponent_weight * regret)
+        return node_utility
+
+    def terminal_utility(self, deck, bet_history):
+        """Returns the utility of the current leaf node.
+
+        Inputs:
+            deck - 52 card shuffled deck
+            bet_history - List of all bets up to this point. Must either have
+                a terminal fold or be complete all the way through the turn.
+
+        Returns:
+            utility - The utility (chips) won (or lost) for the player.
+        """
+        player = len(bet_history) % 2
+        opponent = 1 - player
+        pot = pot_size(bet_history)
+        if bet_history[-1] == 'fold':
+            return pot / 2
+        else:
+            # Showdown
+            player_hand = RhodeHand(deck[player], deck[2], deck[3])
+            opponent_hand = RhodeHand(deck[opponent], deck[2], deck[3])
+            if player_hand > opponent_hand:
+                return pot / 2
+            elif player_hand < opponent_hand:
+                return -pot / 2
+            elif player_hand == opponent_hand:
+                return 0
 
 
 if __name__ == '__main__':
 
-    infoset = InfoSet(hole='8s', preflop_bets=['check'])
-    infoset = InfoSet(hole='8s', preflop_bets=['check', 'check'])
-
+    infoset = InfoSet(get_deck(), ['check', 'check', 'check', 'bet', 'call'])
+    assert(infoset.legal_actions() is not None)
+    assert(game_is_over(['check'] * 6) == True)
+    trainer = CFRPTrainer()
+    trainer.train(10)
+    print(len(trainer.nodes))
+    # infoset = InfoSet(hole='8s', bet_history=[['check']])
+    # node = CFRPNode(infoset)
+    # for i in range(1000):
+    #     node.get_current_strategy(probability=1)
+    # print(node.get_cumulative_strategy())
+    # print(node)
     # game = Game()
     # game.play()
 
