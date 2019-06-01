@@ -12,6 +12,9 @@ PLAYER, COMPUTER = range(2)
 
 nodes = pickle.load(open(SAVE_PATH, 'rb'))
 
+# TODO: Add the ante
+# TODO: Make Player 1 vs player 2 alternate human vs cpu
+
 class Game:
 
     def __init__(self):
@@ -40,10 +43,25 @@ class Game:
                 self.showdown()
             print('Your stack:', self.stacks[PLAYER])
             print("Computer's stack:", self.stacks[COMPUTER])
-            self.hand_is_over = False
+            print()
+            self.reset()
+
+    def reset(self):
+        self.hand_is_over = False
+        self.street = PREFLOP
+        self.board = []
+        self.player_folded = False
+        self.bet_history = []
+        self.pot = 0
+
+    def ante(self):
+        self.pot += 2 * ANTE
+        self.stacks[PLAYER] -= ANTE
+        self.stacks[COMPUTER] -= ANTE
 
     def advance_hand(self):
         if self.street == PREFLOP:
+            self.ante()
             self.preflop()
         elif self.street == FLOP:
             self.flop()
@@ -53,7 +71,6 @@ class Game:
 
     def preflop(self):
         np.random.shuffle(self.deck)
-        self.pot = 0
         self.player_card = self.deck[0]
         self.cpu_card = self.deck[1]
         print("Your card:", self.player_card)
@@ -84,7 +101,6 @@ class Game:
             if player == self.computer:
                 # get strategy based on information set
                 infoset = InfoSet(self.deck, self.bet_history, self.computer)
-                # pdb.set_trace()
                 node = nodes[infoset]
                 strategy = node.get_cumulative_strategy()
                 player_action = np.random.choice(ACTIONS, p=strategy)

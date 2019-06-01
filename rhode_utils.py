@@ -3,6 +3,7 @@ import numpy as np
 import pdb
 import pickle
 
+ANTE = 5
 BET_SIZES = 10, 20, 20
 INITIAL_STACK_SIZE = 1000
 STRATEGY_DELAY = 1    # How many iterations to wait before starting to keep
