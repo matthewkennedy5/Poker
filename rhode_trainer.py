@@ -2,14 +2,13 @@ import functools
 import pdb
 import pickle
 from tqdm import trange
-from rhode_island_holdem import *
 from hand_abstraction import prepare_abstraction
+from rhode_utils import *
 
 abstraction = prepare_abstraction()
 
 ### FUNCTIONS ###
 
-# START HERE: player = len(bet_history) % 2 doesn't work. Consider: check, bet, call.
 # TODO: Use parameter files!
 
 
@@ -90,6 +89,21 @@ def pot_size(bet_history):
     return pot
 
 
+def raises_this_street(bet_history):
+    """Returns the number of raises so far in the current street."""
+    n_raises = 0
+    previous_bet = None
+    for bet in bet_history:
+        if bet == 'call' or (bet == 'check' and previous_bet == 'check'):
+            n_raises = 0
+            previous_bet = None
+        else:
+            previous_bet = bet
+        if bet == 'raise':
+            n_raises += 1
+    return n_raises
+
+
 ### Classes ###
 
 
@@ -111,9 +125,12 @@ class InfoSet:
         bet_history - All of the bets up to this point in the hand.
     """
 
-    def __init__(self, deck, bet_history):
+    def __init__(self, deck, bet_history, player_hole_idx=None):
         self.bet_history = bet_history
-        player = get_player(bet_history)
+        if player_hole_idx is None:
+            player = get_player(bet_history)
+        else:
+            player = player_hole_idx
         hole = deck[player]
         flop = deck[2]
         turn = deck[3]
@@ -324,6 +341,17 @@ class CFRPTrainer:
 
 if __name__ == '__main__':
 
-    trainer = CFRPTrainer()
-    trainer.train(10000)
-    print_strategy()
+    bet_history = ['check', 'bet', 'raise', 'raise', 'call', 'check']
+    assert(raises_this_street(bet_history) == 0)
+    bet_history = ['check', 'bet', 'raise', 'raise', 'call']
+    assert(raises_this_street(bet_history) == 0)
+    bet_history = ['check', 'bet', 'raise', 'raise']
+    assert(raises_this_street(bet_history) == 2)
+
+    bet_history = ['check', 'bet', 'raise', 'raise', 'call',
+                   'check', 'bet', 'call',
+                   'check', 'raise']
+    assert(raises_this_street(bet_history) == 1)
+    # trainer = CFRPTrainer()
+    # trainer.train(1000)
+    # print_strategy()
