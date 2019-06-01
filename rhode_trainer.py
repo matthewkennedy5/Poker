@@ -341,17 +341,6 @@ class CFRPTrainer:
 
 if __name__ == '__main__':
 
-    bet_history = ['check', 'bet', 'raise', 'raise', 'call', 'check']
-    assert(raises_this_street(bet_history) == 0)
-    bet_history = ['check', 'bet', 'raise', 'raise', 'call']
-    assert(raises_this_street(bet_history) == 0)
-    bet_history = ['check', 'bet', 'raise', 'raise']
-    assert(raises_this_street(bet_history) == 2)
-
-    bet_history = ['check', 'bet', 'raise', 'raise', 'call',
-                   'check', 'bet', 'call',
-                   'check', 'raise']
-    assert(raises_this_street(bet_history) == 1)
-    # trainer = CFRPTrainer()
-    # trainer.train(1000)
-    # print_strategy()
+    trainer = CFRPTrainer()
+    trainer.train(1000)
+    print_strategy()
