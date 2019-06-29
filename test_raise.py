@@ -1,14 +1,8 @@
-from poker_utils import *
-import numpy as np
-import pdb
 import unittest
 import rhode_utils
 import rhode_trainer
 
 FOLD, CHECK, CALL, BET, RAISE = range(5)
-
-if __name__ == '__main__':
-    TestRaiseLimit.main()
 
 class TestRaiseLimit(unittest.TestCase):
     def test(self, bet_history):
@@ -44,11 +38,11 @@ class TestRaiseLimit(unittest.TestCase):
         actions = self.test(bet_history)
         assert actions == [FOLD, CALL, RAISE]
 
-    def main()
-        tester = TestRaiseLimit()
-        tester.no_raises()
-        tester.empty()
-        tester.many_raises()
-        tester.cant_raise()
-        tester.last_raise()
-        print('Raise Limit Works Properly')
+if __name__ == "__main__":
+    tester = TestRaiseLimit()
+    tester.no_raises()
+    tester.empty()
+    tester.many_raises()
+    tester.cant_raise()
+    tester.last_raise()
+    print('Raise Limit Works Properly')
