@@ -32,6 +32,13 @@ def get_player(bet_history):
 
     return street_counter % 2
 
+def get_last_player(bet_history):
+    """Return the last player to act on the turn."""
+    if get_street(bet_history)[0] < TURN:
+        raise ValueError("Street must be the turn.")
+    turn_history = get_street(bet_history)[2]
+    return len(turn_history) % 2
+
 def game_is_over(bet_history):
     """Returns True if the hand has reached a terminal state (fold or showdown)."""
     return get_street(bet_history)[1]
@@ -49,20 +56,26 @@ def get_street(bet_history):
     Returns:
         street - one of PREFLOP, FLOP, or TURN
         game_is_over - Whether the hand has reached a terminal state (fold or showdown)
+        street_bets - The bet history of the current street
     """
+    # TODO: Clean up / restructure this code, or combine with other functions
     street = PREFLOP
     previous_bet = None
+    street_bets = []
     for bet in bet_history:
+        street_bets.append(bet)
         if bet == 'fold':
-            return street, True
+            return street, True, street_bets
         if bet == 'call' or (bet == 'check' and previous_bet == 'check'):
             street += 1
             previous_bet = None
+            if street <= TURN:
+                street_bets = []
         else:
             previous_bet = bet
         if street > TURN:
-            return street, True
-    return street, False  # Reached the end of the bet history without the game being over
+            return street, True, street_bets
+    return street, False, street_bets # Reached the end of the bet history without the game being over
 
 # TODO: There's an ante that both players have to post. Add that, otherwise a Nash
 # equilibrium is just checking and folding.
@@ -282,6 +295,12 @@ class CFRPTrainer:
             return self.terminal_utility(deck, bet_history)
 
         infoset = InfoSet(deck, bet_history)
+        # pdeck = ['Ac', '2d', '7c', 'Jc']
+        # pbets = ['check', 'bet', 'raise', 'raise', 'raise', 'call', 'bet', 'call', 'check', 'bet']
+        # piset = InfoSet(pdeck, pbets, player_hole_idx=0)
+        # if piset == infoset and p1 > 0:
+        #     pdb.set_trace()
+
         if infoset not in self.nodes:
             self.nodes[infoset] = CFRPNode(infoset)
         node = self.nodes[infoset]
@@ -320,14 +339,14 @@ class CFRPTrainer:
         Returns:
             utility - The utility (chips) won (or lost) for the player.
         """
-        pdb.set_trace()
-        player = get_player(bet_history)
-        opponent = 1 - player
+        # player = get_player(bet_history)
         pot = pot_size(bet_history)
         if bet_history[-1] == 'fold':
             return pot / 2
         else:
             # Showdown
+            player = get_last_player(bet_history)
+            opponent = 1 - player
             player_hand = RhodeHand(deck[player], deck[2], deck[3])
             opponent_hand = RhodeHand(deck[opponent], deck[2], deck[3])
             if player_hand > opponent_hand:
