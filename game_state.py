@@ -34,7 +34,7 @@ class GameState:
         if (TEST_MODE):
             self.seat = 0
         elif self.num_opponents == 1:
-            # If it's a 1v1 poker match, there is nobody between you and the 
+            # If it's a 1v1 poker match, there is nobody between you and the
             # dealer.
             dealer = input('Are you the dealer [y/n]? ').lower()
             if dealer == 'y' or dealer == 'yes':
@@ -138,12 +138,13 @@ class GameState:
             result[self.player_names[i]] = 0
         return result
 
-    # // TODO: make it keep track of how much money you have 
+    # // TODO: make it keep track of how much money you have
 
     def _opponent_expected_value(self):
         # Iterate over opponent's possible hands
         # See how many beat me
         # Find optimal opponent bet given my bet
+        pass
 
 
     def _expected_value(self):
@@ -161,7 +162,7 @@ class GameState:
         chance_of_winning = self._chance_of_winning()
         for i in range(100):
             expected_opponent_bet = self._opponent_optimal_bet(my_bet)
-            
+
 
 
 
@@ -311,5 +312,5 @@ class GameState:
             return False
         return True
 
-            
+
 

@@ -9,8 +9,6 @@ abstraction = prepare_abstraction()
 
 ### FUNCTIONS ###
 
-# TODO: Use parameter files!
-
 
 def print_strategy():
     nodes = pickle.load(open(SAVE_PATH, 'rb'))
@@ -86,7 +84,7 @@ def pot_size(bet_history):
             previous_action = None
         else:
             previous_action = action
-    return pot
+    return pot + 2*ANTE
 
 
 def raises_this_street(bet_history):
@@ -322,6 +320,7 @@ class CFRPTrainer:
         Returns:
             utility - The utility (chips) won (or lost) for the player.
         """
+        pdb.set_trace()
         player = get_player(bet_history)
         opponent = 1 - player
         pot = pot_size(bet_history)
@@ -342,5 +341,5 @@ class CFRPTrainer:
 if __name__ == '__main__':
 
     trainer = CFRPTrainer()
-    trainer.train(1000)
+    trainer.train(10000)
     print_strategy()

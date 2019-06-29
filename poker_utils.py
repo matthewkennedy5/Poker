@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 
 # TODO: Prepend _ to all private methods
-
+# TODO: Use the id function for hashing
 
 class Suit(Enum):
     HEARTS = 'hearts'
@@ -98,7 +98,6 @@ class Hand:
             # NOTE: This ignores the case in which both hands have the same type
             # and rank. I think this is okay for now.
             return self.rank > hand2.rank
-                
 
     def get_type(self):
         return self.type
@@ -106,35 +105,35 @@ class Hand:
     def get_rank(self):
         return self.rank
 
-    def chance_of_winning(self, num_opponents):
-        """Returns the chance of the hand beating the specified number of opponents.
+    # def chance_of_winning(self, num_opponents):
+    #     """Returns the chance of the hand beating the specified number of opponents.
 
-        Input:
-            num_opponents - Number of other players
-        """
-        chance_against_one = 0
-        # TODO: Explain this confusing code
-        if self.type == HandType.HIGH_CARD:
-            chance_against_one = 0.038552 * (self.rank.value - 1.5)
-        elif self.type == HandType.PAIR:
-            chance_against_one = 0.501177 + 0.422569 / 13 * (self.rank.value - 1.5)
-        elif self.type == HandType.TWO_PAIR:
-            chance_against_one = 0.923746 + 0.047539 / 13 * (self.rank.value - 1.5)
-        elif self.type == HandType.THREE_OF_A_KIND:
-            chance_against_one = 0.971285 + 0.0211285 / 13 * (self.rank.value - 1.5)
-        elif self.type == HandType.FULL_HOUSE:
-            chance_against_one = 0.992414 + 0.00144058 / 13 * (self.rank.value - 1.5)
-        elif self.type == HandType.FOUR_OF_A_KIND:
-            chance_against_one = 0.993854 + 0.00024 / 13 * (self.rank.value - 1.5)
-        elif self.type == HandType.STRAIGHT:
-            chance_against_one = 0.994094 + 0.00392465 / 13 * (self.rank.value - 1.5)
-        elif self.type == HandType.FLUSH:
-            chance_against_one = 0.998019 + 0.0019654 / 13 * (self.rank.value- 1.5)
-        elif self.type == HandType.STRAIGHT_FLUSH:
-            chance_against_one = 0.999984 + 0.0000138517 / 13 * (self.rank.value  - 1.5)
-        elif self.type == HandType.ROYAL_FLUSH:
-            chance_against_one = 0.999986 + 0.00000153908 / 13 * (self.rank.value - 1.5)
-        return chance_against_one ** num_opponents
+    #     Input:
+    #         num_opponents - Number of other players
+    #     """
+    #     chance_against_one = 0
+    #     # TODO: Explain this confusing code
+    #     if self.type == HandType.HIGH_CARD:
+    #         chance_against_one = 0.038552 * (self.rank.value - 1.5)
+    #     elif self.type == HandType.PAIR:
+    #         chance_against_one = 0.501177 + 0.422569 / 13 * (self.rank.value - 1.5)
+    #     elif self.type == HandType.TWO_PAIR:
+    #         chance_against_one = 0.923746 + 0.047539 / 13 * (self.rank.value - 1.5)
+    #     elif self.type == HandType.THREE_OF_A_KIND:
+    #         chance_against_one = 0.971285 + 0.0211285 / 13 * (self.rank.value - 1.5)
+    #     elif self.type == HandType.FULL_HOUSE:
+    #         chance_against_one = 0.992414 + 0.00144058 / 13 * (self.rank.value - 1.5)
+    #     elif self.type == HandType.FOUR_OF_A_KIND:
+    #         chance_against_one = 0.993854 + 0.00024 / 13 * (self.rank.value - 1.5)
+    #     elif self.type == HandType.STRAIGHT:
+    #         chance_against_one = 0.994094 + 0.00392465 / 13 * (self.rank.value - 1.5)
+    #     elif self.type == HandType.FLUSH:
+    #         chance_against_one = 0.998019 + 0.0019654 / 13 * (self.rank.value- 1.5)
+    #     elif self.type == HandType.STRAIGHT_FLUSH:
+    #         chance_against_one = 0.999984 + 0.0000138517 / 13 * (self.rank.value  - 1.5)
+    #     elif self.type == HandType.ROYAL_FLUSH:
+    #         chance_against_one = 0.999986 + 0.00000153908 / 13 * (self.rank.value - 1.5)
+    #     return chance_against_one ** num_opponents
 
     def highest_rank(self):
         """Return the highest rank found in self.cards."""
@@ -259,7 +258,7 @@ class Hand:
 
 
 def get_deck():
-    """Returns a standard 52-card deck as a list of Card instances."""
+    """Returns a standard unshuffled 52-card deck as a list of Card instances."""
     deck = []
     for suit in Suit:
         for rank in Rank:

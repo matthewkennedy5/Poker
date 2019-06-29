@@ -103,6 +103,7 @@ class Game:
                 infoset = InfoSet(self.deck, self.bet_history, self.computer)
                 node = nodes[infoset]
                 strategy = node.get_cumulative_strategy()
+                pdb.set_trace()
                 player_action = np.random.choice(ACTIONS, p=strategy)
                 print('Computer ' + player_action + 's.')
             else:
@@ -167,8 +168,9 @@ class Game:
         else:
             allowed_actions += ['check', 'bet']
 
+        actions_string = ', '.join(allowed_actions[:-1]) + ' or ' + allowed_actions[-1] + '.'
         while True:
-            print(name + ' action: ')
+            print(actions_string[:-1] + ':')
             action = input('> ').lower()
             if action in allowed_actions:
                 return action

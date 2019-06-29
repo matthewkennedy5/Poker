@@ -13,7 +13,7 @@ HIGH_CARD, PAIR, FLUSH, STRAIGHT, THREE_OF_KIND, STRAIGHT_FLUSH = range(6)
 N_ACTIONS = 5
 ACTIONS = 'fold', 'check', 'call', 'bet', 'raise'
 FOLD, CHECK, CALL, BET, RAISE = range(5)
-SAVE_PATH = 'rhode_island_nodes.pkl'
+SAVE_PATH = 'rhode_island_nodes_.pkl'
 FLOP_CARD = 2
 TURN_CARD = 3
 MAX_RAISES = 3
@@ -21,6 +21,7 @@ MAX_RAISES = 3
 RANKS = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, 'T': 10, '9': 9, '8': 8, '7': 7,
          '6': 6, '5': 5, '4': 4, '3': 3, '2': 2}
 SUITS = ('c', 'd', 'h', 's')
+
 
 # TODO: I think the bet limit is actually 4 (max 3 raises), not 3.
 

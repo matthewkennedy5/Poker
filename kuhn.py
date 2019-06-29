@@ -2,13 +2,14 @@ import os
 import pickle
 import time
 import numpy as np
-from progressbar_utils import init_progress_bar
 import pdb
+from tqdm import trange
 
 PASS = 0
 BET = 1
 NUM_ACTIONS = 2
-SAVE_PATH = '/home/matthew/Desktop/Poker/node_map.pkl'
+SAVE_PATH = '/home/matthew/Desktop/Poker/cfr_bad_nodes.pkl'
+ITERATIONS = int(5)
 
 
 class Node:
@@ -49,21 +50,16 @@ class Trainer:
     def train(self, iterations):
         cards = [1, 2, 3]
         util = 0
-        bar = init_progress_bar(iterations)
-        bar.start()
-        for i in range(iterations):
+        for i in trange(iterations):
             np.random.shuffle(cards)
             util += self._cfr(cards, '', 1, 1)
-            bar.update(i+1)
-        bar.finish()
         pickle.dump(self.node_map, open(SAVE_PATH, 'wb'))
-
 
     def _cfr(self, cards, history, p0, p1):
         player = len(history) % 2
         opponent = 1 - player
         # Return payoff for terminal states
-        if self.terminal_utility(cards, history) != 0:
+        if game_is_over(history):
             return self.terminal_utility(cards, history)
 
         info_set = str(cards[player]) + history
@@ -112,25 +108,33 @@ class Trainer:
         is_player_card_higher = cards[player] > cards[opponent]
         if terminal_pass:
             if history == 'pp':
-                if is_player_card_higher:
+                if cards[player] > cards[opponent]:
                     return 1
+                elif cards[player] == cards[opponent]:
+                    return 0
                 else:
                     return -1
             else:
                 return 1
         elif double_bet:
-            if is_player_card_higher:
+            if cards[player] > cards[opponent]:
                 return 2
+            elif cards[player] == cards[opponent]:
+                return 0
             else:
                 return -2
         else:
             return 0    # no winner or loser yet
 
 
+def game_is_over(history):
+    return len(history) >= 2 and (history[-2:] == 'bb'or history[-1] == 'p')
+
+
 class Game:
 
     def __init__(self):
-        self.cards = [1,2, 3]
+        self.cards = [1, 2, 3]
         self.history = ''
         self.computer = 1
         self.human = 0
@@ -146,10 +150,10 @@ class Game:
             np.random.shuffle(self.cards)
             print()
             print('Your card is: %d' % self.cards[self.human])
-            while not self.game_is_over():
-                time.sleep(1)
+            while not game_is_over(self.history):
+                # time.sleep(1)
                 self.play_turn()
-            time.sleep(1)
+            # time.sleep(1)
             print('CPU card: %d' % self.cards[self.computer])
             self.update_score()
             print('Score: %d' % self.score)
@@ -160,9 +164,6 @@ class Game:
         if len(self.history) % 2 == self.computer:
             util = -util
         self.score += util
-
-    def game_is_over(self):
-        return Trainer.terminal_utility(self.cards, self.history) != 0
 
     def input_move(self):
         while True:
@@ -187,21 +188,18 @@ class Game:
                 self.history += 'b'
 
 
+def print_strategy():
+    node_map = pickle.load(open(SAVE_PATH, 'rb'))
+    for node in sorted(node_map):
+        print(node_map[node])
+
 if __name__ == '__main__':
     from kuhn import Node, Trainer
-    if not os.path.isfile(SAVE_PATH):
-        print('[INFO] Starting training...')
-        trainer = Trainer()
-        trainer.train(int(1e6))
+    # if not os.path.isfile(SAVE_PATH):
+    print('[INFO] Starting training...')
+    trainer = Trainer()
+    trainer.train(ITERATIONS)
+    print_strategy()
 
-    game = Game()
-    game.play()
-
-
-
-
-
-
-
-
-
+    # game = Game()
+    # game.play()

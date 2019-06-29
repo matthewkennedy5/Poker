@@ -6,16 +6,16 @@ from scipy import stats
 from tqdm import tqdm, trange
 import pickle
 import pprint
-from rhode_island_holdem import *
+from rhode_utils import *
 
 N_PREFLOP_BUCKETS = 13
-N_FLOP_BUCKETS = 10
-N_TURN_BUCKETS = 50
+N_FLOP_BUCKETS = 100
+N_TURN_BUCKETS = 500
 EQUITY_SAVE_NAME = 'rhode_flop_equities.pkl'
 FLOP_SAVE_NAME = 'rhode_flop_abstraction.pkl'
 TURN_SAVE_NAME = 'rhode_turn_abstraction.pkl'
 N_EQUITY_BINS = 50  # How many bins to divide the equity histogram into
-ITERATIONS = 100    # How many iterations of k-means clustering to run
+ITERATIONS = 1000    # How many iterations of k-means clustering to run
 
 # TODO: Run k-means clustering on the Earth Mover's Distances.
 
@@ -356,7 +356,7 @@ def print_abstraction():
             print('flop')
         elif i == N_FLOP_BUCKETS + N_PREFLOP_BUCKETS:
             print('turn')
-        print('Bin', i, b[:10])
+        print('Bin', i, b)
 
 
 

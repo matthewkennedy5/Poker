@@ -13,3 +13,8 @@ print(np.sum(trainer.get_average_strategy()))
 strat = trainer.get_average_strategy()
 for i, a in enumerate(ACTIONS):
     print('%s: %f' % (a, strat[i]))
+
+print()
+opp_strat = trainer.get_average_strategy()
+for i, a in enumerate(ACTIONS):
+    print('%s: %f' % (a, opp_strat[i]))
