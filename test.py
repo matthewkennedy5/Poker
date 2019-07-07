@@ -47,7 +47,39 @@ class TestRaiseLimit(unittest.TestCase):
 
 class TestTexasHands(unittest.TestCase):
 
-    def test(self):
+    def test_classification(self):
+        royal_flush = TexasHand(('As', 'Js', 'Ks', 'Qs', '10s'))
+        straight_flush = TexasHand(('7d', '8d', 'Jd', '9d', '10d'))
+        four = TexasHand(('2h', '2c', '7d', '2d', '2s'))
+        full_house = TexasHand(('As', 'Jd', 'Jc', 'Ac', 'Ah'))
+        flush = TexasHand(('Jh', '2h', '3h', '7h', '9h'))
+        straight = TexasHand(('Ah', '2s', '3d', '5c', '4c'))
+        trips = TexasHand(('5d', '4c', '6d', '6h', '6c'))
+        two_pair = TexasHand(('6d', '5c', '5h', 'Ah', 'Ac'))
+        pair = TexasHand(('Ah', '2d', '2s', '3c', '5c'))
+        high_card = TexasHand('Kh', 'Ah', 'Qh', '2h', '3s')
+        self.assertEqual(royal_flush.type, ROYAL_FLUSH)
+        self.assertEqual(royal_flush.type, ROYAL_FLUSH)
+        self.assertEqual(royal_flush.type, ROYAL_FLUSH)
+        self.assertEqual(royal_flush.type, ROYAL_FLUSH)
+        self.assertEqual(royal_flush.type, ROYAL_FLUSH)
+        self.assertEqual(royal_flush.type, ROYAL_FLUSH)
+        self.assertEqual(royal_flush.type, ROYAL_FLUSH)
+        self.assertEqual(royal_flush.type, ROYAL_FLUSH)
+        self.assertEqual(royal_flush.type, ROYAL_FLUSH)
+        self.assertEqual(royal_flush.type, ROYAL_FLUSH)
+
+    def test_six_cards(self):
+        pass
+
+    def test_seven_cards(self):
+        pass
+
+    # Should raise a value error when incorrect cards are provided.
+    def test_errors(self):
+        pass
+
+    def test_comparisons(self):
         pass
 
 
