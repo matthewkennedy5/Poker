@@ -19,44 +19,6 @@ def get_deck():
     return [rank + suit for suit in SUITS for rank in RANKS]
 
 
-# TODO: Do we even really need this card class?
-@functools.total_ordering
-class Card:
-    """Class for representing a card using the format '8c', 'Th', etc.
-    Example:
-    card = Card('9d')
-    card2 = Card('Th')
-    card2 > card1 == True
-    Attributes:
-        self.suit - The suit of the card, represented by 'h', 'c', etc.
-        self.rank - The rank of the card, given as an integer, so 'A' -> 14
-    Input:
-        card_str - Input string in the standard card format '2d', 'Jh', etc.
-    Throws:
-        ArgumentError if the input string is not in the correct format.
-    """
-
-    def __init__(self, card_str):
-        if card_str[0] not in RANKS or card_str[1] not in SUITS:
-            raise ValueError('card_str must be in the format like "Kc", "4h"')
-        self.card_str = card_str
-        self.rank = RANKS[self.card_str[0]]
-        self.suit = self.card_str[1]
-
-    def __eq__(self, other):
-        return self.card_str[0] == other.card_str[0]
-
-    def __lt__(self, other):
-        return self.rank < other.rank
-
-    def __hash__(self):
-        # Simple hash function--return the memory address of the object.
-        return id(self)
-
-    def __str__(self):
-        return self.card_str
-
-
 @functools.total_ordering
 class TexasHand:
     """Represents a standard 5-card Texas Hold'em hand."""
@@ -78,7 +40,7 @@ class TexasHand:
         self.classify()
 
     def classify(self):
-        """Sets the self.type and self.rank variables to the hand type and rank."""
+        """Identifies which type of poker hand this is."""
         if len(self.cards) > 5:
             best_subhand = None
             for five_cards in itertools.combinations(self.cards, 5):
@@ -86,9 +48,7 @@ class TexasHand:
                 if hand > best_subhand:
                     best_subhand = hand
             self.type = best_subhand.type
-            self.rank = best_subhand.rank
         else:
-            self.rank = self.max_rank()
             if self.is_royal_flush():
                 self.type = ROYAL_FLUSH
             elif self.is_straight_flush():
@@ -108,6 +68,10 @@ class TexasHand:
             else:
                 self.type = HIGH_CARD
 
+    def is_royal_flush(self):
+        if self.is_straight_flush() and self.has_rank('A')
+
+
     def __lt__(self, other):
         if self.type < other.type:
             return True
@@ -116,7 +80,7 @@ class TexasHand:
         elif self.type == other.type:
             # TODO: Comparing ranks won't work for two pair when the second pairs
             # differ but the top pair is the same. Use every rank in turn to compare.
-            return self.rank < other.rank
+            return self.compare_ranks(other)
 
     def __eq__(self, other):
         raise NotImplementedError
