@@ -53,7 +53,7 @@ class TestTexasHands(unittest.TestCase):
     def test_seven_cards(self):
         royal_flush = TexasHand(('Jd', 'As', 'Js', 'Ks', 'Qs', 'Ts', '2c'))
         straight_flush = TexasHand(('7d', '2c', '8d', 'Jd', '9d', '3d', 'Td'))
-        four = TexasHand(('2h', '2c', '3d', '5c,' '7d', '2d', '2s'))
+        four = TexasHand(('2h', '2c', '3d', '5c', '7d', '2d', '2s'))
         full_house = TexasHand(('As', 'Jd', 'Qs', 'Jc', '2c', 'Ac', 'Ah'))
         flush = TexasHand(('Jh', '2c', '2h', '3h', '7h', 'Ts', '9h'))
         straight = TexasHand(('2c', 'Ah', '2s', '3d', '5c', '4c', 'Td'))
@@ -85,9 +85,10 @@ class TestTexasHands(unittest.TestCase):
         self.assertRaises(ValueError, TexasHand(('7c', '7c', '7h', '7d', '7s')))
 
     def test_comparisons(self):
+        # TODO: Write more tricky hand comparison tests to make sure it really works.
         royal_flush = TexasHand(('Jd', 'As', 'Js', 'Ks', 'Qs', 'Ts', '2c'))
         straight_flush = TexasHand(('7d', '2c', '8d', 'Jd', '9d', '3d', 'Td'))
-        four = TexasHand(('2h', '2c', '3d', '5c,' '7d', '2d', '2s'))
+        four = TexasHand(('2h', '2c', '3d', '5c', '7d', '2d', '2s'))
         full_house = TexasHand(('As', 'Jd', 'Qs', 'Jc', '2c', 'Ac', 'Ah'))
         same_full_house = TexasHand(('As', 'Js', '2s', 'Jc', '2c', 'Ac', 'Ah'))
         flush = TexasHand(('Jh', '2c', '2h', '3h', '7h', 'As', '9h'))
