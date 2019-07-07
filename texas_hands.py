@@ -55,6 +55,10 @@ class TexasHand:
                 raise TypeError('Cards must be strings in the format "5d"')
             if len(card) != 2 or card[0] not in RANKS or card[1] not in SUITS:
                 raise ValueError('Invalid card string: ' + card)
+        # Test for duplicate cards
+        _, counts = np.unique(cards, return_counts=True)
+        if np.max(counts) != 1:
+            raise ValueError('Hand contains duplicate cards')
 
     def classify(self):
         """Identifies which type of poker hand this is."""
