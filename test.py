@@ -48,8 +48,8 @@ class TestRaiseLimit(unittest.TestCase):
 class TestTexasHands(unittest.TestCase):
 
     def test_classification(self):
-        royal_flush = TexasHand(('As', 'Js', 'Ks', 'Qs', '10s'))
-        straight_flush = TexasHand(('7d', '8d', 'Jd', '9d', '10d'))
+        royal_flush = TexasHand(('As', 'Js', 'Ks', 'Qs', 'Ts'))
+        straight_flush = TexasHand(('7d', '8d', 'Jd', '9d', 'Td'))
         four = TexasHand(('2h', '2c', '7d', '2d', '2s'))
         full_house = TexasHand(('As', 'Jd', 'Jc', 'Ac', 'Ah'))
         flush = TexasHand(('Jh', '2h', '3h', '7h', '9h'))
@@ -70,8 +70,8 @@ class TestTexasHands(unittest.TestCase):
         self.assertEqual(royal_flush.type, ROYAL_FLUSH)
 
     def test_six_cards(self):
-        royal_flush = TexasHand(('Jd', 'As', 'Js', 'Ks', 'Qs', '10s'))
-        straight_flush = TexasHand(('7d', '2c', '8d', 'Jd', '9d', '10d'))
+        royal_flush = TexasHand(('Jd', 'As', 'Js', 'Ks', 'Qs', 'Ts'))
+        straight_flush = TexasHand(('7d', '2c', '8d', 'Jd', '9d', 'Td'))
         four = TexasHand(('2h', '2c', '3d', '7d', '2d', '2s'))
         full_house = TexasHand(('As', 'Jd', 'Jc', '2c', 'Ac', 'Ah'))
         flush = TexasHand(('Jh', '2h', '3h', '7h', 'Ts', '9h'))
@@ -93,8 +93,8 @@ class TestTexasHands(unittest.TestCase):
 
 
     def test_seven_cards(self):
-        royal_flush = TexasHand(('Jd', 'As', 'Js', 'Ks', 'Qs', '10s', '2c'))
-        straight_flush = TexasHand(('7d', '2c', '8d', 'Jd', '9d', '3d', '10d'))
+        royal_flush = TexasHand(('Jd', 'As', 'Js', 'Ks', 'Qs', 'Ts', '2c'))
+        straight_flush = TexasHand(('7d', '2c', '8d', 'Jd', '9d', '3d', 'Td'))
         four = TexasHand(('2h', '2c', '3d', '5c,' '7d', '2d', '2s'))
         full_house = TexasHand(('As', 'Jd', 'Qs', 'Jc', '2c', 'Ac', 'Ah'))
         flush = TexasHand(('Jh', '2c', '2h', '3h', '7h', 'Ts', '9h'))
@@ -118,7 +118,7 @@ class TestTexasHands(unittest.TestCase):
     def test_errors(self):
         # Invalid card strings
         self.assertRaises(ValueError, TexasHand(('blah', 'nope', '3h', 'foobar', '7d')))
-        self.assertRaises(ValueError, TexasHand(('Td', 'Th', 'Tc', '10s', '9d', '4h')))
+        self.assertRaises(ValueError, TexasHand(('Td', 'Th', 'Tc', 'Ts', '9d', '4h')))
         # Too many cards
         self.assertRaises(ValueError, TexasHand(('Td', 'Th', 'Tc', '9c', '3h', 'Ts', '9d', '4h')))
         # Too few cards
@@ -127,8 +127,8 @@ class TestTexasHands(unittest.TestCase):
         self.assertRaises(ValueError, TexasHand(('7c', '7c', '7h', '7d', '7s')))
 
     def test_comparisons(self):
-        royal_flush = TexasHand(('Jd', 'As', 'Js', 'Ks', 'Qs', '10s', '2c'))
-        straight_flush = TexasHand(('7d', '2c', '8d', 'Jd', '9d', '3d', '10d'))
+        royal_flush = TexasHand(('Jd', 'As', 'Js', 'Ks', 'Qs', 'Ts', '2c'))
+        straight_flush = TexasHand(('7d', '2c', '8d', 'Jd', '9d', '3d', 'Td'))
         four = TexasHand(('2h', '2c', '3d', '5c,' '7d', '2d', '2s'))
         full_house = TexasHand(('As', 'Jd', 'Qs', 'Jc', '2c', 'Ac', 'Ah'))
         same_full_house = TexasHand(('As', 'Js', '2s', 'Jc', '2c', 'Ac', 'Ah'))
