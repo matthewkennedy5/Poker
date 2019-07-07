@@ -88,6 +88,9 @@ class TestTexasHands(unittest.TestCase):
         # Duplicate cards
         with self.assertRaises(ValueError):
             TexasHand(('7c', '7c', '7h', '7d', '7s'))
+        # Non-string in list
+        with self.assertRaises(TypeError):
+            TexasHand((1, 2, 3, 4, 5))
 
     def test_comparisons(self):
         # TODO: Write more tricky hand comparison tests to make sure it really works.
