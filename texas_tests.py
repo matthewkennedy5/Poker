@@ -75,14 +75,19 @@ class TestTexasHands(unittest.TestCase):
     # Should raise a value error when incorrect cards are provided.
     def test_errors(self):
         # Invalid card strings
-        self.assertRaises(ValueError, TexasHand(('blah', 'nope', '3h', 'foobar', '7d')))
-        self.assertRaises(ValueError, TexasHand(('Td', 'Th', 'Tc', 'Ts', '9d', '4h')))
+        with self.assertRaises(ValueError):
+            TexasHand(('blah', 'nope', '3h', 'foobar', '7d'))
+        with self.assertRaises(ValueError):
+            TexasHand(('Td', 'Th', 'Tc', '10s', '9d', '4h'))
         # Too many cards
-        self.assertRaises(ValueError, TexasHand(('Td', 'Th', 'Tc', '9c', '3h', 'Ts', '9d', '4h')))
+        with self.assertRaises(ValueError):
+            TexasHand(('Td', 'Th', 'Tc', '9c', '3h', 'Ts', '9d', '4h'))
         # Too few cards
-        self.assertRaises(ValueError, TexasHand(('7c', '7h', '7d', '7s')))
+        with self.assertRaises(ValueError):
+            TexasHand(('7c', '7h', '7d', '7s'))
         # Duplicate cards
-        self.assertRaises(ValueError, TexasHand(('7c', '7c', '7h', '7d', '7s')))
+        with self.assertRaises(ValueError):
+            TexasHand(('7c', '7c', '7h', '7d', '7s'))
 
     def test_comparisons(self):
         # TODO: Write more tricky hand comparison tests to make sure it really works.
