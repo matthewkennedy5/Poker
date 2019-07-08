@@ -1,6 +1,7 @@
 """Module for representing and comparing Texas Hold'em hands and abstractions."""
 
-import numpy
+import os
+import abc
 import itertools
 import functools
 import pickle
@@ -13,6 +14,8 @@ import numpy as np
 RANKS = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, 'T': 10, '9': 9, '8': 8, '7': 7,
          '6': 6, '5': 5, '4': 4, '3': 3, '2': 2}
 SUITS = ('c', 'd', 'h', 's')
+
+FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
 
 
 def get_deck():
@@ -214,3 +217,98 @@ class TexasHand:
 # TODO: Use lookup tables to speed up hand classification and comparison. Each
 # hand could correspond to a strength integer (like 1453)
 
+########### Hand abstraction methods #######################
+
+########### Code modified from hand_abstraction.py ###########
+
+
+def print_abstraction():
+    print(PreflopAbstraction())
+    print(FlopAbstraction())
+    print(TurnAbstraction())
+    print(RiverAbstraction())
+
+
+
+class CardAbstraction(abc.ABC):
+    """Abstract base class for preflop, flop, turn, and river card abstractions.
+
+    These classes handle the mapping of hands to integer bucket ID numbers. This
+    can get too dicey for a dict alone because the order of cards matters sometimes.
+    For example, if you have pocket aces, that's very different from there being
+    two aces on the board. However, the order of the flop doesn't matter.
+    """
+    @abc.abstractmethod
+    def __init__(self):
+        self.table = {}
+
+    @abc.abstractmethod
+    def __getitem__(self, cards):
+        pass
+
+    @abc.abstractmethod
+    def __str__(self):
+        pass
+
+
+class PreflopAbstraction(CardAbstraction):
+    """For the preflop, just use the 169 unique two-card combos. This is essentially
+    a hash function for logically unique preflop hands.
+    """
+    def __init__(self):
+        self.table = {}
+        self.compute_abstraction()
+
+    def compute_abstraction(self):
+        """Make a unique index for each logically different preflop hand."""
+        for hand in itertools.combinations(get_deck(), 2):
+            hand = sorted(hand)
+            # -2 maps from 2-14 to 0-12. This is kind of like a hash function that
+            # gives a unique integer for every logically unique preflop hand.
+            first_card = RANKS[hand[0][0]] - 2
+            second_card = RANKS[hand[1][0]] - 2
+            suited = hand[0][1] == hand[1][1]
+            index = 2 * (first_card * len(RANKS) + second_card)
+            if suited:
+                index += 1
+            self.table[frozenset(hand)] = index
+
+    def __getitem__(self, cards):
+        return self.table[frozenset(cards)]
+
+    def __str__(self):
+        """Prints the groupings of hands together."""
+        result = ''
+        for bucket in sorted(self.table.values()):
+            result += str(bucket) + ': '
+            for hand in self.table:
+                if self.table[hand] == bucket:
+                    result += str(tuple(hand)) + ' '
+            result += '\n'
+        return result
+
+
+class FlopAbstraction(CardAbstraction):
+    """Finds similar flop hands and groups them together.
+
+    Similarity is based on the Earth Movers Distance of the hands' equity
+    distributions, and clustering is performed using k_means clustering.
+    """
+
+    def __init__(self, cards):
+        self.table = {}
+        self.compute_abstraction()
+
+    def compute_abstraction(self):
+        if os.path.isfile(FLOP_SAVE_NAME):
+            return pickle.load(open())
+
+    def __getitem__(self, cards):
+        pass
+
+    def __str__(self):
+        return 'nope'
+
+
+if __name__ == '__main__':
+    print_abstraction()
