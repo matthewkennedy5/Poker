@@ -9,13 +9,13 @@ import pprint
 from rhode_utils import *
 
 N_PREFLOP_BUCKETS = 13
-N_FLOP_BUCKETS = 100
-N_TURN_BUCKETS = 500
+N_FLOP_BUCKETS = 10
+N_TURN_BUCKETS = 50
 EQUITY_SAVE_NAME = 'rhode_flop_equities.pkl'
 FLOP_SAVE_NAME = 'rhode_flop_abstraction.pkl'
 TURN_SAVE_NAME = 'rhode_turn_abstraction.pkl'
 N_EQUITY_BINS = 50  # How many bins to divide the equity histogram into
-ITERATIONS = 1000    # How many iterations of k-means clustering to run
+ITERATIONS = 100    # How many iterations of k-means clustering to run
 
 # TODO: Run k-means clustering on the Earth Mover's Distances.
 

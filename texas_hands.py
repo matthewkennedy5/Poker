@@ -3,10 +3,13 @@
 import os
 import abc
 import itertools
+from itertools import product, permutations, combinations
+import math
 import functools
 import pickle
 import pdb
 import numpy as np
+from tqdm import tqdm
 
 (HIGH_CARD, PAIR, TWO_PAIR, THREE_OF_A_KIND, STRAIGHT, FLUSH, FULL_HOUSE,
  FOUR_OF_A_KIND, STRAIGHT_FLUSH, ROYAL_FLUSH) = range(10)
@@ -21,6 +24,15 @@ FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
 def get_deck():
     """Returns the standard 52-card deck, represented as a list of strings."""
     return [rank + suit for suit in SUITS for rank in RANKS]
+
+
+def shuffled_deck():
+    """Generator for a shuffled 52-card deck."""
+    deck = get_deck()
+    np.random.shuffle(deck)
+    for card in deck:
+        yield card
+
 
 
 @functools.total_ordering
@@ -229,6 +241,14 @@ def print_abstraction():
     print(RiverAbstraction())
 
 
+def duplicate_cards(cards):
+    """Returns True if cards are repeated.
+
+    Input:
+        cards - tuple/list of cards in the standard 'Ad' format
+    """
+    return len(np.unique(cards)) == len(cards)
+
 
 class CardAbstraction(abc.ABC):
     """Abstract base class for preflop, flop, turn, and river card abstractions.
@@ -294,14 +314,45 @@ class FlopAbstraction(CardAbstraction):
     Similarity is based on the Earth Movers Distance of the hands' equity
     distributions, and clustering is performed using k_means clustering.
     """
-
-    def __init__(self, cards):
+    def __init__(self, n_buckets=100):
         self.table = {}
+        self.n_buckets = n_buckets
         self.compute_abstraction()
 
     def compute_abstraction(self):
+        """Clusters all possible flop hands into groups."""
         if os.path.isfile(FLOP_SAVE_NAME):
-            return pickle.load(open())
+            return pickle.load(open(FLOP_SAVE_NAME, 'rb'))
+
+        import sys
+        equity_distribution = {}
+        # TODO: Don't iterate over unused permutations if it's too slow.
+        deck = get_deck()
+        with tqdm(range(29304600)) as t:   # 52C2 * 52C3
+            for preflop, flop in product(combinations(deck, 2), combinations(deck, 3)):
+                # Hands are registered as tuples of frozensets to preserve order
+                # only when it matters.
+                hand = (frozenset(preflop), frozenset(flop))
+                if hand not in equity_distribution:
+                    equity_distribution[hand] = self.get_equity_distribution(hand)
+                t.update()
+
+        self.cluster(equity_distributions, n_buckets=n_buckets)
+
+    def get_equity_distribution(self, hand):
+        """Returns the equity histogram distribution for the given hand.
+
+        Equity is the chance of winning plus 1/2 the chance of tying.
+
+        Inputs:
+            hand - tuple of (frozenset, frozenset) where the first frozenset is
+                the preflop cards and the second is the flop cards.
+        """
+        preflop, flop = hand
+        for opponent_preflop in zip(shuffled_deck(), shuffled_deck()):
+            pass
+
+
 
     def __getitem__(self, cards):
         pass
@@ -312,3 +363,4 @@ class FlopAbstraction(CardAbstraction):
 
 if __name__ == '__main__':
     print_abstraction()
+

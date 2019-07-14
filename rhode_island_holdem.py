@@ -103,7 +103,6 @@ class Game:
                 infoset = InfoSet(self.deck, self.bet_history, self.computer)
                 node = nodes[infoset]
                 strategy = node.get_cumulative_strategy()
-                pdb.set_trace()
                 player_action = np.random.choice(ACTIONS, p=strategy)
                 print('Computer ' + player_action + 's.')
             else:

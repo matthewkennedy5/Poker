@@ -360,5 +360,5 @@ class CFRPTrainer:
 if __name__ == '__main__':
 
     trainer = CFRPTrainer()
-    trainer.train(10000)
+    trainer.train(100000)
     print_strategy()
