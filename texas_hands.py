@@ -349,18 +349,16 @@ class FlopAbstraction(CardAbstraction):
         if os.path.isfile(FLOP_SAVE_NAME):
             return pickle.load(open(FLOP_SAVE_NAME, 'rb'))
 
-        import sys
         equity_distribution = {}
         # TODO: Don't iterate over unused permutations if it's too slow.
         deck = get_deck()
-        with tqdm(range(29304600)) as t:   # 52C2 * 52C3
-            for preflop, flop in product(combinations(deck, 2), combinations(deck, 3)):
-                # Hands are registered as tuples of frozensets to preserve order
-                # only when it matters.
-                hand = (frozenset(preflop), frozenset(flop))
+        with tqdm(range(2598960)) as t:   # 52C2 * 52C3
+            for hand in combinations(deck, 5):
+                hand = archetypal_hand(hand)
                 if hand not in equity_distribution:
                     equity_distribution[hand] = self.get_equity_distribution(hand)
                 t.update()
+        pdb.set_trace()
 
         self.cluster(equity_distributions, n_buckets=n_buckets)
 
@@ -373,9 +371,10 @@ class FlopAbstraction(CardAbstraction):
             hand - tuple of (frozenset, frozenset) where the first frozenset is
                 the preflop cards and the second is the flop cards.
         """
-        preflop, flop = hand
-        for opponent_preflop in zip(shuffled_deck(), shuffled_deck()):
-            pass
+        # preflop, flop = hand
+        # for opponent_preflop in zip(shuffled_deck(), shuffled_deck()):
+        #     pass
+        return 0
 
 
 
