@@ -250,6 +250,31 @@ def duplicate_cards(cards):
     return len(np.unique(cards)) == len(cards)
 
 
+def rank(card):
+    return card[0]
+
+
+def suit(card):
+    return card[1]
+
+
+def archetypal_hand(hand):
+    """Returns 'archetypal' hand isomorphic to input hand."""
+    hand = sorted(hand[:2]) + sorted(hand[2:])
+    suits= ['s', 'h', 'd', 'c']
+    suit_mapping = {}
+    for i in range(len(hand)):
+        card = hand[i]
+        if suit(card) in suit_mapping:
+            archetypal_card = rank(card) + suit_mapping[suit(card)]
+            hand[i] = archetypal_card
+        else:
+            suit_mapping[suit(card)] = suits.pop(0)
+            archetypal_card = rank(card) + suit_mapping[suit(card)]
+            hand[i] = archetypal_card
+    return tuple(hand)
+
+
 class CardAbstraction(abc.ABC):
     """Abstract base class for preflop, flop, turn, and river card abstractions.
 
@@ -338,29 +363,6 @@ class FlopAbstraction(CardAbstraction):
                 t.update()
 
         self.cluster(equity_distributions, n_buckets=n_buckets)
-
-    def archetypal_hand(hand):
-        """Returns 'archetypal' hand isomorphic to input hand."""
-        hand[0:2] = sort(hand[0:2])
-        hand[2:] = sort(hand[2:])
-
-        def rank(card):
-            return card[0]
-        def suit(card):
-            return card[1]
-
-        suits= ['s', 'h', 'd', 'c']
-        suit_mapping = {}
-        for i in range(len(hand)):
-            card = hand[i]
-            if suit(card) in suit_mapping:
-                archetypal_card = suit(card) + suit_mapping[rank(card)]
-                hand[i] = archetypal_card
-            else:
-                suit_mapping[suit(card)] = suits_reverse_order.pop(0)
-                archetypal_card = suit(card) + suit_mapping[rank(card)]
-                hand[i] = archetypal_card
-        return hand
 
     def get_equity_distribution(self, hand):
         """Returns the equity histogram distribution for the given hand.
