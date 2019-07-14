@@ -162,6 +162,9 @@ class TestCardAbstractions(unittest.TestCase):
         hand = ('7c', 'Ah', '9c', '10s', '5h')
         truth = ('7s', 'Ah', '5s', '9d', '10h')
         self.assertEqual(archetypal_hand(hand), truth)
+        hand1 = ('5s', '5h', '2c', '6d', '6c')
+        hand2 = ('5s', '5h', '2d', '6c', '6d')
+        self.assertEqual(archetypal_hand(hand1), archetypal_hand(hand2))
 
 
 
