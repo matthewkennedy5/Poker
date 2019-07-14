@@ -1,6 +1,7 @@
 """Unit tests for the Texas Holdem implementation."""
 
 import unittest
+from matplotlib import pyplot as plt
 from texas_hands import *
 
 class TestTexasHands(unittest.TestCase):
@@ -130,6 +131,20 @@ class TestTexasHands(unittest.TestCase):
         self.assertEqual(same_full_house, full_house)
         self.assertEqual(other_high_card, high_card)
         self.assertEqual(same_flush, flush)
+
+
+class TestCardAbstractions(unittest.TestCase):
+
+    def test_preflop_abstractions(self):
+        abst = PreflopAbstraction()
+        self.assertEqual(len(abst.table), 1326)
+        buckets = tuple(abst.table.values())
+        n_buckets = len(np.unique(buckets))
+        self.assertEqual(n_buckets, 169)
+        self.assertEqual(abst[('Ac', 'Ad')], 336)
+
+    def test_flop_abstractions(self):
+        pass
 
 
 if __name__ == '__main__':
