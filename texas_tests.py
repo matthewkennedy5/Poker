@@ -149,10 +149,20 @@ class TestCardAbstractions(unittest.TestCase):
     def test_archetypes(self):
         hand = ('6h', '8c', 'Td', 'Jd', 'Ah')
         truth = ('6s', '8h', 'Td', 'Jd', 'As')
-        self.assertEqual(archetype_hand(hand), truth)
+        self.assertEqual(archetypal_hand(hand), truth)
         hand = ('2d', '7c', '2c', 'As', 'Ah')
         truth = ('2s', '7h', '2h', 'Ad', 'Ac')
-        self.assertEqual(archetype_hand(hand), truth)
+        self.assertEqual(archetypal_hand(hand), truth)
+        hand = ('Jc', 'Ad', 'Ts', '2c', 'Js')
+        truth = ('Js', 'Ah', '2s', 'Td', 'Jd')
+        self.assertEqual(archetypal_hand(hand), truth)
+        hand = ('5s', '5d', '2h', '6d', '6c')
+        truth = ('5s', '5h', '2d', '6h', '6c')
+        self.assertEqual(archetypal_hand(hand), truth)
+        hand = ('7c', 'Ah', '9c', '10s', '5h')
+        truth = ('7s', 'Ah', '5s', '9d', '10h')
+        self.assertEqual(archetypal_hand(hand), truth)
+
 
 
 if __name__ == '__main__':
