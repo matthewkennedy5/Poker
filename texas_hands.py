@@ -272,7 +272,7 @@ def archetypal_hand(hand):
             suit_mapping[suit(card)] = suits.pop(0)
             archetypal_card = rank(card) + suit_mapping[suit(card)]
             hand[i] = archetypal_card
-    return tuple(hand)
+    return tuple(sorted(hand[:2]) + sorted(hand[2:]))
 
 
 class CardAbstraction(abc.ABC):
