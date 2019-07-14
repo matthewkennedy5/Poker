@@ -157,7 +157,7 @@ class InfoSet:
             return [CHECK, BET]
         if self.bet_history[-1] == 'bet' or self.bet_history[-1] == 'raise':
             # START HERE: Only limit raises for the current street, not the whole hand.
-            if self.bet_history.count('raise') >= MAX_RAISES:
+            if raises_this_street(self.bet_history) >= MAX_RAISES:
                 return [FOLD, CALL]
             else:
                 return [FOLD, CALL, RAISE]
