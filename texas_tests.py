@@ -146,6 +146,14 @@ class TestCardAbstractions(unittest.TestCase):
     def test_flop_abstractions(self):
         pass
 
+    def test_archetypes(self):
+        hand = ('6h', '8c', 'Td', 'Jd', 'Ah')
+        truth = ('6s', '8h', 'Td', 'Jd', 'As')
+        self.assertEqual(archetype_hand(hand), truth)
+        hand = ('2d', '7c', '2c', 'As', 'Ah')
+        truth = ('2s', '7h', '2h', 'Ad', 'Ac')
+        self.assertEqual(archetype_hand(hand), truth)
+
 
 if __name__ == '__main__':
     unittest.main()
