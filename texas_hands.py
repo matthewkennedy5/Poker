@@ -19,6 +19,7 @@ RANKS = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, 'T': 10, '9': 9, '8': 8, '7': 7,
 SUITS = ('c', 'd', 'h', 's')
 
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
+N_EQUITY_BINS = 50
 
 
 def get_deck():
@@ -275,6 +276,62 @@ def archetypal_hand(hand):
     return tuple(sorted(hand[:2]) + sorted(hand[2:]))
 
 
+def flop_gen():
+    deck = get_deck()
+    for preflop, flop in product(combinations(deck, 2), combinations(deck, 3)):
+        hand = preflop + flop
+        if len(np.unique(hand)) == len(hand):
+            yield hand
+
+
+def turn_gen():
+    pass
+
+
+def river_gen():
+    pass
+
+
+def get_equity_distribution(preflop, flop, turn=None):
+    hand = preflop
+    remaining_cards = 5
+    if flop is not None:
+        hand += flop
+        remaining_cards = 2
+    if turn is not None:
+        hand += turn
+        remaining_cards = 1
+    deck = get_deck()
+    np.random.shuffle(deck)
+    for card in hand:
+        deck.remove(card)
+
+    equity_distribution = np.zeros(N_EQUITY_BINS)
+    for opponent_preflop in combinations(deck, 2):
+        n_wins = 0
+        n_games = 0
+        for remaining in permutations(deck, remaining_cards):
+            if opponent_preflop[0] in remaining or opponent_preflop[1] in remaining:
+                continue
+
+            river = remaining[-1]
+            turn = remaining[-2]
+            player_hand = TexasHand(hand + remaining)
+            opponent_hand = TexasHand(opponent_preflop + flop + (turn, river))
+            if player_hand > opponent_hand:
+                n_wins += 1
+            elif player_hand == opponent_hand:
+                n_wins += 0.5
+            n_games += 1
+
+        print(n_games)
+        pdb.set_trace()
+        equity = n_wins / n_games
+        bucket = int(equity // (1 / N_EQUITY_BINS))
+        equity_distribution[bucket] += 1
+    return equity_distribution
+
+
 class CardAbstraction(abc.ABC):
     """Abstract base class for preflop, flop, turn, and river card abstractions.
 
@@ -350,31 +407,19 @@ class FlopAbstraction(CardAbstraction):
             return pickle.load(open(FLOP_SAVE_NAME, 'rb'))
 
         equity_distribution = {}
-        # TODO: Don't iterate over unused permutations if it's too slow.
         deck = get_deck()
-        with tqdm(range(2598960)) as t:   # 52C2 * 52C3
-            for hand in combinations(deck, 5):
+        with tqdm(range(29304600)) as t:
+            for hand in flop_gen():
                 hand = archetypal_hand(hand)
                 if hand not in equity_distribution:
-                    equity_distribution[hand] = self.get_equity_distribution(hand)
+                    preflop = hand[:2]
+                    flop = hand[2:]
+                    equity_distribution[hand] = get_equity_distribution(preflop, flop)
                 t.update()
-        pdb.set_trace()
 
         self.cluster(equity_distributions, n_buckets=n_buckets)
 
-    def get_equity_distribution(self, hand):
-        """Returns the equity histogram distribution for the given hand.
 
-        Equity is the chance of winning plus 1/2 the chance of tying.
-
-        Inputs:
-            hand - tuple of (frozenset, frozenset) where the first frozenset is
-                the preflop cards and the second is the flop cards.
-        """
-        # preflop, flop = hand
-        # for opponent_preflop in zip(shuffled_deck(), shuffled_deck()):
-        #     pass
-        return 0
 
 
 
