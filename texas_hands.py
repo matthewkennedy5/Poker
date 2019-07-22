@@ -19,6 +19,7 @@ RANKS = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, 'T': 10, '9': 9, '8': 8, '7': 7,
 SUITS = ('c', 'd', 'h', 's')
 
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
+TABLE_NAME = 'hand_table.pkl'
 N_EQUITY_BINS = 50
 
 
@@ -34,6 +35,52 @@ def shuffled_deck():
     for card in deck:
         yield card
 
+
+def rank(card):
+    return card[0]
+
+
+def suit(card):
+    return card[1]
+
+
+def archetypal_hand(hand):
+    # TODO: Make the turn and river be not sorted
+    """Returns 'archetypal' hand isomorphic to input hand."""
+    hand = sorted(hand[:2]) + sorted(hand[2:])
+    suits= ['s', 'h', 'd', 'c']
+    suit_mapping = {}
+    for i in range(len(hand)):
+        card = hand[i]
+        if suit(card) in suit_mapping:
+            archetypal_card = rank(card) + suit_mapping[suit(card)]
+            hand[i] = archetypal_card
+        else:
+            suit_mapping[suit(card)] = suits.pop(0)
+            archetypal_card = rank(card) + suit_mapping[suit(card)]
+            hand[i] = archetypal_card
+    return tuple(sorted(hand[:2]) + sorted(hand[2:]))
+
+
+def make_hand_table():
+    if os.path.isfile(TABLE_NAME):
+        table = pickle.load(open(TABLE_NAME, 'rb'))
+        return table
+
+    table = {}
+    # with tqdm(range(156742040)) as t:
+    with tqdm(range(2598960)) as t:
+        # for n_cards in range(5, 8):
+        for n_cards in [5]:
+            for cards in combinations(get_deck(), n_cards):
+                # TODO: Use isomorphic function
+                cards = archetypal_hand(cards)
+                cards = sorted(cards)
+                hand = TexasHand(cards)
+                table[tuple(cards)] = hand.type
+                t.update()
+    pickle.dump(table, open(TABLE_NAME, 'wb'))
+    return table
 
 
 @functools.total_ordering
@@ -51,7 +98,7 @@ class TexasHand:
             ValueError if cards contains invalid card strings, the wrong number
             of cards, or duplicate cards.
         """
-        self.check_input(cards)
+        # self.check_input(cards)
         self.cards = list(cards)
         self.ranks = sorted([RANKS[card[0]] for card in self.cards])
         self.suits = [card[1] for card in self.cards]
@@ -60,7 +107,8 @@ class TexasHand:
         self.type = None
         # The 5 cards that actually matter if more than 5 are supplied
         self.playable_cards = None
-        self.classify()
+        self.type = HAND_TABLE[tuple(sorted(archetypal_hand(self.cards)))]
+        # self.classify()
 
     def check_input(self, cards):
         """Makes sure the cards pass the input specifications."""
@@ -251,31 +299,6 @@ def duplicate_cards(cards):
     return len(np.unique(cards)) == len(cards)
 
 
-def rank(card):
-    return card[0]
-
-
-def suit(card):
-    return card[1]
-
-
-def archetypal_hand(hand):
-    """Returns 'archetypal' hand isomorphic to input hand."""
-    hand = sorted(hand[:2]) + sorted(hand[2:])
-    suits= ['s', 'h', 'd', 'c']
-    suit_mapping = {}
-    for i in range(len(hand)):
-        card = hand[i]
-        if suit(card) in suit_mapping:
-            archetypal_card = rank(card) + suit_mapping[suit(card)]
-            hand[i] = archetypal_card
-        else:
-            suit_mapping[suit(card)] = suits.pop(0)
-            archetypal_card = rank(card) + suit_mapping[suit(card)]
-            hand[i] = archetypal_card
-    return tuple(sorted(hand[:2]) + sorted(hand[2:]))
-
-
 def flop_gen():
     deck = get_deck()
     for preflop, flop in product(combinations(deck, 2), combinations(deck, 3)):
@@ -302,15 +325,19 @@ def get_equity_distribution(preflop, flop, turn=None):
         hand += turn
         remaining_cards = 1
     deck = get_deck()
-    np.random.shuffle(deck)
     for card in hand:
         deck.remove(card)
 
     equity_distribution = np.zeros(N_EQUITY_BINS)
-    for opponent_preflop in combinations(deck, 2):
+    preflops = list(combinations(deck, 2))
+    for preflop_index in np.random.choice(range(len(preflops)), 10, replace=False):
+        # Calculate the equity of this hand against the opponent_hand
         n_wins = 0
         n_games = 0
-        for remaining in permutations(deck, remaining_cards):
+        opponent_preflop = preflops[preflop_index]
+        all_remaining = list(permutations(deck, remaining_cards))
+        for remaining_index in np.random.choice(range(len(all_remaining)), 10):
+            remaining = all_remaining[remaining_index]
             if opponent_preflop[0] in remaining or opponent_preflop[1] in remaining:
                 continue
 
@@ -324,8 +351,6 @@ def get_equity_distribution(preflop, flop, turn=None):
                 n_wins += 0.5
             n_games += 1
 
-        print(n_games)
-        pdb.set_trace()
         equity = n_wins / n_games
         bucket = int(equity // (1 / N_EQUITY_BINS))
         equity_distribution[bucket] += 1
@@ -420,9 +445,6 @@ class FlopAbstraction(CardAbstraction):
         self.cluster(equity_distributions, n_buckets=n_buckets)
 
 
-
-
-
     def __getitem__(self, cards):
         pass
 
@@ -431,4 +453,5 @@ class FlopAbstraction(CardAbstraction):
 
 
 if __name__ == '__main__':
+    HAND_TABLE = make_hand_table()
     print_abstraction()
