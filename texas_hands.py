@@ -62,6 +62,22 @@ def archetypal_hand(hand):
     return tuple(sorted(hand[:2]) + sorted(hand[2:]))
 
 
+def isomorphic_hand(hand):
+    hand = sorted(hand)
+    suits= ['s', 'h', 'd', 'c']
+    suit_mapping = {}
+    for i in range(len(hand)):
+        card = hand[i]
+        if suit(card) in suit_mapping:
+            archetypal_card = rank(card) + suit_mapping[suit(card)]
+            hand[i] = archetypal_card
+        else:
+            suit_mapping[suit(card)] = suits.pop(0)
+            archetypal_card = rank(card) + suit_mapping[suit(card)]
+            hand[i] = archetypal_card
+    return tuple(sorted(hand))
+
+
 def make_hand_table():
     if os.path.isfile(TABLE_NAME):
         table = pickle.load(open(TABLE_NAME, 'rb'))
@@ -299,6 +315,7 @@ def duplicate_cards(cards):
     return len(np.unique(cards)) == len(cards)
 
 
+
 def flop_gen():
     deck = get_deck()
     for preflop, flop in product(combinations(deck, 2), combinations(deck, 3)):
@@ -315,7 +332,7 @@ def river_gen():
     pass
 
 
-def get_equity_distribution(preflop, flop, turn=None):
+def get_equity_distribution(preflop, flop=None, turn=None):
     hand = preflop
     remaining_cards = 5
     if flop is not None:
