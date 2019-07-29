@@ -6,10 +6,12 @@ from texas_utils import *
 from tqdm import tqdm
 import numpy as np
 from hand_table import HandTable
+import multiprocessing as mp
+import pickle
 
 
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
-N_EQUITY_BINS = 50
+N_EQUITY_BINS = 10
 HAND_TABLE = HandTable()
 
 
@@ -20,6 +22,7 @@ def print_abstraction():
     print(RiverAbstraction())
 
 
+# TODO: Is this semantically wrong?
 def duplicate_cards(cards):
     """Returns True if cards are repeated.
 
@@ -29,13 +32,17 @@ def duplicate_cards(cards):
     return len(np.unique(cards)) == len(cards)
 
 
-
 def flop_gen():
+    """Yields archetypal flop hands."""
     deck = get_deck()
+    used_hands = {}
     for preflop, flop in product(combinations(deck, 2), combinations(deck, 3)):
         hand = preflop + flop
         if len(np.unique(hand)) == len(hand):
-            yield hand
+            hand = archetypal_hand(hand)
+            if hand not in used_hands:
+                used_hands[hand] = True
+                yield hand
 
 
 def turn_gen():
@@ -46,7 +53,8 @@ def river_gen():
     pass
 
 
-def get_equity_distribution(preflop, flop=None, turn=None):
+def get_equity_distribution(preflop, flop=None, turn=None, opponent_samples=50,
+                                                           rollout_samples=50):
     hand = preflop
     remaining_cards = 5
     if flop is not None:
@@ -61,13 +69,13 @@ def get_equity_distribution(preflop, flop=None, turn=None):
 
     equity_distribution = np.zeros(N_EQUITY_BINS)
     preflops = list(combinations(deck, 2))
-    for preflop_index in np.random.choice(range(len(preflops)), 100, replace=False):
+    for preflop_index in np.random.choice(range(len(preflops)), opponent_samples, replace=False):
         # Calculate the equity of this hand against the opponent_hand
         n_wins = 0
         n_games = 0
         opponent_preflop = preflops[preflop_index]
         all_remaining = list(permutations(deck, remaining_cards))
-        for remaining_index in np.random.choice(range(len(all_remaining)), 100):
+        for remaining_index in np.random.choice(range(len(all_remaining)), rollout_samples):
             remaining = all_remaining[remaining_index]
             if opponent_preflop[0] in remaining or opponent_preflop[1] in remaining:
                 continue
@@ -162,19 +170,24 @@ class FlopAbstraction(CardAbstraction):
         if os.path.isfile(FLOP_SAVE_NAME):
             return pickle.load(open(FLOP_SAVE_NAME, 'rb'))
 
+        # TODO: pickle the list of archetypal flop hands
         equity_distribution = {}
-        deck = get_deck()
-        with tqdm(range(29304600)) as t:
-            for hand in flop_gen():
-                hand = archetypal_hand(hand)
-                if hand not in equity_distribution:
-                    preflop = hand[:2]
-                    flop = hand[2:]
-                    equity_distribution[hand] = get_equity_distribution(preflop, flop)
-                t.update()
+        with mp.Pool(8) as p:
+            result = p.map(self.hand_equity, flop_gen())
+            # result = list(tqdm(p.imap(self.hand_equity, flop_gen()), total=500000))
+
+        pickle.dump(result, open('flopresult.pkl', 'wb'))
+        print(result)
+        pdb.set_trace()
 
         self.cluster(equity_distributions, n_buckets=n_buckets)
 
+    def hand_equity(self, hand):
+        preflop = hand[:2]
+        flop = hand[2:]
+        distribution = get_equity_distribution(preflop, flop,
+                                               opponent_samples=10, rollout_samples=10)
+        return distribution
 
     def __getitem__(self, cards):
         pass
