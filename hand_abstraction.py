@@ -1,8 +1,16 @@
 import abc
 import os
 import numpy
-import itertools
-from texas_hands import *
+from itertools import combinations, product, permutations
+from texas_utils import *
+from tqdm import tqdm
+import numpy as np
+from hand_table import HandTable
+
+
+FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
+N_EQUITY_BINS = 50
+HAND_TABLE = HandTable()
 
 
 def print_abstraction():
@@ -66,8 +74,8 @@ def get_equity_distribution(preflop, flop=None, turn=None):
 
             river = remaining[-1]
             turn = remaining[-2]
-            player_hand = TexasHand(hand + remaining)
-            opponent_hand = TexasHand(opponent_preflop + flop + (turn, river))
+            player_hand = HAND_TABLE[hand + remaining]
+            opponent_hand = HAND_TABLE[opponent_preflop + flop + (turn, river)]
             if player_hand > opponent_hand:
                 n_wins += 1
             elif player_hand == opponent_hand:
@@ -111,7 +119,7 @@ class PreflopAbstraction(CardAbstraction):
 
     def compute_abstraction(self):
         """Make a unique index for each logically different preflop hand."""
-        for hand in itertools.combinations(get_deck(), 2):
+        for hand in combinations(get_deck(), 2):
             hand = sorted(hand)
             # -2 maps from 2-14 to 0-12. This is kind of like a hash function that
             # gives a unique integer for every logically unique preflop hand.

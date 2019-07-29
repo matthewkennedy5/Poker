@@ -10,95 +10,7 @@ import pickle
 import pdb
 import numpy as np
 from tqdm import tqdm
-from hand_table import HandTable
-
-(HIGH_CARD, PAIR, TWO_PAIR, THREE_OF_A_KIND, STRAIGHT, FLUSH, FULL_HOUSE,
- FOUR_OF_A_KIND, STRAIGHT_FLUSH, ROYAL_FLUSH) = range(10)
-
-RANKS = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, 'T': 10, '9': 9, '8': 8, '7': 7,
-         '6': 6, '5': 5, '4': 4, '3': 3, '2': 2}
-SUITS = ('c', 'd', 'h', 's')
-
-FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
-N_EQUITY_BINS = 50
-HAND_TABLE = HandTable()        # TODO: Better way to store the hand table (no global variable?)
-
-
-def get_deck():
-    """Returns the standard 52-card deck, represented as a list of strings."""
-    return [rank + suit for suit in SUITS for rank in RANKS]
-
-
-def shuffled_deck():
-    """Generator for a shuffled 52-card deck."""
-    deck = get_deck()
-    np.random.shuffle(deck)
-    for card in deck:
-        yield card
-
-
-def rank(card):
-    return card[0]
-
-
-def suit(card):
-    return card[1]
-
-
-def archetypal_hand(hand):
-    # TODO: Make the turn and river be not sorted
-    """Returns 'archetypal' hand isomorphic to input hand."""
-    hand = sorted(hand[:2]) + sorted(hand[2:])
-    suits= ['s', 'h', 'd', 'c']
-    suit_mapping = {}
-    for i in range(len(hand)):
-        card = hand[i]
-        if suit(card) in suit_mapping:
-            archetypal_card = rank(card) + suit_mapping[suit(card)]
-            hand[i] = archetypal_card
-        else:
-            suit_mapping[suit(card)] = suits.pop(0)
-            archetypal_card = rank(card) + suit_mapping[suit(card)]
-            hand[i] = archetypal_card
-    return tuple(sorted(hand[:2]) + sorted(hand[2:]))
-
-
-def isomorphic_hand(hand):
-    hand = sorted(hand)
-    suits= ['s', 'h', 'd', 'c']
-    suit_mapping = {}
-    for i in range(len(hand)):
-        card = hand[i]
-        if suit(card) in suit_mapping:
-            archetypal_card = rank(card) + suit_mapping[suit(card)]
-            hand[i] = archetypal_card
-        else:
-            suit_mapping[suit(card)] = suits.pop(0)
-            archetypal_card = rank(card) + suit_mapping[suit(card)]
-            hand[i] = archetypal_card
-    return tuple(sorted(hand))
-
-
-# TODO: Also include playable cards in the hand table
-def make_hand_table():
-    if os.path.isfile(TABLE_NAME):
-        table = pickle.load(open(TABLE_NAME, 'rb'))
-        return table
-
-    table = {}
-    # with tqdm(range(156742040)) as t:
-    with tqdm(range(2598960)) as t:
-        # for n_cards in range(5, 8):
-        for n_cards in [5]:
-            for cards in combinations(get_deck(), n_cards):
-                # TODO: Use isomorphic function
-                cards = archetypal_hand(cards)
-                cards = sorted(cards)
-                hand = TexasHand(cards)
-                table[tuple(cards)] = hand.type
-                t.update()
-    pickle.dump(table, open(TABLE_NAME, 'wb'))
-    return table
+from texas_utils import *
 
 
 @functools.total_ordering
@@ -116,16 +28,14 @@ class TexasHand:
             ValueError if cards contains invalid card strings, the wrong number
             of cards, or duplicate cards.
         """
-        # self.check_input(cards)
+        self.check_input(cards)
         self.cards = list(cards)
         self.ranks = sorted([RANKS[card[0]] for card in self.cards])
         self.suits = [card[1] for card in self.cards]
         # How many times each rank appears in the hand (useful for hand classification)
         _, self.counts = np.sort(np.unique(self.ranks, return_counts=True))
-        self.type = None
-        # The 5 cards that actually matter if more than 5 are supplied
         self.playable_cards = None
-        self.type, self.playable_cards = HAND_TABLE[self.cards]
+        self.classify()
 
     def check_input(self, cards):
         """Makes sure the cards pass the input specifications."""
@@ -290,18 +200,4 @@ class TexasHand:
 
     def __str__(self):
         raise NotImplementedError
-
-
-########### Hand abstraction methods #######################
-
-########### Code modified from hand_abstraction.py ###########
-
-
-
-
-################################### Card table lookup code #########################
-
-
-
-
 

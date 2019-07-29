@@ -3,6 +3,10 @@
 import unittest
 from matplotlib import pyplot as plt
 from texas_hands import *
+from hand_abstraction import *
+from texas_utils import *
+from hand_table import *
+
 
 class TestTexasHands(unittest.TestCase):
 
@@ -112,6 +116,48 @@ class TestTexasHands(unittest.TestCase):
         better_kicker = TexasHand(('Ac', 'As', 'Ts', '3d', '6c'))
         high_card = TexasHand(('Kh', 'Ah', 'Qh', '2h', '3s'))
         other_high_card = TexasHand(('Ks', 'As', 'Qs', '2h', '3s'))
+
+        # Test random hand type comparisons
+        self.assertTrue(royal_flush > straight_flush)
+        self.assertTrue(royal_flush > trips)
+        self.assertTrue(straight_flush > full_house)
+        self.assertTrue(trips > two_pair)
+        self.assertTrue(high_card < pair)
+        self.assertTrue(straight <= flush)
+
+        # Test rank levels within hands
+        self.assertTrue(better_two_pair > two_pair)
+        self.assertTrue(better_flush > flush)
+        self.assertTrue(better_kicker > ace_pair)
+
+        # Test for ties
+        self.assertEqual(better_two_pair, better_two_pair)
+        self.assertEqual(same_full_house, full_house)
+        self.assertEqual(other_high_card, high_card)
+        self.assertEqual(same_flush, flush)
+
+
+class TestFastTexasHands(unittest.TestCase):
+
+    def test_comparisons(self):
+        table = HandTable()
+        royal_flush = table[('Jd', 'As', 'Js', 'Ks', 'Qs', 'Ts', '2c')]
+        straight_flush = table[('7d', '2c', '8d', 'Jd', '9d', '3d', 'Td')]
+        four = table[('2h', '2c', '3d', '5c', '7d', '2d', '2s')]
+        full_house = table[('As', 'Jd', 'Qs', 'Jc', '2c', 'Ac', 'Ah')]
+        same_full_house = table[('As', 'Js', '2s', 'Jc', '2c', 'Ac', 'Ah')]
+        flush = table[('Jh', '2c', '2h', '3h', '7h', 'As', '9h')]
+        same_flush = table[('Jh', '2c', '2h', '3h', '7h', '2s', '9h')]
+        better_flush = table[('Jh', '2c', 'Ah', '3h', '7h', 'Ts', '9h')]
+        straight = table[('Ah', '2s', '3d', '5c', '4c')]
+        trips = table[('5d', '4c', '6d', '6h', '6c')]
+        two_pair = table[('6d', '5c', '5h', 'Ah', 'Ac')]
+        better_two_pair = table[('Td', 'Th', 'Ad', 'Ac', '6h')]
+        pair = table[('Ah', '2d', '2s', '3c', '5c')]
+        ace_pair = table[('Ac', 'As', '2s', '3d', '6c')]
+        better_kicker = table[('Ac', 'As', 'Ts', '3d', '6c')]
+        high_card = table[('Kh', 'Ah', 'Qh', '2h', '3s')]
+        other_high_card = table[('Ks', 'As', 'Qs', '2h', '3s')]
 
         # Test random hand type comparisons
         self.assertTrue(royal_flush > straight_flush)
