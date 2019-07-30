@@ -8,11 +8,14 @@ import numpy as np
 from hand_table import HandTable
 import multiprocessing as mp
 import pickle
+from cluster import cluster
 
 
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
 ARCHETYPAL_FLOP_FILENAME = 'flop_hands.pkl'
+FLOP_EQUITY_DISTIBUTIONS = 'flop_equity.pkl'
 N_EQUITY_BINS = 10
+K_MEANS_ITERS = 10
 HAND_TABLE = HandTable()
 
 
@@ -38,7 +41,7 @@ def archetypal_flop_hands():
         return pickle.load(open(ARCHETYPAL_FLOP_FILENAME, 'rb'))
 
     print('Finding the representative flop hands...')
-    flops = []
+    hands = []
     deck = get_deck()
     used_hands = {}
     with tqdm(total=29304600, smoothing=0) as t:
@@ -48,10 +51,12 @@ def archetypal_flop_hands():
                 hand = archetypal_hand(hand)
                 if hand not in used_hands:
                     used_hands[hand] = True
-                    flops.append(flop)
             t.update()
-    pickle.dump(flops, open(ARCHETYPAL_FLOP_FILENAME, 'wb'))
-    return flops
+    hands = list(used_hands.keys())
+    pickle.dump(hands, open(ARCHETYPAL_FLOP_FILENAME, 'wb'))
+    import pprint
+    pprint.pprint(hands)
+    return hands
 
 
 def turn_gen():
@@ -86,7 +91,11 @@ def get_equity_distribution(preflop, flop=None, turn=None, opponent_samples=50,
         n_games = 0
         opponent_preflop = preflops[preflop_index]
         all_remaining = list(permutations(deck, remaining_cards))
-        for remaining_index in np.random.choice(range(len(all_remaining)), rollout_samples):
+        # TODO: When random sampling, make sure that the sampled hands are always unique.
+        # Otherwise there's a chance this crashes with a ZeroDivisionError.
+        # for remaining_index in np.random.choice(range(len(all_remaining)), rollout_samples):
+        while n_games < rollout_samples:
+            remaining_index = np.random.randint(len(all_remaining))
             remaining = all_remaining[remaining_index]
             if opponent_preflop[0] in remaining or opponent_preflop[1] in remaining:
                 continue
@@ -181,27 +190,31 @@ class FlopAbstraction(CardAbstraction):
         if os.path.isfile(FLOP_SAVE_NAME):
             return pickle.load(open(FLOP_SAVE_NAME, 'rb'))
 
-        equity_distribution = {}
-        result = pbar_map(self.hand_equity, archetypal_flop_hands())
+        if os.path.isfile(FLOP_EQUITY_DISTIBUTIONS):
+            equity_distributions = pickle.load(open(FLOP_EQUITY_DISTIBUTIONS, 'rb'))
+        else:
+            hands = archetypal_flop_hands()
+            distributions = pbar_map(self.hand_equity, hands)
+            equity_distributions = dict(zip(hands, distributions))
+            pickle.dump(equity_distributions, open(FLOP_EQUITY_DISTIBUTIONS, 'wb'))
 
-        # from tqdm import trange
-        # for i in trange(len(flop_hands)):
-        #     hand = flop_hands[i]
-        #     equity_distribution[hand] = self.hand_equity(hand)
-        self.cluster(equity_distributions, n_buckets=n_buckets)
+        self.abstraction = cluster(equity_distributions, K_MEANS_ITERS)
 
     def hand_equity(self, hand):
         preflop = hand[:2]
         flop = hand[2:]
+        # TODO: Add a paramater in the paramater file for number of samples.
         distribution = get_equity_distribution(preflop, flop,
-                                               opponent_samples=10, rollout_samples=10)
+                                               opponent_samples=1, rollout_samples=1)
         return distribution
 
     def __getitem__(self, cards):
-        pass
+        raise NotImplementedError
 
     def __str__(self):
-        return 'nope'
+        raise NotImplementedError
+
+
 
 
 if __name__ == '__main__':
