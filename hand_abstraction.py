@@ -14,8 +14,11 @@ from cluster import cluster
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
 ARCHETYPAL_FLOP_FILENAME = 'flop_hands.pkl'
 FLOP_EQUITY_DISTIBUTIONS = 'flop_equity.pkl'
-N_EQUITY_BINS = 10
+N_EQUITY_BINS = 20
 K_MEANS_ITERS = 10
+N_FLOP_BUCKETS = 20
+N_TURN_BUCKETS = 30
+N_RIVER_BUCKETS = 40
 HAND_TABLE = HandTable()
 
 
@@ -190,22 +193,26 @@ class FlopAbstraction(CardAbstraction):
         if os.path.isfile(FLOP_SAVE_NAME):
             return pickle.load(open(FLOP_SAVE_NAME, 'rb'))
 
+        print('Computing the flop abstraction...')
         if os.path.isfile(FLOP_EQUITY_DISTIBUTIONS):
             equity_distributions = pickle.load(open(FLOP_EQUITY_DISTIBUTIONS, 'rb'))
         else:
+            print('Calculating equity distributions...')
             hands = archetypal_flop_hands()
             distributions = pbar_map(self.hand_equity, hands)
             equity_distributions = dict(zip(hands, distributions))
             pickle.dump(equity_distributions, open(FLOP_EQUITY_DISTIBUTIONS, 'wb'))
 
-        self.abstraction = cluster(equity_distributions, K_MEANS_ITERS)
+        print('Performing k-means clustering...')
+        self.abstraction = cluster(equity_distributions, K_MEANS_ITERS, N_FLOP_BUCKETS)
+        pickle.dump(self.abstraction, open(FLOP_SAVE_NAME, 'wb'))
 
     def hand_equity(self, hand):
         preflop = hand[:2]
         flop = hand[2:]
         # TODO: Add a paramater in the paramater file for number of samples.
         distribution = get_equity_distribution(preflop, flop,
-                                               opponent_samples=1, rollout_samples=1)
+                                               opponent_samples=20, rollout_samples=20)
         return distribution
 
     def __getitem__(self, cards):
