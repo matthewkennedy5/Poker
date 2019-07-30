@@ -11,6 +11,7 @@ import pickle
 
 
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
+ARCHETYPAL_FLOP_FILENAME = 'flop_hands.pkl'
 N_EQUITY_BINS = 10
 HAND_TABLE = HandTable()
 
@@ -32,17 +33,25 @@ def duplicate_cards(cards):
     return len(np.unique(cards)) == len(cards)
 
 
-def flop_gen():
-    """Yields archetypal flop hands."""
+def archetypal_flop_hands():
+    if os.path.isfile(ARCHETYPAL_FLOP_FILENAME):
+        return pickle.load(open(ARCHETYPAL_FLOP_FILENAME, 'rb'))
+
+    print('Finding the representative flop hands...')
+    flops = []
     deck = get_deck()
     used_hands = {}
-    for preflop, flop in product(combinations(deck, 2), combinations(deck, 3)):
-        hand = preflop + flop
-        if len(np.unique(hand)) == len(hand):
-            hand = archetypal_hand(hand)
-            if hand not in used_hands:
-                used_hands[hand] = True
-                yield hand
+    with tqdm(total=29304600, smoothing=0) as t:
+        for preflop, flop in product(combinations(deck, 2), combinations(deck, 3)):
+            hand = preflop + flop
+            if len(np.unique(hand)) == len(hand):
+                hand = archetypal_hand(hand)
+                if hand not in used_hands:
+                    used_hands[hand] = True
+                    flops.append(flop)
+            t.update()
+    pickle.dump(flops, open(ARCHETYPAL_FLOP_FILENAME, 'wb'))
+    return flops
 
 
 def turn_gen():
@@ -69,6 +78,8 @@ def get_equity_distribution(preflop, flop=None, turn=None, opponent_samples=50,
 
     equity_distribution = np.zeros(N_EQUITY_BINS)
     preflops = list(combinations(deck, 2))
+    # TODO: Is it possible to make a generator for isomorphic rollouts, greatly
+    # reducing the number of calls to isomorphic_hand()?
     for preflop_index in np.random.choice(range(len(preflops)), opponent_samples, replace=False):
         # Calculate the equity of this hand against the opponent_hand
         n_wins = 0
@@ -170,16 +181,13 @@ class FlopAbstraction(CardAbstraction):
         if os.path.isfile(FLOP_SAVE_NAME):
             return pickle.load(open(FLOP_SAVE_NAME, 'rb'))
 
-        # TODO: pickle the list of archetypal flop hands
         equity_distribution = {}
-        with mp.Pool(8) as p:
-            result = p.map(self.hand_equity, flop_gen())
-            # result = list(tqdm(p.imap(self.hand_equity, flop_gen()), total=500000))
+        result = pbar_map(self.hand_equity, archetypal_flop_hands())
 
-        pickle.dump(result, open('flopresult.pkl', 'wb'))
-        print(result)
-        pdb.set_trace()
-
+        # from tqdm import trange
+        # for i in trange(len(flop_hands)):
+        #     hand = flop_hands[i]
+        #     equity_distribution[hand] = self.hand_equity(hand)
         self.cluster(equity_distributions, n_buckets=n_buckets)
 
     def hand_equity(self, hand):

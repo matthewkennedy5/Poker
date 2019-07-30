@@ -1,1 +1,3 @@
 *.pkl
+*.pyc
+__pycache__/*
