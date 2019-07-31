@@ -3,6 +3,7 @@
 from tqdm import trange
 import numpy as np
 from scipy import stats
+import multiprocessing as mp
 
 
 def earth_movers_distance(hole1, flop1, hole2, flop2):
@@ -26,6 +27,12 @@ def earth_movers_distance(hole1, flop1, hole2, flop2):
     return distance
 
 
+def emd_input_gen(data, means):
+    for hand in range(data.shape[0]):
+        for mean in means:
+            yield data[hand, :], mean
+
+
 def cluster_with_means(data, means):
     """Groups every item in the data by assigning it to its nearest mean.
 
@@ -38,13 +45,18 @@ def cluster_with_means(data, means):
         clusters - Groupings of hands based on nearest (EMD) mean.
     """
     clusters = [[] for mean in means]
+    # TODO: Get this on the Intel cluster because it uses too much memory.
+    # Precompute all Earth Mover's Distances since that's the bottleneck
+    # with mp.Pool(mp.cpu_count()) as p:
+    #     distances = p.starmap(stats.wasserstein_distance, emd_input_gen(data, means))
+    # breakpoint()    # TODO: Reshape to 2D numpy array?
+
     for hand in range(data.shape[0]):
         nearest_mean = 0
         nearest_distance = np.Inf
         for j, mean in enumerate(means):
-            # Compute the Earth Movers Distance (aka Wasserstein Distance)
+            # Compute the Earth Mover's Distance (aka Wasserstein Distance)
             distance = stats.wasserstein_distance(data[hand, :], mean)
-            # Using L2 distance for now because EMD isn't clustering properly.
             # distance = np.linalg.norm(data[hand, :] - mean)
             if distance < nearest_distance:
                 nearest_mean = j
@@ -66,7 +78,7 @@ def update_means(data, clusters):
     Returns:
         means - The updated centroids of each cluster in Euclidian space.
     """
-    means = np.zeros((len(clusters), N_EQUITY_BINS))
+    means = np.zeros((len(clusters), data.shape[1]))
     for i, cluster in enumerate(clusters):
         means[i, :] = np.mean(data[cluster], axis=0)
     return means
@@ -91,5 +103,7 @@ def cluster(equity_distributions, iterations, n_buckets):
     abstraction = {}
     for idx, cluster in enumerate(clusters):
         for hand in cluster:
-            hand_string = hands_list[hand]
+            hand_string = hand_list[hand]
             abstraction[hand_string] = idx
+
+    return abstraction
