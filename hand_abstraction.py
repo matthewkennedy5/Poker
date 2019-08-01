@@ -57,8 +57,6 @@ def archetypal_flop_hands():
             t.update()
     hands = list(used_hands.keys())
     pickle.dump(hands, open(ARCHETYPAL_FLOP_FILENAME, 'wb'))
-    import pprint
-    pprint.pprint(hands)
     return hands
 
 
