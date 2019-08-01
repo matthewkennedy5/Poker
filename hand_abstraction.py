@@ -8,7 +8,7 @@ import numpy as np
 from hand_table import HandTable
 import multiprocessing as mp
 import pickle
-from cluster import cluster
+from cluster import Cluster
 
 
 # TODO: Make a parameter file
@@ -17,7 +17,7 @@ ARCHETYPAL_FLOP_FILENAME = 'flop_hands.pkl'
 FLOP_EQUITY_DISTIBUTIONS = 'flop_equity.pkl'
 N_EQUITY_BINS = 20
 K_MEANS_ITERS = 2
-N_FLOP_BUCKETS = 20
+N_FLOP_BUCKETS = 2
 N_TURN_BUCKETS = 30
 N_RIVER_BUCKETS = 40
 HAND_TABLE = HandTable()
@@ -118,6 +118,18 @@ def get_equity_distribution(preflop, flop=None, turn=None, opponent_samples=50,
     return equity_distribution
 
 
+def abstraction2str(table):
+    result = ''
+    for bucket in tqdm(sorted(table.values())):
+        result += str(bucket) + ': '
+        for hand in table:
+            if table[hand] == bucket:
+                result += str(tuple(hand)) + ' '
+        result += '\n'
+    return result
+
+
+
 class CardAbstraction(abc.ABC):
     """Abstract base class for preflop, flop, turn, and river card abstractions.
 
@@ -166,14 +178,7 @@ class PreflopAbstraction(CardAbstraction):
 
     def __str__(self):
         """Prints the groupings of hands together."""
-        result = ''
-        for bucket in sorted(self.table.values()):
-            result += str(bucket) + ': '
-            for hand in self.table:
-                if self.table[hand] == bucket:
-                    result += str(tuple(hand)) + ' '
-            result += '\n'
-        return result
+        return abstraction2str(self.table)
 
 
 class FlopAbstraction(CardAbstraction):
@@ -183,9 +188,8 @@ class FlopAbstraction(CardAbstraction):
     distributions, and clustering is performed using k_means clustering.
     """
     def __init__(self, n_buckets=100):
-        self.table = {}
         self.n_buckets = n_buckets
-        self.compute_abstraction()
+        self.table = self.compute_abstraction()
 
     def compute_abstraction(self):
         """Clusters all possible flop hands into groups."""
@@ -203,8 +207,9 @@ class FlopAbstraction(CardAbstraction):
             pickle.dump(equity_distributions, open(FLOP_EQUITY_DISTIBUTIONS, 'wb'))
 
         print('Performing k-means clustering...')
-        self.abstraction = cluster(equity_distributions, K_MEANS_ITERS, N_FLOP_BUCKETS)
-        pickle.dump(self.abstraction, open(FLOP_SAVE_NAME, 'wb'))
+        abstraction = Cluster()(equity_distributions, K_MEANS_ITERS, N_FLOP_BUCKETS)
+        pickle.dump(abstraction, open(FLOP_SAVE_NAME, 'wb'))
+        return abstraction
 
     def hand_equity(self, hand):
         preflop = hand[:2]
@@ -218,7 +223,8 @@ class FlopAbstraction(CardAbstraction):
         raise NotImplementedError
 
     def __str__(self):
-        raise NotImplementedError
+        return abstraction2str(self.table)
+
 
 
 
