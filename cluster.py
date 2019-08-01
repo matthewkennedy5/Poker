@@ -1,36 +1,25 @@
 # TODO: k-means++ initialization
 
-from tqdm import trange
+from tqdm import trange, tqdm
 import numpy as np
 from scipy import stats
 import multiprocessing as mp
+from texas_utils import pbar_map
 
 
-def earth_movers_distance(hole1, flop1, hole2, flop2):
-    """Finds the Earth Mover's Distance (EMD) between the hands.
-
-    We are comparing distinct card situations at the flop only.
-
-    Inputs:
-        hole1 - Hole card for hand 1
-        flop1 - Flop card for hand 1
-        hole2 -
-        flop2
-
-    Returns:
-        distance - The Earth Mover's Distance between the hand states.
-    """
-    equity1 = equity_distribution(hole1, flop1)
-    equity2 = equity_distribution(hole2, flop2)
-    # Take the EMD of the equity distributions
-    distance = stats.wasserstein_distance(equity1, equity2)
-    return distance
-
-
+# TODO: Clean up
 def emd_input_gen(data, means):
-    for hand in range(data.shape[0]):
-        for mean in means:
-            yield data[hand, :], mean
+    for mean in means:
+        yield data, mean
+
+
+# TODO: Clean up
+def earth_movers_distance(inputs):
+    data, mean = inputs
+    result = []
+    for hand in data:
+        result.append(stats.wasserstein_distance(hand, mean))
+    return result
 
 
 def cluster_with_means(data, means):
@@ -45,13 +34,13 @@ def cluster_with_means(data, means):
         clusters - Groupings of hands based on nearest (EMD) mean.
     """
     clusters = [[] for mean in means]
-    # TODO: Get this on the Intel cluster because it uses too much memory.
     # Precompute all Earth Mover's Distances since that's the bottleneck
-    # with mp.Pool(mp.cpu_count()) as p:
-    #     distances = p.starmap(stats.wasserstein_distance, emd_input_gen(data, means))
-    # breakpoint()    # TODO: Reshape to 2D numpy array?
+    with mp.Pool(mp.cpu_count()) as p:
+        distances = p.map(earth_movers_distance, list(emd_input_gen(data, means)))
+        print('done')
+        print(len(distances))
 
-    for hand in range(data.shape[0]):
+    for hand in trange(data.shape[0]):
         nearest_mean = 0
         nearest_distance = np.Inf
         for j, mean in enumerate(means):
@@ -65,7 +54,6 @@ def cluster_with_means(data, means):
     return clusters
 
 
-# TODO: How to find centroid using EMD?
 def update_means(data, clusters):
     """Returns the centroids of the given clusters.
 

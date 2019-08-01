@@ -11,6 +11,7 @@ import pickle
 from cluster import cluster
 
 
+# TODO: Make a parameter file
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
 ARCHETYPAL_FLOP_FILENAME = 'flop_hands.pkl'
 FLOP_EQUITY_DISTIBUTIONS = 'flop_equity.pkl'
