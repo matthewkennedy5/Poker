@@ -15,9 +15,9 @@ from cluster import Cluster
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
 ARCHETYPAL_FLOP_FILENAME = 'flop_hands.pkl'
 FLOP_EQUITY_DISTIBUTIONS = 'flop_equity.pkl'
-N_EQUITY_BINS = 20
-K_MEANS_ITERS = 2
-N_FLOP_BUCKETS = 2
+N_EQUITY_BINS = 10
+K_MEANS_ITERS = 20
+N_FLOP_BUCKETS = 5000
 N_TURN_BUCKETS = 30
 N_RIVER_BUCKETS = 40
 HAND_TABLE = HandTable()
@@ -207,7 +207,7 @@ class FlopAbstraction(CardAbstraction):
             pickle.dump(equity_distributions, open(FLOP_EQUITY_DISTIBUTIONS, 'wb'))
 
         print('Performing k-means clustering...')
-        abstraction = Cluster()(equity_distributions, K_MEANS_ITERS, N_FLOP_BUCKETS)
+        abstraction = Cluster()(equity_distributions, N_FLOP_BUCKETS, K_MEANS_ITERS)
         pickle.dump(abstraction, open(FLOP_SAVE_NAME, 'wb'))
         return abstraction
 
