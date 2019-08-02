@@ -118,6 +118,16 @@ def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, oppon
 
 
 def abstraction2str(table):
+    """Returns a string represntation of the given abstraction dictionary.
+
+    The string lists each bucket in order with the hands each bucket contains.
+
+    Inputs:
+        table - Dictionary mapping hands to bucket indices.
+
+    Returns
+        result - String representation of the abstraction table.
+    """
     result = ''
     for bucket in tqdm(sorted(table.values())):
         result += str(bucket) + ': '
