@@ -137,7 +137,6 @@ class TexasHand:
             return self.compare_ranks(other) == -1
 
     def __eq__(self, other):
-        # TODO: Implement this for real by considering the ranks of the top 5 cards
         if other is None:
             return False
         return self.type == other.type and self.compare_ranks(other) == 0

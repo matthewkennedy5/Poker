@@ -8,24 +8,22 @@ import numpy as np
 from hand_table import HandTable
 import multiprocessing as mp
 import pickle
+import json
 from cluster import Cluster
 
 
-# TODO: Make a parameter file
+# TODO: Take the paramater file as a command line argument to the trainer class
+PARAM_FILE = 'params.json'
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
 ARCHETYPAL_FLOP_FILENAME = 'flop_hands.pkl'
 FLOP_EQUITY_DISTIBUTIONS = 'flop_equity.pkl'
-N_EQUITY_BINS = 20
-K_MEANS_ITERS = 2
-N_FLOP_BUCKETS = 2
-N_TURN_BUCKETS = 30
-N_RIVER_BUCKETS = 40
 HAND_TABLE = HandTable()
 
 
 def print_abstraction():
+    params = json.load(open(PARAM_FILE, 'r'))
     print(PreflopAbstraction())
-    print(FlopAbstraction())
+    print(FlopAbstraction(**params['flop']))
     print(TurnAbstraction())
     print(RiverAbstraction())
 
@@ -68,7 +66,7 @@ def river_gen():
     pass
 
 
-def get_equity_distribution(preflop, flop=None, turn=None, opponent_samples=50,
+def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, opponent_samples=50,
                                                            rollout_samples=50):
     hand = preflop
     remaining_cards = 5
@@ -82,7 +80,7 @@ def get_equity_distribution(preflop, flop=None, turn=None, opponent_samples=50,
     for card in hand:
         deck.remove(card)
 
-    equity_distribution = np.zeros(N_EQUITY_BINS)
+    equity_distribution = np.zeros(equity_bins)
     preflops = list(combinations(deck, 2))
     # TODO: Is it possible to make a generator for isomorphic rollouts, greatly
     # reducing the number of calls to isomorphic_hand()?
@@ -112,7 +110,7 @@ def get_equity_distribution(preflop, flop=None, turn=None, opponent_samples=50,
             n_games += 1
 
         equity = n_wins / n_games
-        bucket = int(equity // (1 / N_EQUITY_BINS))
+        bucket = int(equity // (1 / equity_bins))
         equity_distribution[bucket] += 1
     return equity_distribution
 
@@ -186,8 +184,12 @@ class FlopAbstraction(CardAbstraction):
     Similarity is based on the Earth Movers Distance of the hands' equity
     distributions, and clustering is performed using k_means clustering.
     """
-    def __init__(self, n_buckets=100):
-        self.n_buckets = n_buckets
+    def __init__(self, buckets=5000, equity_bins=50, iters=20, opponent_samples=100, rollout_samples=100):
+        self.buckets = buckets
+        self.equity_bins = equity_bins
+        self.iters = iters
+        self.opponent_samples = opponent_samples
+        self.rollout_samples = rollout_samples
         self.table = self.compute_abstraction()
 
     def compute_abstraction(self):
@@ -207,7 +209,7 @@ class FlopAbstraction(CardAbstraction):
 
         print('Performing k-means clustering...')
         # TODO: Make the inputs be to the actual class?
-        abstraction = Cluster()(equity_distributions, K_MEANS_ITERS, N_FLOP_BUCKETS)
+        abstraction = Cluster()(equity_distributions, self.iters, self.buckets)
         pickle.dump(abstraction, open(FLOP_SAVE_NAME, 'wb'))
         return abstraction
 
@@ -216,7 +218,9 @@ class FlopAbstraction(CardAbstraction):
         flop = hand[2:]
         # TODO: Add a paramater in the paramater file for number of samples.
         distribution = get_equity_distribution(preflop, flop,
-                                               opponent_samples=20, rollout_samples=20)
+                                               equity_bins=self.equity_bins,
+                                               opponent_samples=self.opponent_samples,
+                                               rollout_samples=self.rollout_samples)
         return distribution
 
     def __getitem__(self, cards):
@@ -224,9 +228,6 @@ class FlopAbstraction(CardAbstraction):
 
     def __str__(self):
         return abstraction2str(self.table)
-
-
-
 
 
 if __name__ == '__main__':
