@@ -70,6 +70,41 @@ def river_gen():
 
 def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, opponent_samples=50,
                                                            rollout_samples=50):
+    """Returns an estimate of the equity distribution for the given hand.
+
+    An equity distribution is a histogram that looks like this:
+
+        |
+      # |
+      h |
+      a |
+      n |
+      d |
+      s |
+        |______________________
+         0      % equity     1
+
+    Effectively, this algorithm finds out how many opponent hands give it a given
+    amount of equity for various levels of equity from 0 to 1. This distributon
+    can then be used to compare hand similarity, which is a more effective
+    measurement than expectation because hands like 6c6d have similar expected
+    equity to QsJs, but have very different equity distributions.
+
+    Inputs:
+        preflop - The player's preflop holdings
+        flop - Flop cards on the board
+        turn - Turn card
+        equity_bins - Number of bins the histogram should use. Effectively this
+            represents the number of discrete equity levels that values get
+            rounded to.
+        opponent_samples - How many random opponent holdings to deal.
+        rollout_samples - How many times to run the rollouts (deal the rest of
+            the hand) for each opponent sample
+
+    Returns:
+        equity_distribution - Numpy array containing how many opponent hands
+            give the player's hand each amount of equity.
+    """
     hand = preflop
     remaining_cards = 5
     if flop is not None:
