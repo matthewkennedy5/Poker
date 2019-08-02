@@ -128,7 +128,6 @@ def abstraction2str(table):
     return result
 
 
-
 class CardAbstraction(abc.ABC):
     """Abstract base class for preflop, flop, turn, and river card abstractions.
 
@@ -236,7 +235,7 @@ class FlopAbstraction(CardAbstraction):
         return self.table[isomorphic_hand(cards)]
 
     def __str__(self):
-        return abstraction2str(self.table)
+        return str(self.table)
 
 
 if __name__ == '__main__':
