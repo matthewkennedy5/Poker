@@ -25,9 +25,10 @@ def suit(card):
 
 
 def archetypal_hand(hand):
-    # TODO: Make the turn and river be not sorted
     """Returns 'archetypal' hand isomorphic to input hand."""
-    hand = sorted(hand[:2]) + sorted(hand[2:])
+    # Sort the preflop and flop since order doesn't matter within those streets
+    hand = list(hand)
+    hand[:5] = sorted(hand[:2]) + sorted(hand[2:5])
     suits= ['s', 'h', 'd', 'c']
     suit_mapping = {}
     for i in range(len(hand)):
@@ -39,7 +40,9 @@ def archetypal_hand(hand):
             suit_mapping[suit(card)] = suits.pop(0)
             archetypal_card = rank(card) + suit_mapping[suit(card)]
             hand[i] = archetypal_card
-    return tuple(sorted(hand[:2]) + sorted(hand[2:]))
+    # Sort once again since the suits changed
+    hand[:5] = sorted(hand[:2]) + sorted(hand[2:5])
+    return tuple(hand)
 
 
 # def isomorphic_hand(hand):

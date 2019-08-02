@@ -16,16 +16,19 @@ from texas_utils import *
 # TODO: Take the paramater file as a command line argument to the trainer class
 PARAM_FILE = 'params.json'
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
+TURN_SAVE_NAME = 'texas_turn_abstraction.pkl'
 ARCHETYPAL_FLOP_FILENAME = 'flop_hands.pkl'
+ARCHETYPAL_TURN_FILENAME = 'turn_hands.pkl'
 FLOP_EQUITY_DISTIBUTIONS = 'flop_equity.pkl'
+TURN_EQUITY_DISTRIBUTIONS = 'turn_equity.pkl'
 HAND_TABLE = HandTable()
 
 
 def print_abstraction():
     params = json.load(open(PARAM_FILE, 'r'))
     print(PreflopAbstraction())
-    print(FlopAbstraction(**params['flop']))
-    print(TurnAbstraction())
+    # print(FlopAbstraction(**params['flop']))
+    print(TurnAbstraction(**params['turn']))
     print(RiverAbstraction())
 
 
@@ -39,24 +42,13 @@ def unique_cards(cards):
 
 
 def archetypal_flop_hands():
-    """Returns a list of all archetypal flop hands.
-
-    An archetypal hand is a hand with unnecessary order and suit information
-    removed. For example, it doesn't matter what order the flop cards are in, so
-    we can sort the flop cards without losing information. Same with the preflop.
-    Also, we can only consider one suit isomorphism out of the many possible
-    isomorphisms. For example, a flush of hearts is functionally the same as a
-    flush of diamonds. The returned hand will be sorted by the preflop and flop
-    and be run through the suit isomorphism algorithm. Using these techniques
-    greatly reduces the size of the flop abstraction lookup table.
-    """
     if os.path.isfile(ARCHETYPAL_FLOP_FILENAME):
         return pickle.load(open(ARCHETYPAL_FLOP_FILENAME, 'rb'))
-
-    print('Finding the representative flop hands...')
+    print('Preparing archetypal flop hands...')
     hands = []
     deck = get_deck()
     used_hands = {}
+    # TODO: Adapt for the turn
     with tqdm(total=29304600, smoothing=0) as t:
         for preflop, flop in product(combinations(deck, 2), combinations(deck, 3)):
             hand = preflop + flop
@@ -68,6 +60,54 @@ def archetypal_flop_hands():
     hands = list(used_hands.keys())
     pickle.dump(hands, open(ARCHETYPAL_FLOP_FILENAME, 'wb'))
     return hands
+
+
+def archetypal_turn_hands():
+    if os.path.isfile(ARCHETYPAL_TURN_FILENAME):
+        return pickle.load(open(ARCHETYPAL_TURN_FILENAME, 'rb'))
+    print('Preparing archetypal turn hands...')
+    hands = []
+    deck = get_deck()
+    used_hands = {}
+    # TODO: Adapt for the turn
+    with tqdm(total=29304600 * 52, smoothing=0) as t:
+        for preflop, flop, turn in product(combinations(deck, 2), combinations(deck, 3), deck):
+            hand = preflop + flop + (turn,)
+            if unique_cards(hand):
+                hand = archetypal_hand(hand)
+                if hand not in used_hands:
+                    used_hands[hand] = True
+            t.update()
+    pickle.dump(hands, open(ARCHETYPAL_TURN_FILENAME, 'wb'))
+    hands = list(used_hands.keys())
+    return hands
+
+
+def archetypal_river_hands():
+    raise NotImplementedError
+
+
+def archetypal_hands(street):
+    """Returns a list of all archetypal hands for the given street.
+
+    An archetypal hand is a hand with unnecessary order and suit information
+    removed. For example, it doesn't matter what order the flop cards are in, so
+    we can sort the flop cards without losing information. Same with the preflop.
+    Also, we can only consider one suit isomorphism out of the many possible
+    isomorphisms. For example, a flush of hearts is functionally the same as a
+    flush of diamonds. The returned hand will be sorted by the preflop and flop
+    and be run through the suit isomorphism algorithm. Using these techniques
+    greatly reduces the size of the flop abstraction lookup table.
+
+    Inputs:
+        street - 'preflop' or 'flop'
+    """
+    if street == 'flop':
+        return archetypal_flop_hands()
+    elif street == 'turn':
+        return archetypal_turn_hands()
+    else:
+        raise ValueError('Unknown street')
 
 
 def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, opponent_samples=50,
@@ -221,14 +261,14 @@ class PreflopAbstraction(CardAbstraction):
         return abstraction2str(self.table)
 
 
-class FlopAbstraction(CardAbstraction):
-    """Finds similar flop hands and groups them together.
+class StreetAbstraction(CardAbstraction):
 
-    Similarity is based on the Earth Movers Distance of the hands' equity
-    distributions, and clustering is performed using k_means clustering.
-    """
-    def __init__(self, buckets=5000, equity_bins=50, iters=20,
+    # Base class for the flop and turn abstractions since they're so similar.
+    def __init__(self, street, buckets=5000, equity_bins=50, iters=20,
                  opponent_samples=100, rollout_samples=100):
+        if street not in ('turn', 'flop'):
+            raise ValueError('Unknown street')
+        self.street = street
         self.buckets = buckets
         self.equity_bins = equity_bins
         self.iters = iters
@@ -238,31 +278,42 @@ class FlopAbstraction(CardAbstraction):
 
     def compute_abstraction(self):
         """Clusters all possible flop hands into groups."""
-        if os.path.isfile(FLOP_SAVE_NAME):
-            return pickle.load(open(FLOP_SAVE_NAME, 'rb'))
+        abstraction_file = ''
+        equity_file = ''
+        if self.street == 'preflop':
+            abstraction_file = FLOP_SAVE_NAME
+            equity_file = FLOP_EQUITY_DISTIBUTIONS
+        elif self.street == 'flop':
+            abstraction_file = TURN_SAVE_NAME
+            equity_file = TURN_EQUITY_DISTRIBUTIONS
 
-        print('Computing the flop abstraction...')
-        if os.path.isfile(FLOP_EQUITY_DISTIBUTIONS):
-            equity_distributions = pickle.load(open(FLOP_EQUITY_DISTIBUTIONS, 'rb'))
+        if os.path.isfile(abstraction_file):
+            return pickle.load(open(abstraction_file, 'rb'))
+
+        print('Computing the %s abstraction...' % (self.street,))
+        if os.path.isfile(equity_file):
+            equity_distributions = pickle.load(open(equity_file, 'rb'))
         else:
             print('Calculating equity distributions...')
-            hands = archetypal_flop_hands()
-            distributions = pbar_map(self.hand_equity, hands)
+            hands = archetypal_hands(self.street)
+            # distributions = pbar_map(self.hand_equity, hands)
+            self.hand_equity(hands[50000])
             equity_distributions = dict(zip(hands, distributions))
-            pickle.dump(equity_distributions, open(FLOP_EQUITY_DISTIBUTIONS, 'wb'))
+            pickle.dump(equity_distributions, open(equity_file, 'wb'))
 
         print('Performing k-means clustering...')
         # TODO: Make the inputs be to the actual class?
         abstraction = Cluster(equity_distributions, self.iters, self.buckets)()
-        pickle.dump(abstraction, open(FLOP_SAVE_NAME, 'wb'))
+        pickle.dump(abstraction, open(abstraction_file, 'wb'))
         return abstraction
 
     def hand_equity(self, hand):
         """Returns the equity distribution for the given flop hand.
 
         Inputs:
-            hand - list of five cards with the first two cards being the preflop and
-                the last three being the flop.
+            hand - list of cards with the first two cards being the preflop and
+                the next three being the flop. The last card (if given) is the
+                turn card
 
         Returns:
             distribution - Estimate of the equity distribution (histogram) over
@@ -270,9 +321,12 @@ class FlopAbstraction(CardAbstraction):
 
         """
         preflop = hand[:2]
-        flop = hand[2:]
-        # TODO: Add a paramater in the paramater file for number of samples.
-        distribution = get_equity_distribution(preflop, flop,
+        flop = hand[2:5]
+        turn = None
+        if len(hand) > 5:
+            turn = hand[5]
+        # TODO: Adapt this for the turn
+        distribution = get_equity_distribution(preflop, flop, turn,
                                                equity_bins=self.equity_bins,
                                                opponent_samples=self.opponent_samples,
                                                rollout_samples=self.rollout_samples)
@@ -283,6 +337,41 @@ class FlopAbstraction(CardAbstraction):
 
     def __str__(self):
         return str(self.table)
+
+
+class FlopAbstraction(CardAbstraction):
+    """Finds similar flop hands and groups them together.
+
+    Similarity is based on the Earth Movers Distance of the hands' equity
+    distributions, and clustering is performed using k_means clustering.
+    """
+    def __init__(self, buckets=5000, equity_bins=50, iters=20,
+                 opponent_samples=100, rollout_samples=100):
+        self.abstraction = StreetAbstraction('flop', buckets, equity_bins, iters,
+                                             opponent_samples, rollout_samples)
+
+    def __getitem__(self, cards):
+        return self.abstraction[cards]
+
+    def __str__(self):
+        return str(self.abstraction)
+
+
+class TurnAbstraction(CardAbstraction):
+
+    def __init__(self, buckets=5000, equity_bins=50, iters=20,
+                 opponent_samples=100, rollout_samples=100):
+        self.abstraction = StreetAbstraction('turn', buckets, equity_bins, iters,
+                                             opponent_samples, rollout_samples)
+
+    def __getitem__(self, cards):
+        return self.abstraction[cards]
+
+    def __str__(self):
+        return str(self.abstraction)
+
+
+
 
 
 if __name__ == '__main__':
