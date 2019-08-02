@@ -13,7 +13,6 @@ from texas_utils import *
 
 # TODO: Store the computed abstractions with the parameters so that it will be
 # recomputed if the parameters are different.
-# TODO: Abstraction test suite making sure similar hands are grouped together.
 # TODO: Take the paramater file as a command line argument to the trainer class
 PARAM_FILE = 'params.json'
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
@@ -152,7 +151,8 @@ def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, oppon
         equity = n_wins / n_games
         bucket = int(equity // (1 / equity_bins))
         equity_distribution[bucket] += 1
-    # TODO: Normalize the distribution?
+
+    equity_distribution /= np.sum(equity_distribution)
     return equity_distribution
 
 
