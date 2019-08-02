@@ -40,6 +40,17 @@ def unique_cards(cards):
 
 
 def archetypal_flop_hands():
+    """Returns a list of all archetypal flop hands.
+
+    An archetypal hand is a hand with unnecessary order and suit information
+    removed. For example, it doesn't matter what order the flop cards are in, so
+    we can sort the flop cards without losing information. Same with the preflop.
+    Also, we can only consider one suit isomorphism out of the many possible
+    isomorphisms. For example, a flush of hearts is functionally the same as a
+    flush of diamonds. The returned hand will be sorted by the preflop and flop
+    and be run through the suit isomorphism algorithm. Using these techniques
+    greatly reduces the size of the flop abstraction lookup table.
+    """
     if os.path.isfile(ARCHETYPAL_FLOP_FILENAME):
         return pickle.load(open(ARCHETYPAL_FLOP_FILENAME, 'rb'))
 
