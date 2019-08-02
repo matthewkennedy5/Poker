@@ -1,15 +1,14 @@
-import abc
 import os
-import numpy
+import abc
+import json
+import pickle
 from itertools import combinations, product, permutations
-from texas_utils import *
 from tqdm import tqdm
 import numpy as np
+
 from hand_table import HandTable
-import multiprocessing as mp
-import pickle
-import json
 from cluster import Cluster
+from texas_utils import *
 
 
 # TODO: Store the computed abstractions with the parameters so that it will be
@@ -217,6 +216,17 @@ class FlopAbstraction(CardAbstraction):
         return abstraction
 
     def hand_equity(self, hand):
+        """Returns the equity distribution for the given flop hand.
+
+        Inputs:
+            hand - list of five cards with the first two cards being the preflop and
+                the last three being the flop.
+
+        Returns:
+            distribution - Estimate of the equity distribution (histogram) over
+                all possible opponent holdings and rollouts.
+
+        """
         preflop = hand[:2]
         flop = hand[2:]
         # TODO: Add a paramater in the paramater file for number of samples.
