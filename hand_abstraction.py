@@ -60,14 +60,6 @@ def archetypal_flop_hands():
     return hands
 
 
-def turn_gen():
-    pass
-
-
-def river_gen():
-    pass
-
-
 def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, opponent_samples=50,
                                                            rollout_samples=50):
     """Returns an estimate of the equity distribution for the given hand.
@@ -149,6 +141,7 @@ def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, oppon
         equity = n_wins / n_games
         bucket = int(equity // (1 / equity_bins))
         equity_distribution[bucket] += 1
+    # TODO: Normalize the distribution?
     return equity_distribution
 
 
