@@ -12,6 +12,9 @@ import json
 from cluster import Cluster
 
 
+# TODO: Store the computed abstractions with the parameters so that it will be
+# recomputed if the parameters are different.
+# TODO: Abstraction test suite making sure similar hands are grouped together.
 # TODO: Take the paramater file as a command line argument to the trainer class
 PARAM_FILE = 'params.json'
 FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
@@ -224,7 +227,7 @@ class FlopAbstraction(CardAbstraction):
         return distribution
 
     def __getitem__(self, cards):
-        raise NotImplementedError
+        return self.table[isomorphic_hand(cards)]
 
     def __str__(self):
         return abstraction2str(self.table)
