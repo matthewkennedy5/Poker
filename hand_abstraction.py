@@ -129,9 +129,6 @@ def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, oppon
         n_games = 0
         opponent_preflop = preflops[preflop_index]
         all_remaining = list(permutations(deck, remaining_cards))
-        # TODO: When random sampling, make sure that the sampled hands are always unique.
-        # Otherwise there's a chance this crashes with a ZeroDivisionError.
-        # for remaining_index in np.random.choice(range(len(all_remaining)), rollout_samples):
         while n_games < rollout_samples:
             remaining_index = np.random.randint(len(all_remaining))
             remaining = all_remaining[remaining_index]
@@ -256,7 +253,7 @@ class FlopAbstraction(CardAbstraction):
 
         print('Performing k-means clustering...')
         # TODO: Make the inputs be to the actual class?
-        abstraction = Cluster()(equity_distributions, self.iters, self.buckets)
+        abstraction = Cluster(equity_distributions, self.iters, self.buckets)()
         pickle.dump(abstraction, open(FLOP_SAVE_NAME, 'wb'))
         return abstraction
 

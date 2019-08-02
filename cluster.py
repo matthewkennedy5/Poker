@@ -9,27 +9,30 @@ from texas_utils import pbar_map
 
 class Cluster:
 
-    def __call__(self, equity_distributions, n_buckets, iterations):
-        hand_list = list(equity_distributions.keys())
-        distributions = np.array([equity_distributions[h] for h in hand_list])
+    def __init__(self, equity_distributions, n_buckets, iterations):
+        self.hand_list = list(equity_distributions.keys())
+        distributions = np.array([equity_distributions[h] for h in self.hand_list])
         self.data = distributions
+        self.n_buckets = n_buckets
+        self.iterations = iterations
 
+    def __call__(self):
         # TODO: Initiailize with k-means++
 
         # Sample K initial means initialized to be existing points.
-        means = np.zeros((n_buckets, distributions.shape[1]))
+        means = np.zeros((self.n_buckets, self.data.shape[1]))
         for i in range(means.shape[0]):
-            random_hand = np.random.randint(distributions.shape[0])
-            means[i, :] = distributions[random_hand, :]
+            random_hand = np.random.randint(self.data.shape[0])
+            means[i, :] = self.data[random_hand, :]
 
-        for i in trange(iterations):
+        for i in trange(self.iterations):
             clusters = self.cluster_with_means(means)
             means = self.update_means(clusters)
 
         abstraction = {}
         for idx, cluster in enumerate(clusters):
             for hand in cluster:
-                hand_string = hand_list[hand]
+                hand_string = self.hand_list[hand]
                 abstraction[hand_string] = idx
 
         return abstraction
