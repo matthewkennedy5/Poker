@@ -192,6 +192,7 @@ class TestCardAbstractions(unittest.TestCase):
     def test_flop_abstraction(self):
         # Compare similar hands to see that they're in the same flop bucket
         abstraction = FlopAbstraction()
+        self.assertEqual(len(abstraction.table), len(archetypal_flop_hands()))
         hand1 = ('Ac', 'Ad', '5d', '3s', '7c')
         hand2 = ('Ac', 'Ad', '5d', '3s', '8c')
         self.assertEqual(abstraction[hand1], abstraction[hand2])
