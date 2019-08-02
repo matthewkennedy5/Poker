@@ -138,10 +138,6 @@ class CardAbstraction(abc.ABC):
     two aces on the board. However, the order of the flop doesn't matter.
     """
     @abc.abstractmethod
-    def __init__(self):
-        self.table = {}
-
-    @abc.abstractmethod
     def __getitem__(self, cards):
         pass
 
