@@ -72,7 +72,7 @@ def archetypal_flop_hands():
 
 
 def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, opponent_samples=50,
-                                                           rollout_samples=50):
+                            rollout_samples=50):
     """Returns an estimate of the equity distribution for the given hand.
 
     An equity distribution is a histogram that looks like this:
@@ -230,7 +230,8 @@ class FlopAbstraction(CardAbstraction):
     Similarity is based on the Earth Movers Distance of the hands' equity
     distributions, and clustering is performed using k_means clustering.
     """
-    def __init__(self, buckets=5000, equity_bins=50, iters=20, opponent_samples=100, rollout_samples=100):
+    def __init__(self, buckets=5000, equity_bins=50, iters=20,
+                 opponent_samples=100, rollout_samples=100):
         self.buckets = buckets
         self.equity_bins = equity_bins
         self.iters = iters
