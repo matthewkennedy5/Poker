@@ -190,7 +190,24 @@ class TestCardAbstractions(unittest.TestCase):
         self.assertEqual(abst[('Ac', 'Ad')], 336)
 
     def test_flop_abstractions(self):
-        pass
+        # Compare similar hands to see that they're in the same flop bucket
+        abstraction = FlopAbstraction()
+        hand1 = ('Ac', 'Ad', '5d', '3s', '7c')
+        hand2 = ('Ac', 'Ad', '5d', '3s', '8c')
+        self.assertEqual(abstraction[hand1], abstraction[hand2])
+        hand1 = ('Kh', '7h', '2h', '3h', '9h')
+        hand2 = ('Kh', '8h', '2h', '3h', '9h')
+        self.assertEqual(abstraction[hand1], abstraction[hand2])
+        hand1 = ('9h', '7d', '5c', 'Qh', '9s')
+        hand1 = ('9h', '7d', '5d', 'Qh', '9s')
+        self.assertEqual(abstraction[hand1], abstraction[hand2])
+        hand1 = ('Jd', 'Ad', '2c', '6c', '4d')
+        hand2 = ('Jd', 'Ad', '2s', '6c', '4d')
+        self.assertEqual(abstraction[hand1], abstraction[hand2])
+        hand1 = ('3c', 'Qd', '5d', '7s', '4s')
+        hand1 = ('3c', 'Qd', '7s', '6s', '4s')
+        self.assertEqual(abstraction[hand1], abstraction[hand2])
+
 
     def test_archetypes(self):
         hand = ('6h', '8c', 'Td', 'Jd', 'Ah')
