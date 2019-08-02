@@ -30,9 +30,8 @@ def print_abstraction():
     print(RiverAbstraction())
 
 
-# TODO: Is this semantically wrong?
-def duplicate_cards(cards):
-    """Returns True if cards are repeated.
+def unique_cards(cards):
+    """Returns True if there are no repeated cards in the given list.
 
     Input:
         cards - tuple/list of cards in the standard 'Ad' format
@@ -51,7 +50,7 @@ def archetypal_flop_hands():
     with tqdm(total=29304600, smoothing=0) as t:
         for preflop, flop in product(combinations(deck, 2), combinations(deck, 3)):
             hand = preflop + flop
-            if len(np.unique(hand)) == len(hand):
+            if unique_cards(hand):
                 hand = archetypal_hand(hand)
                 if hand not in used_hands:
                     used_hands[hand] = True
@@ -207,6 +206,7 @@ class FlopAbstraction(CardAbstraction):
             pickle.dump(equity_distributions, open(FLOP_EQUITY_DISTIBUTIONS, 'wb'))
 
         print('Performing k-means clustering...')
+        # TODO: Make the inputs be to the actual class?
         abstraction = Cluster()(equity_distributions, K_MEANS_ITERS, N_FLOP_BUCKETS)
         pickle.dump(abstraction, open(FLOP_SAVE_NAME, 'wb'))
         return abstraction
