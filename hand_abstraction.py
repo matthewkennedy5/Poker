@@ -27,7 +27,7 @@ HAND_TABLE = HandTable()
 def print_abstraction():
     params = json.load(open(PARAM_FILE, 'r'))
     print(PreflopAbstraction())
-    # print(FlopAbstraction(**params['flop']))
+    print(FlopAbstraction(**params['flop']))
     print(TurnAbstraction(**params['turn']))
     print(RiverAbstraction())
 
@@ -280,10 +280,10 @@ class StreetAbstraction(CardAbstraction):
         """Clusters all possible flop hands into groups."""
         abstraction_file = ''
         equity_file = ''
-        if self.street == 'preflop':
+        if self.street == 'flop':
             abstraction_file = FLOP_SAVE_NAME
             equity_file = FLOP_EQUITY_DISTIBUTIONS
-        elif self.street == 'flop':
+        elif self.street == 'turn':
             abstraction_file = TURN_SAVE_NAME
             equity_file = TURN_EQUITY_DISTRIBUTIONS
 
@@ -296,8 +296,7 @@ class StreetAbstraction(CardAbstraction):
         else:
             print('Calculating equity distributions...')
             hands = archetypal_hands(self.street)
-            # distributions = pbar_map(self.hand_equity, hands)
-            self.hand_equity(hands[50000])
+            distributions = pbar_map(self.hand_equity, hands)
             equity_distributions = dict(zip(hands, distributions))
             pickle.dump(equity_distributions, open(equity_file, 'wb'))
 
