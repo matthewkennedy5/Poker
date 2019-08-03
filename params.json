@@ -1,0 +1,23 @@
+{
+    "flop": {
+       "buckets": 5000,
+       "equity_bins": 10,
+       "opponent_samples": 100,
+       "rollout_samples": 100,
+       "iters": 20
+    },
+    "turn": {
+       "buckets": 5000,
+       "equity_bins": 10,
+       "opponent_samples": 100,
+       "rollout_samples": 100,
+       "iters": 20
+    },
+    "river": {
+       "buckets": 5000,
+       "equity_bins": 10,
+       "opponent_samples": 100,
+       "rollout_samples": 100,
+       "iters": 20
+    }
+}
