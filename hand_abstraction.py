@@ -28,8 +28,21 @@ def print_abstraction():
     params = json.load(open(PARAM_FILE, 'r'))
     print(PreflopAbstraction())
     # print(FlopAbstraction(**params['flop']))
+    abst = FlopAbstraction(**params['flop'])
+    inspect_abstraction(abst, 100)
     print(TurnAbstraction(**params['turn']))
     print(RiverAbstraction())
+
+
+def inspect_abstraction(abstraction, n_buckets):
+    for i in range(n_buckets):
+        count = 0
+        for hand in abstraction:
+            if abstraction[hand] == i:
+                print(hand)
+                count += 1
+                if count > 10:
+                    break
 
 
 def unique_cards(cards):
