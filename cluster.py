@@ -25,8 +25,15 @@ class Cluster:
             random_hand = np.random.randint(self.data.shape[0])
             means[i, :] = self.data[random_hand, :]
 
-        for i in trange(self.iterations):
+        prev_clusters = None
+        i = 0
+        while True:
+            print(i)
+            i += 1
             clusters = self.cluster_with_means(means)
+            if clusters == prev_clusters:
+                break
+            prev_clusters = clusters
             means = self.update_means(clusters)
 
         abstraction = {}
@@ -55,9 +62,8 @@ class Cluster:
         """
         clusters = [[] for mean in means]
         # Precompute all Earth Mover's Distances since that's the bottleneck
-        inputs = [mean for mean in means]
         with mp.Pool(mp.cpu_count()) as p:
-            distances = p.map(self.earth_movers_distance, inputs)
+            distances = pbar_map(self.earth_movers_distance, means)
         # TODO: Test this with the old code to make sure it's the same
         distances = np.array(distances).T
         nearest_means = np.argmin(distances, axis=1)

@@ -1,6 +1,6 @@
 {
     "flop": {
-       "buckets": 5000,
+       "buckets": 10,
        "equity_bins": 10,
        "opponent_samples": 100,
        "rollout_samples": 100,
