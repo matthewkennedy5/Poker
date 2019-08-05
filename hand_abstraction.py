@@ -43,13 +43,17 @@ def print_abstraction():
 
 
 def inspect_abstraction(abstraction, n_buckets):
+    hands = list(abstraction.abstraction.table.keys())
+    equities = pickle.load(open(FLOP_EQUITY_DISTIBUTIONS, 'rb'))
+    np.random.shuffle(hands)
     for i in range(n_buckets):
+        print(i)
         count = 0
-        for hand in abstraction:
+        for hand in hands:
             if abstraction[hand] == i:
-                print(hand)
+                print(hand, equities[hand])
                 count += 1
-                if count > 10:
+                if count > 5:
                     break
 
 
