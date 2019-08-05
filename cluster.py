@@ -20,7 +20,8 @@ class Cluster:
         # TODO: Initiailize with k-means++
 
         # Sample K initial means initialized to be existing points.
-        means = np.zeros((self.n_buckets, self.data.shape[1]))
+        # means = np.zeros((self.n_buckets, self.data.shape[1]))
+        means = self.init_means()
         for i in range(means.shape[0]):
             random_hand = np.random.randint(self.data.shape[0])
             means[i, :] = self.data[random_hand, :]
@@ -43,6 +44,25 @@ class Cluster:
                 abstraction[hand_string] = idx
 
         return abstraction
+
+    def init_means(self):
+        # Uses the k-means++ algorithm to initialize the means
+        print('Initializing means using k-means++...')
+        initial_means = []
+        n_hands = self.data.shape[0]
+        initial_means.append(np.random.randint(n_hands))
+        for i in range(1, self.n_buckets):
+            squared_distances = np.zeros(n_hands)
+            for j in trange(n_hands):
+                min_distance = min([stats.wasserstein_distance(self.data[mean], self.data[j]) for mean in initial_means])
+                squared_distances[j] = min_distance ** 2
+            pdf = squared_distances / np.sum(squared_distances)
+            new_mean = np.random.choice(range(n_hands), p=pdf)
+            initial_means.append(new_mean)
+        means = np.zeros((self.n_buckets, self.data.shape[1]))
+        breakpoint()
+        # for i, mean in enumerate(initial_means):
+        #     means[]
 
     def earth_movers_distance(self, mean):
         result = []
