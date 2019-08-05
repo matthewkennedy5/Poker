@@ -1,6 +1,8 @@
-"""Unit tests for the Texas Holdem implementation."""
-
 import unittest
+import itertools
+import random
+from tqdm import tqdm, trange
+from scipy import stats
 from matplotlib import pyplot as plt
 from texas_hands import *
 from hand_abstraction import *
@@ -8,7 +10,7 @@ from texas_utils import *
 from hand_table import *
 
 
-class TestTexasHands(unittest.TestCase):
+class HandTests(unittest.TestCase):
 
     def test_classification(self):
         royal_flush = TexasHand(('As', 'Js', 'Ks', 'Qs', 'Ts'))
@@ -191,8 +193,9 @@ class TestCardAbstractions(unittest.TestCase):
 
     def test_flop_abstraction(self):
         # Compare similar hands to see that they're in the same flop bucket
+        # TODO: Possibly delete this test
         abstraction = FlopAbstraction()
-        self.assertEqual(len(abstraction.table), len(archetypal_flop_hands()))
+        self.assertEqual(len(abstraction.abstraction.table), len(archetypal_flop_hands()))
         hand1 = ('Ac', 'Ad', '5d', '3s', '7c')
         hand2 = ('Ac', 'Ad', '5d', '3s', '8c')
         self.assertEqual(abstraction[hand1], abstraction[hand2])
@@ -222,7 +225,6 @@ class TestCardAbstractions(unittest.TestCase):
         self.assertEqual(abstraction[hand1], abstraction[hand2])
         self.assertNotEqual(abstraction[hand1], abstraction[hand3])
 
-
     def test_archetypes(self):
         hand = ('6h', '8c', 'Td', 'Jd', 'Ah')
         truth = ('6s', '8h', 'As', 'Jd', 'Td')
@@ -247,6 +249,40 @@ class TestCardAbstractions(unittest.TestCase):
         self.assertEqual(archetypal_hand(hand1), archetypal_hand(hand2))
 
 
+class ClusterTests(unittest.TestCase):
+
+    def test_coefficient(self):
+        # This test makes sure that the average distance within clusters is less than the average
+        # distance between the cluster and other hands. 
+        equities = pickle.load(open('flop_equity.pkl', 'rb'))
+        abstraction = FlopAbstraction()
+        hands = list(equities.keys())
+        np.random.shuffle(hands)
+        n_buckets = np.max(list(abstraction.abstraction.table.values())) + 1
+        samples = 50
+        for i in range(n_buckets):
+            cluster = []
+            for hand in hands:
+                if abstraction[hand] == i:
+                    cluster.append(hand)
+                    if len(cluster) > samples:
+                        break
+#           1 Compute estimated average distance within cluster
+            total_distance = 0
+            counter = 0
+            for hand1, hand2 in itertools.product(cluster[:samples], cluster[:samples]):
+                total_distance += np.linalg.norm(equities[hand1] - equities[hand2])
+                counter += 1
+            inside_mean_distance = total_distance / counter
+#           2 Compute estimated average distance to random other hands
+            total_distance = 0
+            counter = 0
+            for hand1, hand2 in itertools.product(cluster[:samples], hands[:samples]):
+                total_distance += np.linalg.norm(equities[hand1] - equities[hand2])
+                counter += 1
+            outside_mean_distance = total_distance / counter
+#           see that 1 < 2
+            self.assertTrue(inside_mean_distance < outside_mean_distance)
 
 if __name__ == '__main__':
     unittest.main()

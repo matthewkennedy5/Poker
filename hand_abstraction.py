@@ -24,6 +24,14 @@ TURN_EQUITY_DISTRIBUTIONS = 'turn_equity.pkl'
 HAND_TABLE = HandTable()
 
 
+def print_equities():
+    equities = pickle.load(open(FLOP_EQUITY_DISTIBUTIONS, 'rb'))
+    hands = list(equities.keys())
+    np.random.shuffle(hands)
+    for hand in hands[:10]:
+        print(hand, equities[hand])
+
+
 def print_abstraction():
     params = json.load(open(PARAM_FILE, 'r'))
     print(PreflopAbstraction())
@@ -344,7 +352,7 @@ class StreetAbstraction(CardAbstraction):
         return distribution
 
     def __getitem__(self, cards):
-        return self.table[isomorphic_hand(cards)]
+        return self.table[archetypal_hand(cards)]
 
     def __str__(self):
         return str(self.table)
@@ -383,7 +391,6 @@ class TurnAbstraction(CardAbstraction):
 
 
 
-
-
 if __name__ == '__main__':
+    #print_equities()
     print_abstraction()
