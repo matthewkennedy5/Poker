@@ -326,7 +326,7 @@ class StreetAbstraction(CardAbstraction):
             pickle.dump(equity_distributions, open(equity_file, 'wb'))
 
         print('Performing k-means clustering...')
-        abstraction = Cluster(equity_distributions, self.iters, self.buckets)()
+        abstraction = Cluster(equity_distributions, self.buckets, self.iters)()
         pickle.dump(abstraction, open(abstraction_file, 'wb'))
         return abstraction
 

@@ -20,21 +20,22 @@ class Cluster:
         # TODO: Initiailize with k-means++
 
         # Sample K initial means initialized to be existing points.
-        # means = np.zeros((self.n_buckets, self.data.shape[1]))
-        means = self.init_means()
+        means = np.zeros((self.n_buckets, self.data.shape[1]))
         for i in range(means.shape[0]):
             random_hand = np.random.randint(self.data.shape[0])
             means[i, :] = self.data[random_hand, :]
 
-        prev_clusters = None
-        i = 0
-        while True:
-            print(i)
-            i += 1
+        # prev_clusters = None
+        # i = 0
+        # while True:
+        #     print(i)
+        #     i += 1
+        for i in range(self.iterations):
+            print('Iteration {}/{}'.format(i+1, self.iterations))
             clusters = self.cluster_with_means(means)
-            if clusters == prev_clusters:
-                break
-            prev_clusters = clusters
+            # if clusters == prev_clusters:
+                # break
+            # prev_clusters = clusters
             means = self.update_means(clusters)
 
         abstraction = {}
@@ -61,13 +62,14 @@ class Cluster:
             initial_means.append(new_mean)
         means = np.zeros((self.n_buckets, self.data.shape[1]))
         breakpoint()
-        # for i, mean in enumerate(initial_means):
-        #     means[]
+        raise NotImplementedError
 
     def earth_movers_distance(self, mean):
         result = []
         for hand in self.data:
-            result.append(stats.wasserstein_distance(hand, mean))
+            # result.append(stats.wasserstein_distance(hand, mean))
+            # TODO: Do k-means++ get EMD to work
+            result.append(np.linalg.norm(hand - mean))
         return result
 
     def cluster_with_means(self, means):
@@ -90,7 +92,6 @@ class Cluster:
         for hand_idx, nearest_mean in enumerate(nearest_means):
             clusters[nearest_mean].append(hand_idx)
         return clusters
-
 
     def update_means(self, clusters):
         """Returns the centroids of the given clusters.
