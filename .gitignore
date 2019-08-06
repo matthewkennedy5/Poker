@@ -1,3 +1,4 @@
 *.pkl
 *.pyc
 __pycache__/*
+params.json
