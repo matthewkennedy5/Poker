@@ -34,7 +34,7 @@ def print_equities():
 
 def print_abstraction():
     params = json.load(open(PARAM_FILE, 'r'))
-    print(PreflopAbstraction())
+    # print(PreflopAbstraction())
     # print(FlopAbstraction(**params['flop']))
     #abst = FlopAbstraction(**params['flop'])
     #inspect_abstraction(abst, 100)
@@ -73,7 +73,6 @@ def archetypal_flop_hands():
     hands = []
     deck = get_deck()
     used_hands = {}
-    # TODO: Adapt for the turn
     with tqdm(total=29304600, smoothing=0) as t:
         for preflop, flop in product(combinations(deck, 2), combinations(deck, 3)):
             hand = preflop + flop
@@ -94,7 +93,6 @@ def archetypal_turn_hands():
     hands = []
     deck = get_deck()
     used_hands = {}
-    # TODO: Adapt for the turn
     with tqdm(total=29304600 * 52, smoothing=0) as t:
         for preflop, flop, turn in product(combinations(deck, 2), combinations(deck, 3), deck):
             hand = preflop + flop + (turn,)
@@ -103,8 +101,8 @@ def archetypal_turn_hands():
                 if hand not in used_hands:
                     used_hands[hand] = True
             t.update()
-    pickle.dump(hands, open(ARCHETYPAL_TURN_FILENAME, 'wb'))
     hands = list(used_hands.keys())
+    pickle.dump(hands, open(ARCHETYPAL_TURN_FILENAME, 'wb'))
     return hands
 
 
@@ -348,7 +346,6 @@ class StreetAbstraction(CardAbstraction):
         turn = None
         if len(hand) > 5:
             turn = hand[5]
-        # TODO: Adapt this for the turn
         distribution = get_equity_distribution(preflop, flop, turn,
                                                equity_bins=self.equity_bins,
                                                opponent_samples=self.opponent_samples,
