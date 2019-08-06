@@ -248,6 +248,15 @@ class TestCardAbstractions(unittest.TestCase):
         hand2 = ('5s', '5h', '2d', '6c', '6d')
         self.assertEqual(archetypal_hand(hand1), archetypal_hand(hand2))
 
+    def test_hands(self):
+        hands = pickle.load(open(ARCHETYPAL_TURN_FILENAME, 'rb'))
+        deck = get_deck()
+        for i in range(1000):
+            hand = np.random.choice(deck, 6, replace=False)
+            hand = archetypal_hand(hand)
+            self.assertTrue(hand in hands)
+            
+
 
 class ClusterTests(unittest.TestCase):
 
