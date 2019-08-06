@@ -25,15 +25,17 @@ class Cluster:
             random_hand = np.random.randint(self.data.shape[0])
             means[i, :] = self.data[random_hand, :]
 
-        prev_clusters = None
-        i = 0
-        while True:
-            print(i)
-            i += 1
+        # prev_clusters = None
+        # i = 0
+        # while True:
+        #     print(i)
+        #     i += 1
+        for i in range(self.iterations):
+            print('Iteration {}/{}'.format(i+1, self.iterations))
             clusters = self.cluster_with_means(means)
-            if clusters == prev_clusters:
-                break
-            prev_clusters = clusters
+            # if clusters == prev_clusters:
+                # break
+            # prev_clusters = clusters
             means = self.update_means(clusters)
 
         abstraction = {}
@@ -44,10 +46,30 @@ class Cluster:
 
         return abstraction
 
+    def init_means(self):
+        # Uses the k-means++ algorithm to initialize the means
+        print('Initializing means using k-means++...')
+        initial_means = []
+        n_hands = self.data.shape[0]
+        initial_means.append(np.random.randint(n_hands))
+        for i in range(1, self.n_buckets):
+            squared_distances = np.zeros(n_hands)
+            for j in trange(n_hands):
+                min_distance = min([stats.wasserstein_distance(self.data[mean], self.data[j]) for mean in initial_means])
+                squared_distances[j] = min_distance ** 2
+            pdf = squared_distances / np.sum(squared_distances)
+            new_mean = np.random.choice(range(n_hands), p=pdf)
+            initial_means.append(new_mean)
+        means = np.zeros((self.n_buckets, self.data.shape[1]))
+        breakpoint()
+        raise NotImplementedError
+
     def earth_movers_distance(self, mean):
         result = []
         for hand in self.data:
-            result.append(stats.wasserstein_distance(hand, mean))
+            # result.append(stats.wasserstein_distance(hand, mean))
+            # TODO: Do k-means++ get EMD to work
+            result.append(np.linalg.norm(hand - mean))
         return result
 
     def cluster_with_means(self, means):
@@ -70,7 +92,6 @@ class Cluster:
         for hand_idx, nearest_mean in enumerate(nearest_means):
             clusters[nearest_mean].append(hand_idx)
         return clusters
-
 
     def update_means(self, clusters):
         """Returns the centroids of the given clusters.
