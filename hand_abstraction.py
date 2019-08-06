@@ -2,6 +2,7 @@ import os
 import abc
 import json
 import pickle
+import resource
 from itertools import combinations, product, permutations
 from tqdm import tqdm
 import numpy as np
@@ -9,6 +10,10 @@ import numpy as np
 from hand_table import HandTable
 from cluster import Cluster
 from texas_utils import *
+
+# TODO: Move to main file
+# Sets the max memory usage to 4 GB to avoid freezing the computer
+resource.setrlimit(resource.RLIMIT_AS, (4e9, resource.RLIM_INFINITY))
 
 
 # TODO: Store the computed abstractions with the parameters so that it will be
@@ -35,7 +40,7 @@ def print_equities():
 def print_abstraction():
     params = json.load(open(PARAM_FILE, 'r'))
     # print(PreflopAbstraction())
-    # print(FlopAbstraction(**params['flop']))
+    print(FlopAbstraction(**params['flop']))
     # abst = FlopAbstraction(**params['flop'])
     abst = TurnAbstraction(**params['turn'])
     # print_equities()
@@ -396,9 +401,24 @@ class TurnAbstraction(CardAbstraction):
         return str(self.abstraction)
 
 
-# class RiverAbstraction(CardAbstraction):
+class RiverAbstraction(CardAbstraction):
 
-    # def __init__(self, buckets=5000, )
+    def __init__(self, buckets=5000, iters=20, samples=100):
+        self.buckets = buckets
+        self.iters = iters
+        self.samples = samples
+        self.table = self.compute_abstraction()
+
+    def __getitem__(self, cards):
+        pass
+
+    def __str__(self):
+        pass
+
+    def compute_abstraction(self):
+        pass
+        # load abstraction if it exists
+
 
 
 
