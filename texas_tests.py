@@ -255,14 +255,14 @@ class TestCardAbstractions(unittest.TestCase):
             hand = np.random.choice(deck, 6, replace=False)
             hand = archetypal_hand(hand)
             self.assertTrue(hand in hands)
-            
+
 
 
 class ClusterTests(unittest.TestCase):
 
-    def test_coefficient(self):
+    def test_flop_coefficient(self):
         # This test makes sure that the average distance within clusters is less than the average
-        # distance between the cluster and other hands. 
+        # distance between the cluster and other hands.
         equities = pickle.load(open('flop_equity.pkl', 'rb'))
         abstraction = FlopAbstraction()
         hands = list(equities.keys())
@@ -276,22 +276,56 @@ class ClusterTests(unittest.TestCase):
                     cluster.append(hand)
                     if len(cluster) > samples:
                         break
-#           1 Compute estimated average distance within cluster
+           # 1 Compute estimated average distance within cluster
             total_distance = 0
             counter = 0
             for hand1, hand2 in itertools.product(cluster[:samples], cluster[:samples]):
                 total_distance += np.linalg.norm(equities[hand1] - equities[hand2])
                 counter += 1
             inside_mean_distance = total_distance / counter
-#           2 Compute estimated average distance to random other hands
+            # 2 Compute estimated average distance to random other hands
             total_distance = 0
             counter = 0
             for hand1, hand2 in itertools.product(cluster[:samples], hands[:samples]):
                 total_distance += np.linalg.norm(equities[hand1] - equities[hand2])
                 counter += 1
             outside_mean_distance = total_distance / counter
-#           see that 1 < 2
+            # see that 1 < 2
             self.assertTrue(inside_mean_distance < outside_mean_distance)
+
+    def test_turn_coefficient(self):
+        # This test makes sure that the average distance within clusters is less than the average
+        # distance between the cluster and other hands.
+        equities = pickle.load(open('turn_equity.pkl', 'rb'))
+        abstraction = TurnAbstraction()
+        hands = list(equities.keys())
+        np.random.shuffle(hands)
+        n_buckets = np.max(list(abstraction.abstraction.table.values())) + 1
+        samples = 50
+        for i in range(n_buckets):
+            cluster = []
+            for hand in hands:
+                if abstraction[hand] == i:
+                    cluster.append(hand)
+                    if len(cluster) > samples:
+                        break
+            # 1 Compute estimated average distance within cluster
+            total_distance = 0
+            counter = 0
+            for hand1, hand2 in itertools.product(cluster[:samples], cluster[:samples]):
+                total_distance += np.linalg.norm(equities[hand1] - equities[hand2])
+                counter += 1
+            inside_mean_distance = total_distance / counter
+            # 2 Compute estimated average distance to random other hands
+            total_distance = 0
+            counter = 0
+            for hand1, hand2 in itertools.product(cluster[:samples], hands[:samples]):
+                total_distance += np.linalg.norm(equities[hand1] - equities[hand2])
+                counter += 1
+            outside_mean_distance = total_distance / counter
+            # see that 1 < 2
+            self.assertTrue(inside_mean_distance < outside_mean_distance)
+
 
 if __name__ == '__main__':
     unittest.main()
