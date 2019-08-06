@@ -1,5 +1,6 @@
 from itertools import product
 from tqdm import tqdm
+import numpy as np
 import multiprocessing as mp
 
 (HIGH_CARD, PAIR, TWO_PAIR, THREE_OF_A_KIND, STRAIGHT, FLUSH, FULL_HOUSE,
@@ -22,6 +23,15 @@ def rank(card):
 
 def suit(card):
     return card[1]
+
+
+def unique_cards(cards):
+    """Returns True if there are no repeated cards in the given list.
+
+    Input:
+        cards - tuple/list of cards in the standard 'Ad' format
+    """
+    return len(np.unique(cards)) == len(cards)
 
 
 def archetypal_hand(hand):

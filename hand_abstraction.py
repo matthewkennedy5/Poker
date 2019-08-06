@@ -21,8 +21,10 @@ resource.setrlimit(resource.RLIMIT_AS, (4e9, resource.RLIM_INFINITY))
 PARAM_FILE = 'params.json'
 FLOP_SAVE_NAME = 'flop_abstraction.pkl'
 TURN_SAVE_NAME = 'turn_abstraction.pkl'
+RIVER_SAVE_NAME = 'river_abstraction.pkl'
 ARCHETYPAL_FLOP_FILENAME = 'flop_hands.pkl'
 ARCHETYPAL_TURN_FILENAME = 'turn_hands.pkl'
+ARCHETYPAL_RIVER_FILENAME = 'river_hands.pkl'
 FLOP_EQUITY_DISTIBUTIONS = 'flop_equity.pkl'
 TURN_EQUITY_DISTRIBUTIONS = 'turn_equity.pkl'
 HAND_TABLE = HandTable()
@@ -63,15 +65,6 @@ def inspect_abstraction(abstraction, n_buckets, street):
                 count += 1
                 if count > 5:
                     break
-
-
-def unique_cards(cards):
-    """Returns True if there are no repeated cards in the given list.
-
-    Input:
-        cards - tuple/list of cards in the standard 'Ad' format
-    """
-    return len(np.unique(cards)) == len(cards)
 
 
 def archetypal_flop_hands():
@@ -423,8 +416,10 @@ class RiverAbstraction(CardAbstraction):
         pass
 
     def compute_abstraction(self):
-        pass
         # load abstraction if it exists
+        if os.path.isfile()
+        # calculate hand equities
+        # cluster the equities using "largest gaps"
 
 
 
