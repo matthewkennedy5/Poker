@@ -1,5 +1,3 @@
-# TODO: k-means++ initialization
-
 from tqdm import trange, tqdm
 import numpy as np
 from scipy import stats
@@ -18,6 +16,7 @@ class Cluster:
 
     def __call__(self):
         # TODO: Initiailize with k-means++
+        # TODO: Triangle inequality speedup
 
         # Sample K initial means initialized to be existing points.
         means = np.zeros((self.n_buckets, self.data.shape[1]))
@@ -86,7 +85,6 @@ class Cluster:
         # Precompute all Earth Mover's Distances since that's the bottleneck
         with mp.Pool(mp.cpu_count()) as p:
             distances = pbar_map(self.earth_movers_distance, means)
-        # TODO: Test this with the old code to make sure it's the same
         distances = np.array(distances).T
         nearest_means = np.argmin(distances, axis=1)
         for hand_idx, nearest_mean in enumerate(nearest_means):

@@ -35,7 +35,7 @@ def print_equities():
 def print_abstraction():
     params = json.load(open(PARAM_FILE, 'r'))
     # print(PreflopAbstraction())
-    # print(FlopAbstraction(**params['flop']))
+    print(FlopAbstraction(**params['flop']))
     #abst = FlopAbstraction(**params['flop'])
     #inspect_abstraction(abst, 100)
     print(TurnAbstraction(**params['turn']))
@@ -176,7 +176,7 @@ def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, oppon
         hand += flop
         remaining_cards = 2
     if turn is not None:
-        hand += turn
+        hand += (turn,)
         remaining_cards = 1
     deck = get_deck()
     for card in hand:
@@ -199,7 +199,8 @@ def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, oppon
                 continue
 
             river = remaining[-1]
-            turn = remaining[-2]
+            if remaining_cards == 2:
+                turn = remaining[-2]
             player_hand = HAND_TABLE[hand + remaining]
             opponent_hand = HAND_TABLE[opponent_preflop + flop + (turn, river)]
             if player_hand > opponent_hand:
