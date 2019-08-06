@@ -25,7 +25,7 @@ HAND_TABLE = HandTable()
 
 
 def print_equities():
-    equities = pickle.load(open(FLOP_EQUITY_DISTIBUTIONS, 'rb'))
+    equities = pickle.load(open(TURN_EQUITY_DISTRIBUTIONS, 'rb'))
     hands = list(equities.keys())
     np.random.shuffle(hands)
     for hand in hands[:10]:
@@ -35,16 +35,20 @@ def print_equities():
 def print_abstraction():
     params = json.load(open(PARAM_FILE, 'r'))
     # print(PreflopAbstraction())
-    print(FlopAbstraction(**params['flop']))
-    #abst = FlopAbstraction(**params['flop'])
-    #inspect_abstraction(abst, 100)
-    print(TurnAbstraction(**params['turn']))
-    print(RiverAbstraction())
+    # print(FlopAbstraction(**params['flop']))
+    # abst = FlopAbstraction(**params['flop'])
+    abst = TurnAbstraction(**params['turn'])
+    # print_equities()
+    inspect_abstraction(abst, params['turn']['buckets'], 'turn')
+    # print(RiverAbstraction(**params['river']))
 
 
-def inspect_abstraction(abstraction, n_buckets):
+def inspect_abstraction(abstraction, n_buckets, street):
     hands = list(abstraction.abstraction.table.keys())
-    equities = pickle.load(open(FLOP_EQUITY_DISTIBUTIONS, 'rb'))
+    if street == 'flop':
+        equities = pickle.load(open(FLOP_EQUITY_DISTIBUTIONS, 'rb'))
+    elif street == 'turn':
+        equities = pickle.load(open(TURN_EQUITY_DISTRIBUTIONS, 'rb'))
     np.random.shuffle(hands)
     for i in range(n_buckets):
         print(i)
@@ -390,6 +394,11 @@ class TurnAbstraction(CardAbstraction):
 
     def __str__(self):
         return str(self.abstraction)
+
+
+# class RiverAbstraction(CardAbstraction):
+
+    # def __init__(self, buckets=5000, )
 
 
 

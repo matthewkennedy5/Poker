@@ -1,4 +1,5 @@
 from tqdm import trange, tqdm
+from matplotlib import pyplot as plt
 import numpy as np
 from scipy import stats
 import multiprocessing as mp
@@ -13,6 +14,7 @@ class Cluster:
         self.data = distributions
         self.n_buckets = n_buckets
         self.iterations = iterations
+        self.loss_history = []
 
     def __call__(self):
         # TODO: Initiailize with k-means++
@@ -86,11 +88,19 @@ class Cluster:
         with mp.Pool(mp.cpu_count()) as p:
             distances = pbar_map(self.earth_movers_distance, means)
         distances = np.array(distances).T
+
+        # Update the loss history with the sum of the squared distances of each
+        # data point to its nearest mean
+        distances[np.isnan(distances)] = np.Inf
+        loss = np.sum(np.min(distances, axis=1) ** 2)
+        self.loss_history.append(loss)
+
         nearest_means = np.argmin(distances, axis=1)
         for hand_idx, nearest_mean in enumerate(nearest_means):
             clusters[nearest_mean].append(hand_idx)
         return clusters
 
+    # TODO: Handle degenerate clusters with 0 points
     def update_means(self, clusters):
         """Returns the centroids of the given clusters.
 
@@ -106,3 +116,8 @@ class Cluster:
         for i, cluster in enumerate(clusters):
             means[i, :] = np.mean(self.data[cluster, :], axis=0)
         return means
+
+    def plot_loss(self):
+        plt.figure()
+        plt.plot(range(len(self.loss_history)), self.loss_history)
+        plt.show()
