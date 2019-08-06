@@ -15,8 +15,8 @@ from texas_utils import *
 # recomputed if the parameters are different.
 # TODO: Take the paramater file as a command line argument to the trainer class
 PARAM_FILE = 'params.json'
-FLOP_SAVE_NAME = 'texas_flop_abstraction.pkl'
-TURN_SAVE_NAME = 'texas_turn_abstraction.pkl'
+FLOP_SAVE_NAME = 'flop_abstraction.pkl'
+TURN_SAVE_NAME = 'turn_abstraction.pkl'
 ARCHETYPAL_FLOP_FILENAME = 'flop_hands.pkl'
 ARCHETYPAL_TURN_FILENAME = 'turn_hands.pkl'
 FLOP_EQUITY_DISTIBUTIONS = 'flop_equity.pkl'
