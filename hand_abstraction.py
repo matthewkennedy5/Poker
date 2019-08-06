@@ -15,7 +15,6 @@ from texas_utils import *
 # Sets the max memory usage to 4 GB to avoid freezing the computer
 resource.setrlimit(resource.RLIMIT_AS, (4e9, resource.RLIM_INFINITY))
 
-
 # TODO: Store the computed abstractions with the parameters so that it will be
 # recomputed if the parameters are different.
 # TODO: Take the paramater file as a command line argument to the trainer class
@@ -77,7 +76,8 @@ def unique_cards(cards):
 
 def archetypal_flop_hands():
     if os.path.isfile(ARCHETYPAL_FLOP_FILENAME):
-        return pickle.load(open(ARCHETYPAL_FLOP_FILENAME, 'rb'))
+        with open(ARCHETYPAL_FLOP_FILENAME, 'rb') as f:
+            return pickle.load(f)
     print('Preparing archetypal flop hands...')
     hands = []
     deck = get_deck()
@@ -91,13 +91,15 @@ def archetypal_flop_hands():
                     used_hands[hand] = True
             t.update()
     hands = list(used_hands.keys())
-    pickle.dump(hands, open(ARCHETYPAL_FLOP_FILENAME, 'wb'))
+    with open(ARCHETYPAL_FLOP_FILENAME, 'wb') as f:
+        pickle.dump(hands, f)
     return hands
 
 
 def archetypal_turn_hands():
     if os.path.isfile(ARCHETYPAL_TURN_FILENAME):
-        return pickle.load(open(ARCHETYPAL_TURN_FILENAME, 'rb'))
+        with open(ARCHETYPAL_TURN_FILENAME, 'rb') as f:
+            return pickle.load(f)
     print('Preparing archetypal turn hands...')
     hands = []
     deck = get_deck()
@@ -111,7 +113,8 @@ def archetypal_turn_hands():
                     used_hands[hand] = True
             t.update()
     hands = list(used_hands.keys())
-    pickle.dump(hands, open(ARCHETYPAL_TURN_FILENAME, 'wb'))
+    with open(ARCHETYPAL_TURN_FILENAME, 'wb') as f:
+        pickle.dump(hands, f)
     return hands
 
 
@@ -321,21 +324,25 @@ class StreetAbstraction(CardAbstraction):
             equity_file = TURN_EQUITY_DISTRIBUTIONS
 
         if os.path.isfile(abstraction_file):
-            return pickle.load(open(abstraction_file, 'rb'))
+            with open(abstraction_file, 'rb') as f:
+                return pickle.load(f)
 
         print('Computing the %s abstraction...' % (self.street,))
         if os.path.isfile(equity_file):
-            equity_distributions = pickle.load(open(equity_file, 'rb'))
+            with open(equity_file, 'rb') as f:
+                equity_distributions = pickle.load(f)
         else:
             print('Calculating equity distributions...')
             hands = archetypal_hands(self.street)
             distributions = pbar_map(self.hand_equity, hands)
             equity_distributions = dict(zip(hands, distributions))
-            pickle.dump(equity_distributions, open(equity_file, 'wb'))
+            with open(equity_file, 'wb') as f:
+                pickle.dump(equity_distributions, f)
 
         print('Performing k-means clustering...')
         abstraction = Cluster(equity_distributions, self.buckets, self.iters)()
-        pickle.dump(abstraction, open(abstraction_file, 'wb'))
+        with open(abstraction_file, 'wb') as f:
+            pickle.dump(abstraction, f)
         return abstraction
 
     def hand_equity(self, hand):
