@@ -36,20 +36,24 @@ def print_abstraction():
     params = json.load(open(PARAM_FILE, 'r'))
     print(PreflopAbstraction())
     # print(FlopAbstraction(**params['flop']))
-    abst = FlopAbstraction(**params['flop'])
-    inspect_abstraction(abst, 100)
+    #abst = FlopAbstraction(**params['flop'])
+    #inspect_abstraction(abst, 100)
     print(TurnAbstraction(**params['turn']))
     print(RiverAbstraction())
 
 
 def inspect_abstraction(abstraction, n_buckets):
+    hands = list(abstraction.abstraction.table.keys())
+    equities = pickle.load(open(FLOP_EQUITY_DISTIBUTIONS, 'rb'))
+    np.random.shuffle(hands)
     for i in range(n_buckets):
+        print(i)
         count = 0
-        for hand in abstraction:
+        for hand in hands:
             if abstraction[hand] == i:
-                print(hand)
+                print(hand, equities[hand])
                 count += 1
-                if count > 10:
+                if count > 5:
                     break
 
 
@@ -322,7 +326,7 @@ class StreetAbstraction(CardAbstraction):
             pickle.dump(equity_distributions, open(equity_file, 'wb'))
 
         print('Performing k-means clustering...')
-        abstraction = Cluster(equity_distributions, self.iters, self.buckets)()
+        abstraction = Cluster(equity_distributions, self.buckets, self.iters)()
         pickle.dump(abstraction, open(abstraction_file, 'wb'))
         return abstraction
 
