@@ -8,6 +8,7 @@ from texas_hands import *
 from hand_abstraction import *
 from texas_utils import *
 from hand_table import *
+from trainer import *
 
 
 class HandTests(unittest.TestCase):
@@ -329,6 +330,54 @@ class ClusterTests(unittest.TestCase):
             outside_mean_distance = total_distance / counter
             # see that 1 < 2
             self.assertTrue(inside_mean_distance < outside_mean_distance)
+
+
+class ActionTests(unittest.TestCase):
+
+    def test_pot_size(self):
+        history = ActionHistory(preflp=('limp', 'call'),
+                                flop=('half_pot', 'call'),
+                                turn=('half_pot', 'call'),
+                                river=('half_pot', 'call'))
+        truth = 200 + 200 + 400 + 800
+        self.assertEqual(history.pot_size(), truth)
+
+        history = ActionHistory(preflop=('raise', '3-bet'),
+                                flop=('all_in',))
+        self.assertEqual(history.pot_size(), STACK_SIZE + 3*BIG_BLIND)
+
+        history = ActionHistory(preflop=('raise'))
+        self.assertEqual(history.pot_size(), 3*BIG_BLIND)
+
+        history = ActionHistory(preflop=('limp', 'raise', 'call'),
+                                flop=('check', 'half_pot', 'min_raise', 'call'),
+                                turn=('check',))
+        self.assertEqual(history.pot_size(), 6*BIG_BLIND + 12*BIG_BLIND)
+
+    def test_street(self):
+        pass
+
+    def test_whose_turn(self):
+        pass
+
+    def test_legal_actions(self):
+        pass
+
+    def test_hand_over(self):
+        pass
+
+
+class InfoSetTests(unittest.TestCase):
+
+    def test_eq(self):
+        pass
+
+    def test_hash(self):
+        pass
+
+
+
+
 
 
 if __name__ == '__main__':
