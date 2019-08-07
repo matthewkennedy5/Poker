@@ -41,12 +41,11 @@ def print_equities():
 def print_abstraction():
     params = json.load(open(PARAM_FILE, 'r'))
     # print(PreflopAbstraction())
-    print(FlopAbstraction(**params['flop']))
+    # print(FlopAbstraction(**params['flop']))
     # abst = FlopAbstraction(**params['flop'])
-    abst = TurnAbstraction(**params['turn'])
+    # abst = TurnAbstraction(**params['turn'])
     # print_equities()
-    inspect_abstraction(abst, params['turn']['buckets'], 'turn')
-    # print(RiverAbstraction(**params['river']))
+    # inspect_abstraction(abst, params['turn']['buckets'], 'turn')
 
 
 def inspect_abstraction(abstraction, n_buckets, street):
@@ -220,6 +219,26 @@ def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, oppon
 
     equity_distribution /= np.sum(equity_distribution)
     return equity_distribution
+
+
+def equity(hand, samples=1000):
+    hand = list(hand)
+    preflop = hand[:2]
+    board = hand[2:7]
+    deck = get_deck()
+    for card in preflop + board:
+        deck.remove(card)
+    wins = 0
+    for i in range(samples):
+        opp_hand = list(np.random.choice(deck, 2, replace=False))
+        my_hand = HAND_TABLE[preflop + board]
+        opp_hand = HAND_TABLE[opp_hand + board]
+        if my_hand > opp_hand:
+            wins += 1
+        elif my_hand == opp_hand:
+            wins += 0.5
+    equity = wins / samples
+    return equity
 
 
 def abstraction2str(table):
@@ -401,29 +420,28 @@ class TurnAbstraction(CardAbstraction):
         return str(self.abstraction)
 
 
+# Uses online lookup instead of table lookup
 class RiverAbstraction(CardAbstraction):
 
-    def __init__(self, buckets=5000, iters=20, samples=100):
+    def __init__(self, buckets=5000, samples=100):
         self.buckets = buckets
-        self.iters = iters
         self.samples = samples
-        self.table = self.compute_abstraction()
 
     def __getitem__(self, cards):
-        pass
+        # get the equity of the hand
+        equity = equity(cards, self.samples)
+        bucket = int(equity * self.buckets)
 
     def __str__(self):
-        pass
-
-    def compute_abstraction(self):
-        # load abstraction if it exists
-        if os.path.isfile()
-        # calculate hand equities
-        # cluster the equities using "largest gaps"
-
-
+        raise NotImplemented
 
 
 if __name__ == '__main__':
     #print_equities()
+    deck = get_deck()
+    np.random.shuffle(deck)
+    hand = deck[:7]
+    abst = RiverAbstraction()
+    print(abst[hand])
     print_abstraction()
+

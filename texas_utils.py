@@ -103,23 +103,3 @@ def pbar_map(function, iterator):
         result = list(tqdm(p.imap(function, iterator), total=len(iterator), smoothing=0.1))
     return result
 
-
-# Profiling code
-# import time
-# import numpy as np
-# from itertools import combinations
-# deck = get_deck()
-# np.random.shuffle(deck)
-# hand = deck[:5]
-# start = time.time()
-# for i in range(1000000):
-#     isomorphic_hand(hand)
-
-# end = time.time()
-# print(end - start)
-# raise KeyboardInterrupt
-
-
-
-
-

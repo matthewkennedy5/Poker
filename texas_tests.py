@@ -256,7 +256,11 @@ class TestCardAbstractions(unittest.TestCase):
             hand = archetypal_hand(hand)
             self.assertTrue(hand in hands)
 
-
+    def test_equity(self):
+        hand = ('Ac', 'Ad', 'As', 'Ah', '2h', '9c', 'Tc')
+        self.assertTrue(equity(hand, samples=1000) > 0.9)
+        hand = ('4c', '7d', 'As', '2h', '9h', '9c', 'Tc')
+        self.assertTrue(equity(hand, samples=1000) < 0.2)
 
 class ClusterTests(unittest.TestCase):
 

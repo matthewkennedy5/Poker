@@ -44,3 +44,4 @@ class HandTable:
                 table[tuple(hand.cards)] = table[tuple(prev_hand.cards)]
         print('Done.')
         return table
+
