@@ -110,10 +110,6 @@ def archetypal_turn_hands():
     return hands
 
 
-def archetypal_river_hands():
-    raise NotImplementedError
-
-
 def archetypal_hands(street):
     """Returns a list of all archetypal hands for the given street.
 
@@ -222,6 +218,14 @@ def get_equity_distribution(preflop, flop=None, turn=None, equity_bins=50, oppon
 
 
 def equity(hand, samples=1000):
+    """Returns the average equity of the given river hand.
+
+    Equity = chance of winning + 0.5 * chance of tying.
+
+    Inputs:
+        hand - 7 card river hand
+        samples - How many opponent hands to average over
+    """
     hand = list(hand)
     preflop = hand[:2]
     board = hand[2:7]
