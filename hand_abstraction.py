@@ -394,7 +394,7 @@ class FlopAbstraction(CardAbstraction):
     Similarity is based on the Earth Movers Distance of the hands' equity
     distributions, and clustering is performed using k_means clustering.
     """
-    def __init__(self, buckets=5000, equity_bins=50, iters=20,
+    def __init__(self, buckets=100, equity_bins=50, iters=20,
                  opponent_samples=100, rollout_samples=100):
         self.abstraction = StreetAbstraction('flop', buckets, equity_bins, iters,
                                              opponent_samples, rollout_samples)
@@ -408,7 +408,7 @@ class FlopAbstraction(CardAbstraction):
 
 class TurnAbstraction(CardAbstraction):
 
-    def __init__(self, buckets=5000, equity_bins=50, iters=20,
+    def __init__(self, buckets=100, equity_bins=50, iters=20,
                  opponent_samples=100, rollout_samples=100):
         self.abstraction = StreetAbstraction('turn', buckets, equity_bins, iters,
                                              opponent_samples, rollout_samples)
@@ -423,17 +423,19 @@ class TurnAbstraction(CardAbstraction):
 # Uses online lookup instead of table lookup
 class RiverAbstraction(CardAbstraction):
 
-    def __init__(self, buckets=5000, samples=100):
+    def __init__(self, buckets=100, samples=100):
         self.buckets = buckets
         self.samples = samples
 
     def __getitem__(self, cards):
         # get the equity of the hand
-        equity = equity(cards, self.samples)
-        bucket = int(equity * self.buckets)
+        avg_equity = equity(cards, self.samples)
+        print(cards, avg_equity)
+        bucket = int(avg_equity * self.buckets)
+        return bucket
 
     def __str__(self):
-        raise NotImplemented
+        raise NotImplementedError
 
 
 if __name__ == '__main__':
