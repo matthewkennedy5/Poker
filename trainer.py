@@ -20,6 +20,7 @@ class ActionHistory:
         self.turn = turn
         self.river = river
 
+
     def add_action(self, action):
         raise NotImplementedError
 
@@ -74,6 +75,9 @@ class ActionHistory:
                     stack_sizes[player] -= prev_bet
                     player = 1 - player
                     pot += bet
+
+        if stack_sizes[0] < 0 or stack_sizes[1] < 0:
+            raise ValueError('Invalid bet history: bets exceed stack size.')
         return pot
 
     def street(self):
@@ -123,7 +127,36 @@ class ActionHistory:
             return self.river
 
     def legal_actions(self):
-        raise NotImplementedError
+        history = self.current_street_history()
+        if history is None:
+            prev_action = None
+        else:
+            prev_action = history[-1]
+        if self.street() == 'preflop':
+            if prev_action is None:
+                return ('fold', 'limp', 'raise')
+            elif prev_action == 'limp':
+                return ('fold', 'call', 'raise')
+            elif prev_action == 'raise':
+                return ('fold', 'call', '3-bet')
+            elif prev_action == '3-bet':
+                return ('fold', 'call', '4-bet', 'all-in')
+            elif prev_action == '4-bet':
+                return ('fold', 'call', 'all-in')
+            elif prev_action == 'all-in':
+                return ('fold', 'call')
+
+        # Postflop
+        if prev_action is None:
+            return ('check', 'half_pot', 'pot', 'all-in')
+        elif prev_action == 'check':
+            return ('check', 'half_pot', 'pot', 'all-in')
+        elif prev_action in ('half_pot', 'pot', 'min_raise'):
+            return ('fold', 'call', 'min_raise', 'all-in')
+        elif prev_action == 'all-in':
+            return ('fold', 'call')
+
+
 
     def hand_over(self):
         raise NotImplementedError
