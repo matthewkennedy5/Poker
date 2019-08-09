@@ -335,24 +335,44 @@ class ClusterTests(unittest.TestCase):
 class ActionTests(unittest.TestCase):
 
     def test_pot_size(self):
-        history = ActionHistory(preflp=('limp', 'call'),
+        history = ActionHistory(preflop=('limp', 'call'),
                                 flop=('half_pot', 'call'),
                                 turn=('half_pot', 'call'),
                                 river=('half_pot', 'call'))
         truth = 200 + 200 + 400 + 800
         self.assertEqual(history.pot_size(), truth)
 
-        history = ActionHistory(preflop=('raise', '3-bet'),
-                                flop=('all_in',))
-        self.assertEqual(history.pot_size(), STACK_SIZE + 3*BIG_BLIND)
+        history = ActionHistory(preflop=('raise', '3-bet', 'call'),
+                                flop=('all-in',))
+        self.assertEqual(history.pot_size(), STACK_SIZE + 9*BIG_BLIND)
 
-        history = ActionHistory(preflop=('raise'))
+        history = ActionHistory(preflop=('raise',))
         self.assertEqual(history.pot_size(), 3*BIG_BLIND)
 
         history = ActionHistory(preflop=('limp', 'raise', 'call'),
                                 flop=('check', 'half_pot', 'min_raise', 'call'),
                                 turn=('check',))
         self.assertEqual(history.pot_size(), 6*BIG_BLIND + 12*BIG_BLIND)
+
+        history = ActionHistory(preflop=('raise', '3-bet', '4-bet', 'call'),
+                                flop=('half_pot', 'call'),
+                                turn=('check', 'pot', 'min_raise', 'call'),
+                                river=('check', 'check'))
+        self.assertEqual(history.pot_size(), 600 * BIG_BLIND)
+
+        history = ActionHistory(preflop=('all-in',))
+        self.assertEqual(history.pot_size(), STACK_SIZE)
+
+
+    def test_preflop_pot_size(self):
+        history = ActionHistory(preflop=('limp', 'call'))
+        # self.assertEqual(history.pot_size(), 2*BIG_BLIND)
+        history = ActionHistory(preflop=('raise', 'call'))
+        # self.assertEqual(history.pot_size(), 6*BIG_BLIND)
+        history = ActionHistory(preflop=('limp', 'raise', '3-bet', '4-bet', 'all-in', 'call'))
+        self.assertEqual(history.pot_size(), 2*STACK_SIZE)
+        history = ActionHistory(preflop=('raise', '3-bet', 'call'))
+        self.assertEqual(history.pot_size(), 18*BIG_BLIND)
 
     def test_street(self):
         pass
