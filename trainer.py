@@ -184,16 +184,11 @@ class ActionHistory:
 
         return tuple(actions)
 
-
-
     def hand_over(self):
-        raise NotImplementedError
-
-    def check(self):
-        raise NotImplementedError
+        return self.street() == 'over'
 
     def __str__(self):
-        raise NotImplementedError
+        result = 'Preflop: {}\nFlop: {}\nTurn: {}\nRiver: {}'.format(self.preflop, self.flop, self.turn, self.river)
 
 
 class InfoSet:
