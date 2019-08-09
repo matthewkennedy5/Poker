@@ -101,11 +101,26 @@ class ActionHistory:
         return street
 
     def street_is_over(self, street_history):
-        return street_history[-1] == 'call' or (street_history[-1] == 'check'
+        return street_history[-1] == 'call' or (len(street_history) >= 2 and street_history[-1] == 'check'
                                                 and street_history[-2] == 'check')
 
     def whose_turn(self):
-        raise NotImplementedError
+        history = self.current_street_history()
+        if history is None:
+            return 0
+        else:
+            return len(history) % 2
+
+    def current_street_history(self):
+        street = self.street()
+        if street == 'preflop':
+            return self.preflop
+        elif street == 'flop':
+            return self.flop
+        elif street == 'turn':
+            return self.turn
+        elif street == 'river':
+            return self.river
 
     def legal_actions(self):
         raise NotImplementedError
