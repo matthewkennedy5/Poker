@@ -74,11 +74,35 @@ class ActionHistory:
                     stack_sizes[player] -= prev_bet
                     player = 1 - player
                     pot += bet
-
         return pot
 
     def street(self):
-        raise NotImplementedError
+        street = ''
+        if self.river is not None:
+            if self.street_is_over(self.river):
+                street = 'over'
+            else:
+                street = 'river'
+        elif self.turn is not None:
+            if self.street_is_over(self.turn):
+                street = 'river'
+            else:
+                street = 'turn'
+        elif self.flop is not None:
+            if self.street_is_over(self.flop):
+                street = 'turn'
+            else:
+                street = 'flop'
+        else:
+            if self.street_is_over(self.preflop):
+                street = 'flop'
+            else:
+                street = 'preflop'
+        return street
+
+    def street_is_over(self, street_history):
+        return street_history[-1] == 'call' or (street_history[-1] == 'check'
+                                                and street_history[-2] == 'check')
 
     def whose_turn(self):
         raise NotImplementedError
@@ -87,6 +111,9 @@ class ActionHistory:
         raise NotImplementedError
 
     def hand_over(self):
+        raise NotImplementedError
+
+    def check(self):
         raise NotImplementedError
 
     def __str__(self):
