@@ -382,7 +382,13 @@ class ActionTests(unittest.TestCase):
         self.assertEqual(self.histories[6].street(), 'flop')
 
     def test_whose_turn(self):
-        pass
+        self.assertEqual(self.histories[0].whose_turn(), 0)
+        self.assertEqual(self.histories[1].whose_turn(), 1)
+        self.assertEqual(self.histories[2].whose_turn(), 1)
+        self.assertEqual(self.histories[3].whose_turn(), 1)
+        self.assertEqual(self.histories[4].whose_turn(), 0)
+        self.assertEqual(self.histories[5].whose_turn(), 1)
+        self.assertEqual(self.histories[6].whose_turn(), 0)
 
     def test_legal_actions(self):
         pass
