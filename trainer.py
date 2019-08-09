@@ -1,5 +1,6 @@
 # https://arxiv.org/abs/1809.04040
 
+import copy
 import numpy as np
 from texas_utils import *
 from hand_abstraction import PreflopAbstraction, FlopAbstraction, RiverAbstraction
@@ -20,9 +21,23 @@ class ActionHistory:
         self.turn = turn
         self.river = river
 
-
     def add_action(self, action):
-        raise NotImplementedError
+        street = self.street()
+        action = (action,)
+        if street == 'preflop':
+            self.preflop += action
+        elif street == 'flop':
+            if self.flop is None:
+                self.flop = ()
+            self.flop += action
+        elif street == 'turn':
+            if self.turn is None:
+                self.turn = ()
+            self.turn += action
+        elif street == 'river':
+            if self.river is None:
+                self.river = ()
+            self.river += action
 
     def pot_size(self):
         stack_sizes = [STACK_SIZE, STACK_SIZE]
@@ -147,14 +162,27 @@ class ActionHistory:
                 return ('fold', 'call')
 
         # Postflop
+        pot = self.pot_size()
         if prev_action is None:
-            return ('check', 'half_pot', 'pot', 'all-in')
+            actions = ['check', 'half_pot', 'pot', 'all-in']
         elif prev_action == 'check':
-            return ('check', 'half_pot', 'pot', 'all-in')
+            actions = ['check', 'half_pot', 'pot', 'all-in']
         elif prev_action in ('half_pot', 'pot', 'min_raise'):
-            return ('fold', 'call', 'min_raise', 'all-in')
+            actions = ['fold', 'call', 'min_raise', 'all-in']
         elif prev_action == 'all-in':
-            return ('fold', 'call')
+            actions = ['fold', 'call']
+
+        for action in actions:
+            trial = copy.deepcopy(self)
+            trial.add_action(action)
+            try:
+                trial.pot_size()
+            except ValueError:
+                # This action is invalid because the bets are larger than
+                # the stack sizes
+                actions.remove(action)
+
+        return tuple(actions)
 
 
 
