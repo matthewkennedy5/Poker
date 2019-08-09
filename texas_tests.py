@@ -391,7 +391,14 @@ class ActionTests(unittest.TestCase):
         self.assertEqual(self.histories[6].whose_turn(), 0)
 
     def test_legal_actions(self):
-        pass
+        self.assertEqual(self.histories[0].legal_actions(), ())
+        self.assertEqual(self.histories[1].legal_actions(), ('fold', 'call'))
+        self.assertEqual(self.histories[2].legal_actions(), ('fold', 'call', '3-bet'))
+        self.assertEqual(self.histories[3].legal_actions(), ('check', 'half_pot', 'pot', 'all-in'))
+        self.assertEqual(self.histories[4].legal_actions(), ())
+        self.assertEqual(self.histories[5].legal_actions(), ('fold', 'call'))
+        self.assertEqual(self.histories[6].legal_actions(), ('check', 'half_pot', 'pot', 'all-in'))
+
 
     def test_hand_over(self):
         pass
