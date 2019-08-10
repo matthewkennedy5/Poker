@@ -120,8 +120,9 @@ class ActionHistory:
         return street
 
     def street_is_over(self, street_history):
-        return street_history[-1] == 'call' or (len(street_history) >= 2 and street_history[-1] == 'check'
-                                                and street_history[-2] == 'check')
+        return ((len(street_history) >= 1 and street_history[-1] == 'call')
+                or (len(street_history) >= 2 and street_history[-1] == 'check'
+                                             and street_history[-2] == 'check'))
 
     def whose_turn(self):
         history = self.current_street_history()
@@ -201,7 +202,7 @@ class InfoSet:
         raise NotImplementedError
 
     # Make sure equal infosets are hashed equally
-    def __hash__(self, other):
+    def __hash__(self):
         raise NotImplementedError
 
     def __str__(self):
@@ -229,10 +230,50 @@ class Trainer:
         self.nodes = {}
 
     def train(self, iterations):
-        raise NotImplementedError
+        print('Beginning training...')
+        deck = get_deck()
+        for i in range(iterations):
+            np.random.shuffle(deck)
+            self.iterate(deck)
+        with open(SAVE_PATH, 'wb') as f:
+            pickle.dump(self.nodes, f)
 
-    def iterate(self, deck, bet_history=[], p0=1, p1=1):
-        raise NotImplementedError
+    def iterate(self, deck, history=ActionHistory([]), weights=[1, 1]):
+        player = history.whose_turn()
+        opponent = 1 - player
+
+        if history.hand_over():
+            return self.terminal_utility(deck, history)
+
+        infoset = InfoSet(deck, history)
+        if infoset not in self.nodes:
+            self.nodes[infoset] = Node(infoset)
+        node = self.nodes[infoset]
+
+        player_weight = weights[player]
+        opponent_weight = weights[opponent]
+
+        strategy = node.current_strategy(player_weight)
+        utility = {}
+        node_utility = 0
+        for action in infoset.legal_actions():
+            next_history = history + action
+            if player == 0:
+                utility[action] = -self.iterate(deck, next_history, p0*strategy[action], p1)
+            elif player == 1:
+                utility[action] = - self.cfrplus(deck, next_history, p0, p1*strategy[action])
+            node_utility += strategy[action] * utility[action]
+
+        for action in infoset.legal_actions():
+            regret = utility[action] - node_utility
+            node.add_regret(action, opponent_weight * regret)
+        return node_utility
+
 
     def terminal_utility(self, deck, bet_history):
         raise NotImplementedError
+
+
+if __name__ == '__main__':
+    t = Trainer()
+    t.train(int(1e2))
