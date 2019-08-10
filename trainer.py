@@ -2,8 +2,9 @@
 
 import copy
 import numpy as np
+from tqdm import trange
 from texas_utils import *
-from hand_abstraction import PreflopAbstraction, FlopAbstraction, RiverAbstraction
+from hand_abstraction import PreflopAbstraction, FlopAbstraction, TurnAbstraction, RiverAbstraction
 
 PREFLOP_ACTIONS = 'fold', 'call', 'limp', 'raise', '3-bet', '4-bet', 'all-in'
 POSTFLOP_ACTIONS = 'fold', 'check', 'call', 'half_pot', 'pot', 'min_raise', 'all-in'
@@ -11,6 +12,12 @@ ACTIONS = PREFLOP_ACTIONS + POSTFLOP_ACTIONS
 SMALL_BLIND = 50
 BIG_BLIND = 100
 STACK_SIZE = 20000
+
+# TODO - Parameters
+PREFLOP_ABSTRACTION = PreflopAbstraction()
+FLOP_ABSTRACTION = FlopAbstraction()
+TURN_ABSTRACTION = TurnAbstraction()
+RIVER_ABSTRACTION = RiverAbstraction()
 
 # TODO: Action translation
 class ActionHistory:
@@ -189,24 +196,37 @@ class ActionHistory:
         return self.street() == 'over'
 
     def __str__(self):
-        result = 'Preflop: {}\nFlop: {}\nTurn: {}\nRiver: {}'.format(self.preflop, self.flop, self.turn, self.river)
+        return 'Preflop: {}\nFlop: {}\nTurn: {}\nRiver: {}'.format(self.preflop, self.flop, self.turn, self.river)
+
+    def __hash__(self):
+        return hash(str(self))
 
 
 class InfoSet:
 
-    def __init__(self, cards, action_history):
-        self.cards = cards
-        self.action_history = action_history
+    def __init__(self, deck, history):
+        self.history = history
+        street = history.street()
+        if street == 'preflop':
+            self.card_bucket = PREFLOP_ABSTRACTION[deck[:2]]
+        elif street == 'flop':
+            self.card_bucket = FLOP_ABSTRACTION[deck[:5]]
+        elif street == 'turn':
+            self.card_bucket = TURN_ABSTRACTION[deck[:6]]
+        elif street == 'river':
+            self.card_bucket = RIVER_ABSTRACTION[deck[:7]]
+        else:
+            raise ValueError('Unknown street.')
 
     def __eq__(self, other):
-        raise NotImplementedError
+        return self.card_bucket == other.card_bucket and self.history == other.history
 
     # Make sure equal infosets are hashed equally
     def __hash__(self):
-        raise NotImplementedError
+        return self.card_bucket + hash(self.history)
 
     def __str__(self):
-        raise NotImplementedError
+        return 'Information set:\n\tCard bucket: {}\n\tHistory: {}'.format(self.card_bucket, self.history)
 
 
 class Node:
@@ -232,7 +252,7 @@ class Trainer:
     def train(self, iterations):
         print('Beginning training...')
         deck = get_deck()
-        for i in range(iterations):
+        for i in trange(iterations):
             np.random.shuffle(deck)
             self.iterate(deck)
         with open(SAVE_PATH, 'wb') as f:

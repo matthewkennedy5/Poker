@@ -459,7 +459,7 @@ class TurnAbstraction(CardAbstraction):
 # Uses online lookup instead of table lookup
 class RiverAbstraction(CardAbstraction):
 
-    def __init__(self, buckets=100, samples=100):
+    def __init__(self, buckets=5, samples=100):
         self.buckets = buckets
         self.samples = samples
 
