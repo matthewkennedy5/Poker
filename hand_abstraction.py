@@ -49,21 +49,21 @@ def print_abstraction():
 
 
 def inspect_abstraction(abstraction, n_buckets, street):
-    hands = list(abstraction.abstraction.table.keys())
-    if street == 'flop':
-        equities = pickle.load(open(FLOP_EQUITY_DISTIBUTIONS, 'rb'))
-    elif street == 'turn':
-        equities = pickle.load(open(TURN_EQUITY_DISTRIBUTIONS, 'rb'))
-    np.random.shuffle(hands)
+    # hands = list(abstraction.abstraction.table.keys())
+    # if street == 'flop':
+        # equities = pickle.load(open(FLOP_EQUITY_DISTIBUTIONS, 'rb'))
+    # elif street == 'turn':
+        # equities = pickle.load(open(TURN_EQUITY_DISTRIBUTIONS, 'rb'))
+    deck = get_deck()
     for i in range(n_buckets):
         print(i)
         count = 0
-        for hand in hands:
+        while count < 5:
+            hand = list(np.random.choice(deck, 6, replace=False))
             if abstraction[hand] == i:
-                print(hand, equities[hand])
+                # print(hand, equities[hand])
+                print(hand)
                 count += 1
-                if count > 5:
-                    break
 
 
 def archetypal_flop_hands():
@@ -410,18 +410,50 @@ class FlopAbstraction(CardAbstraction):
         return str(self.abstraction)
 
 
+# class TurnAbstraction(CardAbstraction):
+
+#     def __init__(self, buckets=100, equity_bins=50, iters=20,
+#                  opponent_samples=100, rollout_samples=100):
+#         self.abstraction = StreetAbstraction('turn', buckets, equity_bins, iters,
+#                                              opponent_samples, rollout_samples)
+
+#     def __getitem__(self, cards):
+#         return self.abstraction[cards]
+
+#     def __str__(self):
+#         return str(self.abstraction)
+
+
+# Expected hand strength implementation since the distribution approach is
+# taking some time to get going
 class TurnAbstraction(CardAbstraction):
 
-    def __init__(self, buckets=100, equity_bins=50, iters=20,
-                 opponent_samples=100, rollout_samples=100):
-        self.abstraction = StreetAbstraction('turn', buckets, equity_bins, iters,
-                                             opponent_samples, rollout_samples)
+    def __init__(self, buckets=5, samples=100):
+        self.buckets = buckets
+        self.samples = samples
 
     def __getitem__(self, cards):
-        return self.abstraction[cards]
+        preflop = cards[:2]
+        board = cards[2:]
+        deck = get_deck()
+        for card in cards:
+            deck.remove(card)
+
+        n_wins = 0
+        for i in range(self.samples):
+            opp_hand1, opp_hand2, river = np.random.choice(deck, 3, replace=False)
+            opp_hand = HAND_TABLE[[opp_hand1, opp_hand2] + board + [river]]
+            my_hand = HAND_TABLE[preflop + board + [river]]
+            if my_hand > opp_hand:
+                n_wins += 1
+            elif my_hand == opp_hand:
+                n_wins += 0.5
+
+        bucket = int(n_wins / self.samples * self.buckets)
+        return bucket
 
     def __str__(self):
-        return str(self.abstraction)
+        raise NotImplementedError
 
 
 # Uses online lookup instead of table lookup
@@ -443,11 +475,5 @@ class RiverAbstraction(CardAbstraction):
 
 
 if __name__ == '__main__':
-    #print_equities()
-    deck = get_deck()
-    np.random.shuffle(deck)
-    hand = deck[:7]
-    abst = RiverAbstraction()
-    print(abst[hand])
-    print_abstraction()
-
+    abst = TurnAbstraction()
+    inspect_abstraction(abst, 5, 'turn')
