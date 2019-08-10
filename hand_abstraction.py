@@ -428,7 +428,7 @@ class FlopAbstraction(CardAbstraction):
 # taking some time to get going
 class TurnAbstraction(CardAbstraction):
 
-    def __init__(self, buckets=5, samples=100):
+    def __init__(self, buckets=5, samples=20):
         self.buckets = buckets
         self.samples = samples
 
@@ -459,7 +459,7 @@ class TurnAbstraction(CardAbstraction):
 # Uses online lookup instead of table lookup
 class RiverAbstraction(CardAbstraction):
 
-    def __init__(self, buckets=5, samples=100):
+    def __init__(self, buckets=5, samples=20):
         self.buckets = buckets
         self.samples = samples
 

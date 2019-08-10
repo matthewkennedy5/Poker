@@ -1,12 +1,14 @@
 # https://arxiv.org/abs/1809.04040
 
 import copy
+import pickle
 import numpy as np
 from tqdm import trange
 from texas_utils import *
 from hand_abstraction import PreflopAbstraction, FlopAbstraction, TurnAbstraction, RiverAbstraction
 from hand_table import HandTable
 
+SAVE_PATH = 'blueprint.pkl'
 PREFLOP_ACTIONS = 'fold', 'call', 'limp', 'raise', '3-bet', '4-bet', 'all-in'
 POSTFLOP_ACTIONS = 'fold', 'check', 'call', 'half_pot', 'pot', 'min_raise', 'all-in'
 ACTIONS = PREFLOP_ACTIONS + POSTFLOP_ACTIONS
@@ -221,7 +223,7 @@ class ActionHistory:
             return history[-1]
 
     def __str__(self):
-        return 'Preflop: {}\nFlop: {}\nTurn: {}\nRiver: {}'.format(self.preflop, self.flop, self.turn, self.river)
+        return 'Preflop: {}, Flop: {}, Turn: {}, River: {}'.format(self.preflop, self.flop, self.turn, self.river)
 
     def __hash__(self):
         return hash(str(self))
@@ -272,6 +274,7 @@ class InfoSet:
             self.card_bucket = RIVER_ABSTRACTION[hand]
         else:
             raise ValueError('Unknown street.')
+        self.hand = hand
 
     def __eq__(self, other):
         return self.card_bucket == other.card_bucket and self.history == other.history
@@ -281,7 +284,9 @@ class InfoSet:
         return self.card_bucket + hash(self.history)
 
     def __str__(self):
-        return 'Information set:\n\tCard bucket: {}\n\tHistory: {}'.format(self.card_bucket, self.history)
+        return ('Information set:\n\tCard bucket: {}\n\tHistory: {}\n\tHand: {}'
+               '\n\tStreet: {}').format(self.card_bucket, self.history, self.hand,
+                                       self.history.street())
 
     def legal_actions(self):
         return self.history.legal_actions()
@@ -426,3 +431,4 @@ class Trainer:
 if __name__ == '__main__':
     t = Trainer()
     t.train(int(1e2))
+
