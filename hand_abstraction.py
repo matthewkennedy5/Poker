@@ -84,7 +84,7 @@ def archetypal_flop_hands():
             t.update()
     hands = list(used_hands.keys())
     with open(ARCHETYPAL_FLOP_FILENAME, 'wb') as f:
-        pickle.dump(hands, f)
+        pickle.dump(hands, f, protocol=pickle.HIGHEST_PROTOCOL)
     return hands
 
 
@@ -106,7 +106,7 @@ def archetypal_turn_hands():
             t.update()
     hands = list(used_hands.keys())
     with open(ARCHETYPAL_TURN_FILENAME, 'wb') as f:
-        pickle.dump(hands, f)
+        pickle.dump(hands, f, protocol=pickle.HIGHEST_PROTOCOL)
     return hands
 
 
@@ -353,12 +353,12 @@ class StreetAbstraction(CardAbstraction):
             distributions = pbar_map(self.hand_equity, hands)
             equity_distributions = dict(zip(hands, distributions))
             with open(equity_file, 'wb') as f:
-                pickle.dump(equity_distributions, f)
+                pickle.dump(equity_distributions, f, protocol=pickle.HIGHEST_PROTOCOL)
 
         print('Performing k-means clustering...')
         abstraction = Cluster(equity_distributions, self.buckets, self.iters)()
         with open(abstraction_file, 'wb') as f:
-            pickle.dump(abstraction, f)
+            pickle.dump(abstraction, f, protocol=pickle.HIGHEST_PROTOCOL)
         return abstraction
 
     def hand_equity(self, hand):

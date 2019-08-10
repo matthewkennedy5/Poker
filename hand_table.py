@@ -15,7 +15,7 @@ class HandTable:
             self.table = pickle.load(open(TABLE_NAME, 'rb'))
         else:
             self.table = self.make_table()
-            pickle.dump(self.table, open(TABLE_NAME, 'wb'))
+            pickle.dump(self.table, open(TABLE_NAME, 'wb'), protocol=pickle.HIGHEST_PROTOCOL)
 
     def __getitem__(self, cards):
         if not 5 <= len(cards) <= 7:

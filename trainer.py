@@ -227,9 +227,6 @@ class ActionHistory:
         return hash(str(self))
 
     def __add__(self, action):
-        if not isinstance(action, str):
-            raise TypeError('Must add a string action to the ActionHistory')
-
         preflop = conditional_copy(self.preflop)
         flop = conditional_copy(self.flop)
         turn = conditional_copy(self.turn)
@@ -300,7 +297,7 @@ class Node:
         self.weighted_strategy_sum = self.regrets.copy()
         self.t = 0
 
-    def current_strategy(self, prob):
+    def current_strategy(self, prob=0):
         actions = self.infoset.legal_actions()
         strategy = {}
         if sum(self.regrets.values()) == 0:
@@ -308,13 +305,17 @@ class Node:
                 strategy[action] = 1
         else:
             for action in actions:
-                strategy[action] = self.regrets[action]
+                chance = self.regrets[action]
+                if chance < 0:
+                    chance = 0
+                strategy[action] = chance
 
         strategy = normalize(strategy)
         # TODO: DCFR implementation
         for action in actions:
             self.weighted_strategy_sum[action] += strategy[action] * prob
-        self.t += 1
+        if prob > 0:
+            self.t += 1
         return strategy
 
 
@@ -344,21 +345,41 @@ class Trainer:
         deck = get_deck()
         for i in trange(iterations):
             np.random.shuffle(deck)
-            self.iterate(deck)
+            self.iterate(0, deck)
+            np.random.shuffle(deck)
+            self.iterate(1, deck)
         with open(SAVE_PATH, 'wb') as f:
-            pickle.dump(self.nodes, f)
+            pickle.dump(self.nodes, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def iterate(self, deck, history=ActionHistory([]), weights=[1, 1]):
-        player = history.whose_turn()
-        opponent = 1 - player
-
-        if history.hand_over():
-            return self.terminal_utility(deck, history)
-
+    def lookup_node(self, deck, history):
         infoset = InfoSet(deck, history)
         if infoset not in self.nodes:
             self.nodes[infoset] = Node(infoset)
-        node = self.nodes[infoset]
+        return self.nodes[infoset], infoset
+
+    def opponent_action(self, node, infoset):
+        actions = infoset.legal_actions()
+        strategy = node.current_strategy()
+        # Make sure the strategy values are in the correct order
+        strat = []
+        for action in actions:
+            strat.append(strategy[action])
+
+        action = np.random.choice(actions, p=strat)
+        return action
+
+    def iterate(self, player, deck, history=ActionHistory([]), weights=[1, 1]):
+        if history.hand_over():
+            return self.terminal_utility(deck, history)
+
+        node, infoset = self.lookup_node(deck, history)
+
+        opponent = 1 - player
+        if history.whose_turn() == opponent:
+            history += self.opponent_action(node, infoset)
+            if history.hand_over():
+                return -self.terminal_utility(deck, history)
+            node, infoset = self.lookup_node(deck, history)
 
         player_weight = weights[player]
         opponent_weight = weights[opponent]
@@ -371,10 +392,10 @@ class Trainer:
             next_history = history + action
             if player == 0:
                 weights = [p0*strategy[action], p1]
-                utility[action] = -self.iterate(deck, next_history, weights)
+                utility[action] = -self.iterate(player, deck, next_history, weights)
             elif player == 1:
                 weights = p0, p1*strategy[action]
-                utility[action] = -self.iterate(deck, next_history, weights)
+                utility[action] = -self.iterate(player, deck, next_history, weights)
             node_utility += strategy[action] * utility[action]
 
         for action in infoset.legal_actions():
