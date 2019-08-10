@@ -466,7 +466,6 @@ class RiverAbstraction(CardAbstraction):
     def __getitem__(self, cards):
         # get the equity of the hand
         avg_equity = equity(cards, self.samples)
-        print(cards, avg_equity)
         bucket = int(avg_equity * self.buckets)
         return bucket
 

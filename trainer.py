@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import trange
 from texas_utils import *
 from hand_abstraction import PreflopAbstraction, FlopAbstraction, TurnAbstraction, RiverAbstraction
+from hand_table import HandTable
 
 PREFLOP_ACTIONS = 'fold', 'call', 'limp', 'raise', '3-bet', '4-bet', 'all-in'
 POSTFLOP_ACTIONS = 'fold', 'check', 'call', 'half_pot', 'pot', 'min_raise', 'all-in'
@@ -18,6 +19,35 @@ PREFLOP_ABSTRACTION = PreflopAbstraction()
 FLOP_ABSTRACTION = FlopAbstraction()
 TURN_ABSTRACTION = TurnAbstraction()
 RIVER_ABSTRACTION = RiverAbstraction()
+HAND_TABLE = HandTable()
+
+
+def conditional_copy(l):
+    if l is None:
+        return None
+    return list(l).copy()
+
+
+def normalize(dictionary):
+    total = sum(dictionary.values())
+    for key in dictionary:
+        dictionary[key] /= total
+    return dictionary
+
+
+def draw_deck(deck, player, return_hand=False):
+    if player == 0:
+        hole = deck[:2]
+    else:
+        hole = deck[2:4]
+    flop = deck[4:7]
+    turn = deck[7:8]
+    river = deck[8:9]
+    if return_hand:
+        return hole + flop + turn + river
+    else:
+        return hole, flop, turn, river
+
 
 # TODO: Action translation
 class ActionHistory:
@@ -27,24 +57,6 @@ class ActionHistory:
         self.flop = flop
         self.turn = turn
         self.river = river
-
-    def add_action(self, action):
-        street = self.street()
-        action = (action,)
-        if street == 'preflop':
-            self.preflop += action
-        elif street == 'flop':
-            if self.flop is None:
-                self.flop = ()
-            self.flop += action
-        elif street == 'turn':
-            if self.turn is None:
-                self.turn = ()
-            self.turn += action
-        elif street == 'river':
-            if self.river is None:
-                self.river = ()
-            self.river += action
 
     def pot_size(self):
         stack_sizes = [STACK_SIZE, STACK_SIZE]
@@ -88,6 +100,7 @@ class ActionHistory:
                     elif action == 'pot':
                         bet = pot
                     elif action == 'min_raise':
+                        # TODO: This is wrong for re-raises (but it's consistent)
                         bet = 2 * prev_bet
                     elif action == 'all-in':
                         bet = stack_sizes[player]
@@ -151,7 +164,7 @@ class ActionHistory:
 
     def legal_actions(self):
         history = self.current_street_history()
-        if history is None:
+        if history is None or len(history) == 0:
             prev_action = None
         else:
             prev_action = history[-1]
@@ -179,21 +192,33 @@ class ActionHistory:
             actions = ['fold', 'call', 'min_raise', 'all-in']
         elif prev_action == 'all-in':
             actions = ['fold', 'call']
+        else:
+            raise ValueError('Unknown previous action')
 
-        for action in actions:
-            trial = copy.deepcopy(self)
-            trial.add_action(action)
+        for action in actions.copy():
+            trial = self + action
             try:
                 trial.pot_size()
             except ValueError:
-                # This action is invalid because the bets are larger than
+                # The action is invalid because the bets are larger than
                 # the stack sizes
                 actions.remove(action)
 
         return tuple(actions)
 
     def hand_over(self):
-        return self.street() == 'over'
+        if self.street() == 'over':
+            return True
+        if self.last_action() == 'fold':
+            return True
+        return False
+
+    def last_action(self):
+        history = self.current_street_history()
+        if history is None or len(history) == 0:
+            return None
+        else:
+            return history[-1]
 
     def __str__(self):
         return 'Preflop: {}\nFlop: {}\nTurn: {}\nRiver: {}'.format(self.preflop, self.flop, self.turn, self.river)
@@ -201,20 +226,53 @@ class ActionHistory:
     def __hash__(self):
         return hash(str(self))
 
+    def __add__(self, action):
+        if not isinstance(action, str):
+            raise TypeError('Must add a string action to the ActionHistory')
+
+        preflop = conditional_copy(self.preflop)
+        flop = conditional_copy(self.flop)
+        turn = conditional_copy(self.turn)
+        river = conditional_copy(self.river)
+
+        street = self.street()
+        action = (action,)
+        if street == 'preflop':
+            preflop += action
+        elif street == 'flop':
+            if flop is None:
+                flop = ()
+            flop += action
+        elif street == 'turn':
+            if turn is None:
+                turn = ()
+            turn += action
+        elif street == 'river':
+            if river is None:
+                river = ()
+            river += action
+        return ActionHistory(preflop, flop, turn, river)
+
 
 class InfoSet:
 
     def __init__(self, deck, history):
         self.history = history
         street = history.street()
+        player = history.whose_turn()
+        hole, flop, turn, river = draw_deck(deck, player)
         if street == 'preflop':
-            self.card_bucket = PREFLOP_ABSTRACTION[deck[:2]]
+            hand = hole
+            self.card_bucket = PREFLOP_ABSTRACTION[hand]
         elif street == 'flop':
-            self.card_bucket = FLOP_ABSTRACTION[deck[:5]]
+            hand = hole + flop
+            self.card_bucket = FLOP_ABSTRACTION[hand]
         elif street == 'turn':
-            self.card_bucket = TURN_ABSTRACTION[deck[:6]]
+            hand = hole + flop + turn
+            self.card_bucket = TURN_ABSTRACTION[hand]
         elif street == 'river':
-            self.card_bucket = RIVER_ABSTRACTION[deck[:7]]
+            hand = hole + flop + turn + river
+            self.card_bucket = RIVER_ABSTRACTION[hand]
         else:
             raise ValueError('Unknown street.')
 
@@ -228,20 +286,52 @@ class InfoSet:
     def __str__(self):
         return 'Information set:\n\tCard bucket: {}\n\tHistory: {}'.format(self.card_bucket, self.history)
 
+    def legal_actions(self):
+        return self.history.legal_actions()
+
 
 class Node:
 
-    def __init__(self, infoset, alpha, beta, gamma):
-        raise NotImplementedError
+    def __init__(self, infoset, alpha=1.5, beta=0, gamma=2):
+        self.infoset = infoset
+        self.regrets = {}
+        for action in self.infoset.legal_actions():
+            self.regrets[action] = 0
+        self.weighted_strategy_sum = self.regrets.copy()
+        self.t = 0
 
     def current_strategy(self, prob):
-        raise NotImplementedError
+        actions = self.infoset.legal_actions()
+        strategy = {}
+        if sum(self.regrets.values()) == 0:
+            for action in actions:
+                strategy[action] = 1
+        else:
+            for action in actions:
+                strategy[action] = self.regrets[action]
+
+        strategy = normalize(strategy)
+        # TODO: DCFR implementation
+        for action in actions:
+            self.weighted_strategy_sum[action] += strategy[action] * prob
+        self.t += 1
+        return strategy
+
 
     def cumulative_strategy(self):
-        raise NotImplementedError
+        actions = self.infoset.legal_actions()
+        strategy = {}
+        if sum(self.weighted_strategy_sum.values()) == 0:
+            for action in actions:
+                strategy[action] = 1
+        else:
+            strategy = self.weighted_strategy_sum
+        strategy = normalize(strategy)
+        return strategy
 
     def add_regret(self, action, regret):
-        raise NotImplementedError
+        # TODO: DCFR
+        self.regrets[action] += regret
 
 
 class Trainer:
@@ -272,6 +362,7 @@ class Trainer:
 
         player_weight = weights[player]
         opponent_weight = weights[opponent]
+        p0, p1 = weights
 
         strategy = node.current_strategy(player_weight)
         utility = {}
@@ -279,9 +370,11 @@ class Trainer:
         for action in infoset.legal_actions():
             next_history = history + action
             if player == 0:
-                utility[action] = -self.iterate(deck, next_history, p0*strategy[action], p1)
+                weights = [p0*strategy[action], p1]
+                utility[action] = -self.iterate(deck, next_history, weights)
             elif player == 1:
-                utility[action] = - self.cfrplus(deck, next_history, p0, p1*strategy[action])
+                weights = p0, p1*strategy[action]
+                utility[action] = -self.iterate(deck, next_history, weights)
             node_utility += strategy[action] * utility[action]
 
         for action in infoset.legal_actions():
@@ -289,9 +382,24 @@ class Trainer:
             node.add_regret(action, opponent_weight * regret)
         return node_utility
 
+    def terminal_utility(self, deck, history):
+        pot = history.pot_size()
+        if history.last_action() == 'fold':
+            return pot / 2
 
-    def terminal_utility(self, deck, bet_history):
-        raise NotImplementedError
+        # Showdown
+        last_player = 1 - history.whose_turn()
+        opponent = 1 - last_player
+        player_hand = draw_deck(deck, last_player, return_hand=True)
+        opponent_hand = draw_deck(deck, opponent, return_hand=True)
+        player_strength = HAND_TABLE[player_hand]
+        opponent_strength = HAND_TABLE[opponent_hand]
+        if player_strength > opponent_strength:
+            return pot / 2
+        elif player_strength < opponent_strength:
+            return -pot / 2
+        elif player_strength == opponent_strength:
+            return 0
 
 
 if __name__ == '__main__':
