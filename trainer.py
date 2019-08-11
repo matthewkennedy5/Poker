@@ -254,6 +254,9 @@ class ActionHistory:
             river += action
         return ActionHistory(preflop, flop, turn, river)
 
+    def __eq__(self, other):
+        return str(self) == str(other)
+
 
 class InfoSet:
 
@@ -286,8 +289,8 @@ class InfoSet:
         return self.card_bucket + hash(self.history)
 
     def __str__(self):
-        return ('Information set:\n\tCard bucket: {}\n\tHistory: {}\n\tHand: {}'
-               '\n\tStreet: {}').format(self.card_bucket, self.history, self.hand,
+        return ('Information set:\n\tPlayer: {}\n\tCard bucket: {}\n\tHistory: {}\n\tHand: {}'
+               '\n\tStreet: {}').format(self.history.whose_turn(), self.card_bucket, self.history, self.hand,
                                        self.history.street())
 
     def legal_actions(self):
@@ -353,9 +356,9 @@ class Trainer:
         print('Beginning training...')
         deck = get_deck()
         for i in trange(iterations):
-            np.random.shuffle(deck)
+            # np.random.shuffle(deck)
             self.iterate(0, deck)
-            np.random.shuffle(deck)
+            # np.random.shuffle(deck)
             self.iterate(1, deck)
         with open(SAVE_PATH, 'wb') as f:
             pickle.dump(self.nodes, f, protocol=pickle.HIGHEST_PROTOCOL)

@@ -1,6 +1,7 @@
 import unittest
 import itertools
 import random
+import copy
 from tqdm import tqdm, trange
 from scipy import stats
 from matplotlib import pyplot as plt
@@ -410,7 +411,19 @@ class ActionTests(unittest.TestCase):
 class InfoSetTests(unittest.TestCase):
 
     def test_eq(self):
-        pass
+        deck = get_deck()
+        history = ActionHistory(
+            preflop=['raise', '3-bet', 'call'],
+            flop=['half_pot', 'call'],
+            turn=['check', 'half_pot', 'min_raise', 'all-in', 'call'],
+            river=['check']
+        )
+        history2 = copy.deepcopy(history)
+        infoset = InfoSet(deck, history)
+        infoset2 = InfoSet(deck, history2)
+        self.assertEqual(infoset, infoset2)
+        infoset2 = copy.deepcopy(infoset)
+        self.assertEqual(infoset, infoset2)
 
     def test_hash(self):
         pass
