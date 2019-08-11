@@ -106,6 +106,8 @@ class ActionHistory:
                         bet = 2 * prev_bet
                     elif action == 'all-in':
                         bet = stack_sizes[player]
+                    elif action == 'fold':
+                        break
 
                     bets[player].append(bet)
                     prev_bet = bets[player][-1]
@@ -323,7 +325,6 @@ class Node:
             self.t += 1
         return strategy
 
-
     def cumulative_strategy(self):
         actions = self.infoset.legal_actions()
         strategy = {}
@@ -338,6 +339,9 @@ class Node:
     def add_regret(self, action, regret):
         # TODO: DCFR
         self.regrets[action] += regret
+
+    def __str__(self):
+        return '{}\nStrategy: {}\nHits: {}'.format(self.infoset, self.cumulative_strategy(), self.t+1)
 
 
 class Trainer:
@@ -431,4 +435,3 @@ class Trainer:
 if __name__ == '__main__':
     t = Trainer()
     t.train(int(1e2))
-
