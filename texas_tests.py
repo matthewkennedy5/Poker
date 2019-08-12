@@ -407,6 +407,10 @@ class ActionTests(unittest.TestCase):
     def test_hand_over(self):
         pass
 
+    def test_stack_sizes(self):
+        history = ActionHistory(preflop=['limp', 'raise', 'fold'])
+        self.assertEqual(history.stack_sizes(), [19900, 19700])
+
 
 class InfoSetTests(unittest.TestCase):
 

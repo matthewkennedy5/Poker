@@ -23,6 +23,8 @@ TURN_ABSTRACTION = TurnAbstraction()
 RIVER_ABSTRACTION = RiverAbstraction()
 HAND_TABLE = HandTable()
 
+np.random.seed(123)
+
 
 def conditional_copy(l):
     if l is None:
@@ -60,7 +62,7 @@ class ActionHistory:
         self.turn = turn
         self.river = river
 
-    def pot_size(self):
+    def pot_size(self, return_stack_sizes=False):
         stack_sizes = [STACK_SIZE, STACK_SIZE]
         player = 0
         prev_bet = 0
@@ -81,6 +83,8 @@ class ActionHistory:
                 bets[player].append(3 * prev_bet)
             elif action == 'all-in':
                 bets[player].append(stack_sizes[player])
+            elif action == 'fold':
+                break
 
             prev_bet = bets[player][-1]
             stack_sizes[player] -= prev_bet
@@ -117,7 +121,14 @@ class ActionHistory:
 
         if stack_sizes[0] < 0 or stack_sizes[1] < 0:
             raise ValueError('Invalid bet history: bets exceed stack size.')
-        return pot
+
+        if return_stack_sizes:
+            return pot, stack_sizes
+        else:
+            return pot
+
+    def stack_sizes(self):
+        return self.pot_size(return_stack_sizes=True)[1]
 
     def street(self):
         street = ''
@@ -382,7 +393,8 @@ class Trainer:
 
     def iterate(self, player, deck, history=ActionHistory([]), weights=[1, 1]):
         if history.hand_over():
-            return self.terminal_utility(deck, history)
+            # START HERE: Step through iterate, think through negative signs
+            return -self.terminal_utility(deck, history)
 
         node, infoset = self.lookup_node(deck, history)
 
@@ -404,10 +416,10 @@ class Trainer:
             next_history = history + action
             if player == 0:
                 weights = [p0*strategy[action], p1]
-                utility[action] = -self.iterate(player, deck, next_history, weights)
+                utility[action] = self.iterate(player, deck, next_history, weights)
             elif player == 1:
                 weights = p0, p1*strategy[action]
-                utility[action] = -self.iterate(player, deck, next_history, weights)
+                utility[action] = self.iterate(player, deck, next_history, weights)
             node_utility += strategy[action] * utility[action]
 
         for action in infoset.legal_actions():
@@ -416,12 +428,13 @@ class Trainer:
         return node_utility
 
     def terminal_utility(self, deck, history):
-        pot = history.pot_size()
-        if history.last_action() == 'fold':
-            return pot / 2
-
-        # Showdown
         last_player = 1 - history.whose_turn()
+        if history.last_action() == 'fold':
+            stack_sizes = history.stack_sizes()
+            return stack_sizes[last_player] - STACK_SIZE
+
+        # Showdown - we can assume both players have contributed equally to the pot
+        pot = history.pot_size()
         opponent = 1 - last_player
         player_hand = draw_deck(deck, last_player, return_hand=True)
         opponent_hand = draw_deck(deck, opponent, return_hand=True)
