@@ -2,6 +2,7 @@
 
 import copy
 import pickle
+import multiprocessing as mp
 import numpy as np
 from tqdm import trange
 from texas_utils import *
@@ -371,6 +372,7 @@ class Trainer:
             self.iterate(0, deck)
             # np.random.shuffle(deck)
             self.iterate(1, deck)
+
         with open(SAVE_PATH, 'wb') as f:
             pickle.dump(self.nodes, f, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -393,8 +395,7 @@ class Trainer:
 
     def iterate(self, player, deck, history=ActionHistory([]), weights=[1, 1]):
         if history.hand_over():
-            # START HERE: Step through iterate, think through negative signs
-            return -self.terminal_utility(deck, history)
+            return self.terminal_utility(deck, history, player)
 
         node, infoset = self.lookup_node(deck, history)
 
@@ -402,7 +403,7 @@ class Trainer:
         if history.whose_turn() == opponent:
             history += self.opponent_action(node, infoset)
             if history.hand_over():
-                return -self.terminal_utility(deck, history)
+                return self.terminal_utility(deck, history, player)
             node, infoset = self.lookup_node(deck, history)
 
         player_weight = weights[player]
@@ -427,7 +428,7 @@ class Trainer:
             node.add_regret(action, opponent_weight * regret)
         return node_utility
 
-    def terminal_utility(self, deck, history):
+    def terminal_utility(self, deck, history, player):
         last_player = 1 - history.whose_turn()
         if history.last_action() == 'fold':
             stack_sizes = history.stack_sizes()
@@ -435,8 +436,8 @@ class Trainer:
 
         # Showdown - we can assume both players have contributed equally to the pot
         pot = history.pot_size()
-        opponent = 1 - last_player
-        player_hand = draw_deck(deck, last_player, return_hand=True)
+        opponent = 1 - player
+        player_hand = draw_deck(deck, player, return_hand=True)
         opponent_hand = draw_deck(deck, opponent, return_hand=True)
         player_strength = HAND_TABLE[player_hand]
         opponent_strength = HAND_TABLE[opponent_hand]

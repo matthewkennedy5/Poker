@@ -26,6 +26,9 @@ class HandTable:
         best_strength = max([self.table[isomorphic_hand(hand)] for hand in itertools.combinations(cards, 5)])
         return best_strength
 
+    # TODO: This unintentionally makes there be too many integers since hands is
+    # a list. len(self.table) = 160537 but some hands are in the millions. Not
+    # sure if this is an issue or not.
     def make_table(self):
         hands = []
         print('Constructing the lookup table for hand evaluation...')
