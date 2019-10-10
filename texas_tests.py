@@ -193,39 +193,39 @@ class TestCardAbstractions(unittest.TestCase):
         self.assertEqual(n_buckets, 169)
         self.assertEqual(abst[('Ac', 'Ad')], 336)
 
-    def test_flop_abstraction(self):
-        # Compare similar hands to see that they're in the same flop bucket
-        # TODO: Possibly delete this test
-        abstraction = FlopAbstraction()
-        self.assertEqual(len(abstraction.abstraction.table), len(archetypal_flop_hands()))
-        hand1 = ('Ac', 'Ad', '5d', '3s', '7c')
-        hand2 = ('Ac', 'Ad', '5d', '3s', '8c')
-        self.assertEqual(abstraction[hand1], abstraction[hand2])
-        hand1 = ('Kh', '7h', '2h', '3h', '9h')
-        hand2 = ('Kh', '8h', '2h', '3h', '9h')
-        self.assertEqual(abstraction[hand1], abstraction[hand2])
-        hand1 = ('9h', '7d', '5c', 'Qh', '9s')
-        hand1 = ('9h', '7d', '5d', 'Qh', '9s')
-        self.assertEqual(abstraction[hand1], abstraction[hand2])
-        hand1 = ('Jd', 'Ad', '2c', '6c', '4d')
-        hand2 = ('Jd', 'Ad', '2s', '6c', '4d')
-        self.assertEqual(abstraction[hand1], abstraction[hand2])
-        hand1 = ('3c', 'Qd', '5d', '7s', '4s')
-        hand1 = ('3c', 'Qd', '7s', '6s', '4s')
-        self.assertEqual(abstraction[hand1], abstraction[hand2])
-        hand1 = ('Ts', '3c', '5c', 'Jd', '7d')
-        hand2 = ('Ts', 'Tc', '5c', 'Jd', '7d')
-        self.assertNotEqual(abstraction[hand1], abstraction[hand2])
-        hand1 = ('9h', '8s', 'Js', 'Kh', 'Qs')
-        hand2 = ('9h', '7s', 'Js', 'Kh', 'Qs')
-        hand3 = ('9h', '8s', 'As', 'Kh', 'Qs')
-        self.assertEqual(abstraction[hand1], abstraction[hand2])
-        self.assertNotEqual(abstraction[hand1], abstraction[hand3])
-        hand1 = ['Td', '4h', 'Th', 'Qs', '4s']
-        hand2 = ['Td', '4h', 'Th', 'Jc', '4s']
-        hand3 = ['Td', 'Th', 'Th', 'Qs', '4s']
-        self.assertEqual(abstraction[hand1], abstraction[hand2])
-        self.assertNotEqual(abstraction[hand1], abstraction[hand3])
+    # def test_flop_abstraction(self):
+    #     # Compare similar hands to see that they're in the same flop bucket
+    #     # TODO: Possibly delete this test
+    #     abstraction = FlopAbstraction()
+    #     self.assertEqual(len(abstraction.abstraction.table), len(archetypal_flop_hands()))
+    #     hand1 = ('Ac', 'Ad', '5d', '3s', '7c')
+    #     hand2 = ('Ac', 'Ad', '5d', '3s', '8c')
+    #     self.assertEqual(abstraction[hand1], abstraction[hand2])
+    #     hand1 = ('Kh', '7h', '2h', '3h', '9h')
+    #     hand2 = ('Kh', '8h', '2h', '3h', '9h')
+    #     self.assertEqual(abstraction[hand1], abstraction[hand2])
+    #     hand1 = ('9h', '7d', '5c', 'Qh', '9s')
+    #     hand1 = ('9h', '7d', '5d', 'Qh', '9s')
+    #     self.assertEqual(abstraction[hand1], abstraction[hand2])
+    #     hand1 = ('Jd', 'Ad', '2c', '6c', '4d')
+    #     hand2 = ('Jd', 'Ad', '2s', '6c', '4d')
+    #     self.assertEqual(abstraction[hand1], abstraction[hand2])
+    #     hand1 = ('3c', 'Qd', '5d', '7s', '4s')
+    #     hand1 = ('3c', 'Qd', '7s', '6s', '4s')
+    #     self.assertEqual(abstraction[hand1], abstraction[hand2])
+    #     hand1 = ('Ts', '3c', '5c', 'Jd', '7d')
+    #     hand2 = ('Ts', 'Tc', '5c', 'Jd', '7d')
+    #     self.assertNotEqual(abstraction[hand1], abstraction[hand2])
+    #     hand1 = ('9h', '8s', 'Js', 'Kh', 'Qs')
+    #     hand2 = ('9h', '7s', 'Js', 'Kh', 'Qs')
+    #     hand3 = ('9h', '8s', 'As', 'Kh', 'Qs')
+    #     self.assertEqual(abstraction[hand1], abstraction[hand2])
+    #     self.assertNotEqual(abstraction[hand1], abstraction[hand3])
+    #     hand1 = ['Td', '4h', 'Th', 'Qs', '4s']
+    #     hand2 = ['Td', '4h', 'Th', 'Jc', '4s']
+    #     hand3 = ['Td', 'Th', 'Th', 'Qs', '4s']
+    #     self.assertEqual(abstraction[hand1], abstraction[hand2])
+    #     self.assertNotEqual(abstraction[hand1], abstraction[hand3])
 
     def test_archetypes(self):
         hand = ('6h', '8c', 'Td', 'Jd', 'Ah')
@@ -250,13 +250,16 @@ class TestCardAbstractions(unittest.TestCase):
         hand2 = ('5s', '5h', '2d', '6c', '6d')
         self.assertEqual(archetypal_hand(hand1), archetypal_hand(hand2))
 
-    def test_hands(self):
-        hands = pickle.load(open(ARCHETYPAL_TURN_FILENAME, 'rb'))
-        deck = get_deck()
-        for i in range(1000):
-            hand = np.random.choice(deck, 6, replace=False)
-            hand = archetypal_hand(hand)
-            self.assertTrue(hand in hands)
+    # Not using this at the moment since I'm using equity on the turn
+    # def test_hands(self):
+    #     hands = pickle.load(open(ARCHETYPAL_TURN_FILENAME, 'rb'))
+    #     breakpoint()
+    #     deck = get_deck()
+    #     for i in range(1000):
+    #         hand = np.random.choice(deck, 6, replace=False)
+    #         # hand = archetypal_hand(hand)
+    #         hand = archetypal_hand(hand)
+    #         self.assertTrue(hand in hands)
 
     def test_equity(self):
         hand = ('Ac', 'Ad', 'As', 'Ah', '2h', '9c', 'Tc')
@@ -299,38 +302,38 @@ class ClusterTests(unittest.TestCase):
             # see that 1 < 2
             self.assertTrue(inside_mean_distance < outside_mean_distance)
 
-    def test_turn_coefficient(self):
-        # This test makes sure that the average distance within clusters is less than the average
-        # distance between the cluster and other hands.
-        equities = pickle.load(open('turn_equity.pkl', 'rb'))
-        abstraction = TurnAbstraction()
-        hands = list(equities.keys())
-        np.random.shuffle(hands)
-        n_buckets = np.max(list(abstraction.abstraction.table.values())) + 1
-        samples = 50
-        for i in range(n_buckets):
-            cluster = []
-            for hand in hands:
-                if abstraction[hand] == i:
-                    cluster.append(hand)
-                    if len(cluster) > samples:
-                        break
-            # 1 Compute estimated average distance within cluster
-            total_distance = 0
-            counter = 0
-            for hand1, hand2 in itertools.product(cluster[:samples], cluster[:samples]):
-                total_distance += np.linalg.norm(equities[hand1] - equities[hand2])
-                counter += 1
-            inside_mean_distance = total_distance / counter
-            # 2 Compute estimated average distance to random other hands
-            total_distance = 0
-            counter = 0
-            for hand1, hand2 in itertools.product(cluster[:samples], hands[:samples]):
-                total_distance += np.linalg.norm(equities[hand1] - equities[hand2])
-                counter += 1
-            outside_mean_distance = total_distance / counter
-            # see that 1 < 2
-            self.assertTrue(inside_mean_distance < outside_mean_distance)
+    # def test_turn_coefficient(self):
+    #     # This test makes sure that the average distance within clusters is less than the average
+    #     # distance between the cluster and other hands.
+    #     equities = pickle.load(open('turn_equity.pkl', 'rb'))
+    #     abstraction = TurnAbstraction()
+    #     hands = list(equities.keys())
+    #     np.random.shuffle(hands)
+    #     n_buckets = np.max(list(abstraction.abstraction.table.values())) + 1
+    #     samples = 50
+    #     for i in range(n_buckets):
+    #         cluster = []
+    #         for hand in hands:
+    #             if abstraction[hand] == i:
+    #                 cluster.append(hand)
+    #                 if len(cluster) > samples:
+    #                     break
+    #         # 1 Compute estimated average distance within cluster
+    #         total_distance = 0
+    #         counter = 0
+    #         for hand1, hand2 in itertools.product(cluster[:samples], cluster[:samples]):
+    #             total_distance += np.linalg.norm(equities[hand1] - equities[hand2])
+    #             counter += 1
+    #         inside_mean_distance = total_distance / counter
+    #         # 2 Compute estimated average distance to random other hands
+    #         total_distance = 0
+    #         counter = 0
+    #         for hand1, hand2 in itertools.product(cluster[:samples], hands[:samples]):
+    #             total_distance += np.linalg.norm(equities[hand1] - equities[hand2])
+    #             counter += 1
+    #         outside_mean_distance = total_distance / counter
+    #         # see that 1 < 2
+    #         self.assertTrue(inside_mean_distance < outside_mean_distance)
 
 
 class ActionTests(unittest.TestCase):
@@ -364,7 +367,6 @@ class ActionTests(unittest.TestCase):
         self.assertEqual(self.histories[4].pot_size(), 600 * BIG_BLIND)
         self.assertEqual(self.histories[5].pot_size(), STACK_SIZE)
         self.assertEqual(self.histories[6].pot_size(), 6 * BIG_BLIND)
-
 
     def test_preflop_pot_size(self):
         history = ActionHistory(preflop=('limp', 'call'))
@@ -403,7 +405,6 @@ class ActionTests(unittest.TestCase):
         # Can't min raise because not enough chips
         self.assertEqual(history.legal_actions(), ('fold', 'call', 'all-in'))
 
-
     def test_hand_over(self):
         pass
 
@@ -431,10 +432,6 @@ class InfoSetTests(unittest.TestCase):
 
     def test_hash(self):
         pass
-
-
-
-
 
 
 if __name__ == '__main__':
