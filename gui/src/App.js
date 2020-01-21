@@ -6,12 +6,13 @@ import Buttons from './components/buttons'
 import Log from './components/log'
 import './App.css';
 
+// TODO: Figure out how to change tab thumbnail and title
 class App extends Component {
   state = {};
   render() {
     return (
       <div>
-        <Score />
+        <Score class="score"/>
         <Table />
         <Buttons />
         <Log />

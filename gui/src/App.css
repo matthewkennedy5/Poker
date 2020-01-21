@@ -42,7 +42,7 @@
   display: inline-block;
 }
 
-.card1 {
+.humanCard1 {
   position: absolute;
   top: 400px;
   left: 300px;
@@ -50,7 +50,7 @@
   width: 20%;
 }
 
-.card2 {
+.humanCard2 {
   position: absolute;
   top: 400px;
   left: 400px;
@@ -58,7 +58,50 @@
   width: 20%;
 }
 
+.cpuCard1 {
+  position: absolute;
+  top: 25px;
+  left: 450px;
+  height: 116px;
+  width: 80px;
+}
+
+.cpuCard2 {
+  position: absolute;
+  top: 25px;
+  left: 550px;
+  height: 116px;
+  width: 80px;
+}
+
 .table svg {
    display: block;
    max-width: 100%;
 }
+
+.pot {
+  position: absolute;
+  top: 400px;
+  left: 700px;
+  font-family: "Courier New";
+  font-size: 36px;
+}
+
+.score {
+  position: absolute;
+  top: 100px;
+  left: 1100px;
+}
+
+.buttons {
+  position: absolute;
+  top: 550px;
+  left: 140px;
+}
+
+.log {
+  position: absolute;
+  top: 160px;
+  left: 1100px;
+}
+

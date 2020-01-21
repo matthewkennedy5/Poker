@@ -9,7 +9,7 @@ class Score extends Component {
 
     render() {
         return (
-            <div>
+            <div class="score">
                 <b>Session: {this.state.winnings} <br></br>
                    Hands: {this.state.num_hands}</b>
             </div>
