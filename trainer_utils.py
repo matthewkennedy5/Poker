@@ -1,8 +1,10 @@
+import json
 from hand_abstraction import PreflopAbstraction, FlopAbstraction, TurnAbstraction, RiverAbstraction
 from hand_table import HandTable
 
 PREFLOP_ABSTRACTION = PreflopAbstraction()
-FLOP_ABSTRACTION = FlopAbstraction()
+FLOP_ABSTRACTION = FlopAbstraction(buckets=100, equity_bins=10, iters=10,
+                                   opponent_samples=50, rollout_samples=20)
 TURN_ABSTRACTION = TurnAbstraction()
 RIVER_ABSTRACTION = RiverAbstraction()
 HAND_TABLE = HandTable()

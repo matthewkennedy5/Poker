@@ -14,13 +14,15 @@ class Buttons extends Component {
             <div>
               <button onClick={this.nextHand} className={BUTTON_STYLE}>Next Hand</button>
               <button onClick={this.fold} className={BUTTON_STYLE}>Fold</button>
-              <button onClick={this.fold} className={BUTTON_STYLE}>Check</button>
-              <button onClick={this.fold} className={BUTTON_STYLE}>Call</button>
-              <button onClick={this.fold} className={BUTTON_STYLE}>Min Bet</button>
-              <button onClick={this.fold} className={BUTTON_STYLE}>Bet Half Pot</button>
-              <button onClick={this.fold} className={BUTTON_STYLE}>Bet Pot</button>
-              <button onClick={this.fold} className={BUTTON_STYLE}>All In</button>
-              <button onClick={this.fold} className={BUTTON_STYLE}>Bet</button>
+              <button onClick={this.check} className={BUTTON_STYLE}>Check</button>
+              <button onClick={this.call} className={BUTTON_STYLE}>Call</button>
+              <button onClick={this.minBet} className={BUTTON_STYLE}>Min Bet</button>
+              <button onClick={this.betHalfPot} className={BUTTON_STYLE}>Bet Half Pot</button>
+              <button onClick={this.betPot} className={BUTTON_STYLE}>Bet Pot</button>
+              <button onClick={this.allIn} className={BUTTON_STYLE}>All In</button>
+              <button onClick={this.betCustom} className={BUTTON_STYLE}>Bet</button>
+              <input type="text" size="5"></input>
+
             </div>
         );
     };
