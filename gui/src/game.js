@@ -5,11 +5,6 @@ const STACK_SIZE = 20000;
 const BIG_BLIND = 200;
 const SMALL_BLIND = 100;
 
-const FLOP = 0;
-const TURN = 0
-const RIVER = 0
-const SHOWDOWN = 0
-
 const DECK = ['2c', '2s', '2h', '2d',
               '3c', '3s', '3h', '3d',
               '4c', '4s', '4h', '4d',
@@ -144,19 +139,18 @@ class Game extends Component {
     };
 
     cpuAction() {
+    // TODO: Write a Flask server to integrate with the bot
+    // send card / history info to server
+    // wait for action from server
+    // right now I'm going to say that the bot always check/calls
+        const action = {action: "bet", amount: 3*BIG_BLIND};  // placeholder, but a good format for the action
+        this.stacks["cpu"] -= action["amount"];
+        this.updateLog("cpu", action);
+        this.props.addToPot(action["amount"]);
+        this.history[this.street].push(action);
+        this.enableHumanButtons();
         if (this.bettingIsOver()) {
             this.advanceStreet();
-        } else {
-        // TODO: Write a Flask server to integrate with the bot
-        // send card / history info to server
-        // wait for action from server
-        // right now I'm going to say that the bot always check/calls
-            const action = {action: "bet", amount: 3*BIG_BLIND};  // placeholder, but a good format for the action
-            this.stacks["cpu"] -= action["amount"];
-            this.updateLog("cpu", action);
-            this.props.addToPot(action["amount"]);
-            this.history[this.street].push(action);
-            this.enableHumanButtons();
         }
     };
 
@@ -165,7 +159,7 @@ class Game extends Component {
         if (action["action"] === "bet") {
             message += "bets $" + action["amount"];
         } else if (action["action"] === "call") {
-            message += "calls";
+            message += "calls $" + action["amount"];
         } else {
             alert("Action not understood");
         }
@@ -192,11 +186,7 @@ class Game extends Component {
 
     getCallAmount() {
         // for the human
-        const history = this.history[this.street]
-        const bets = this.streetBets(history);
-        const totalHumanBet = bets[0];
-        const totalCPUBet = bets[1];
-        return (totalCPUBet - totalHumanBet);
+        return (this.stacks["human"] - this.stacks["cpu"])
     }
 
     getMinBetAmount() {
@@ -245,8 +235,8 @@ class Game extends Component {
     };
 
     bettingIsOver() {
-        // TODO
-        return false;
+        console.log(this.stacks);
+        return (this.stacks["human"] === this.stacks["cpu"])
     };
 
     advanceStreet() {
@@ -258,13 +248,13 @@ class Game extends Component {
                 this.cpuAction();
             }
             this.street = "flop";
-        } else if (this.street === FLOP) {
+        } else if (this.street === "flop") {
+            this.props.dealFlop(this.flopCards);
+        } else if (this.street === "turn") {
 
-        } else if (this.street === TURN) {
+        } else if (this.street === "river") {
 
-        } else if (this.street === RIVER) {
-
-        } else if (this.street === SHOWDOWN) {
+        } else if (this.street === "showdown") {
 
         }
     }
