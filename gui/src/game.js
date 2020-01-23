@@ -1,22 +1,14 @@
 import {Random} from "random-js";
-import React, {Component} from 'react';
+import {Component} from 'react';
 
-const PREFLOP = 0;
-const FLOP = 1;
-const TURN = 2;
-const RIVER = 3;
-const SHOWDOWN = 4;
+const STACK_SIZE = 20000;
+const BIG_BLIND = 200;
+const SMALL_BLIND = 100;
 
-// Constants for card placement in deck
-const HUMAN_CARD_1 = 0;
-const HUMAN_CARD_2 = 1;
-const CPU_CARD_1 = 2;
-const CPU_CARD_2 = 3;
-const FLOP_CARD_1 = 4;
-const FLOP_CARD_2 = 5;
-const FLOP_CARD_3 = 6;
-const TURN_CARD = 7;
-const RIVER_CARD = 8;
+const FLOP = 0;
+const TURN = 0
+const RIVER = 0
+const SHOWDOWN = 0
 
 const DECK = ['2c', '2s', '2h', '2d',
               '3c', '3s', '3h', '3d',
@@ -38,18 +30,25 @@ class Game extends Component {
     constructor(props) {
         super(props);
         this.dealer = "cpu";
-        this.street = PREFLOP;
+        this.street = "preflop";
         this.pot = 0;
         this.bets = [0, 0];
         this.deck = DECK;
         this.humanCards = [];
         this.cpuCards = [];
         this.board = [];
-        this.history = [];
+        this.history = {
+            preflop: [],
+            flop: [],
+            turn: [],
+            river: []
+        };
+        this.score = 0;
+        this.numHands = 0;
     };
 
     nextHand = () => {
-        this.street = PREFLOP;
+        this.street = "preflop";
         this.props.clearLog();
         this.props.clearPot();
         const random = new Random();
@@ -63,7 +62,9 @@ class Game extends Component {
     };
 
     fold = () => {
-
+        // update score with losings from this hand
+        this.props.logMessage("HUMAN folds.");
+        this.props.setEnabledButtons(["nextHand"]);
     };
 
     check() {
@@ -88,8 +89,8 @@ class Game extends Component {
         // right now I'm going to say that the bot always check/calls
             const action = {action: "bet", amount: 20};  // placeholder, but a good format for the action
             this.updateLog("cpu", action);
-            this.addToPot(action["amount"]);
-            // TODO: keep track and update action history
+            this.props.addToPot(action["amount"]);
+            this.history[this.street].push(action);
             this.enableHumanButtons();
         }
     };
@@ -104,11 +105,62 @@ class Game extends Component {
         this.props.logMessage(message);
     };
 
-    addToPot(amount) {
+    streetBets(streetActions) {
+        // We know the previous bet was from the CPU, so we use that fact to know
+        // which player is which in the action history.
+        let cpuTotal = 0;
+        let humanTotal = 0;
 
-    };
+        streetActions.reverse();
+        for (let i = 0; i < streetActions.length; i++) {
+            if (i % 2 === 0) {
+                // This is a CPU action
+                cpuTotal += streetActions[i]["amount"];
+            } else {
+                humanTotal += streetActions[i]["amount"];
+            }
+        }
+        return [humanTotal, cpuTotal];
+    }
 
     enableHumanButtons() {
+        // TODO: Dynamically figure out which human buttons should be allowed
+        // depending on the previous bets / pot size.
+        const history = this.history[this.street]
+        const firstAction = history.length === 0;
+        const bets = this.streetBets(history);
+        const totalHumanBet = bets[0];
+        const totalCPUBet = bets[1];
+        const stack = STACK_SIZE - totalHumanBet;
+        let prevAction = "";
+        if (!firstAction) {
+            prevAction = history[history.length - 1]
+        }
+
+        let enabled = ["fold"];
+        if (this.street !== "preflop" && (firstAction || prevAction["action"] === "check")) {
+            enabled.push("check");
+        }
+        if (totalHumanBet < totalCPUBet) {
+            enabled.push("call");
+        }
+        let minBetAmount = SMALL_BLIND;
+        if (prevAction["amount"] > 0) {
+            minBetAmount = 2 * prevAction["amount"];
+        }
+        if (minBetAmount <= stack) {
+            enabled.push("minBet");
+        }
+        if (stack >= this.pot/2) {
+            enabled.push("betHalfPot");
+        }
+        if (stack >= this.pot) {
+            enabled.push("betPot");
+        }
+        enabled.push("allIn");
+        enabled.push("betCustom");
+
+        this.props.setEnabledButtons(enabled);
 
     };
 
@@ -118,10 +170,10 @@ class Game extends Component {
     };
 
     advanceStreet() {
-        if (this.street === PREFLOP) {
+        if (this.street === "preflop") {
             this.props.dealHumanCards(this.humanCards);
             if (this.dealer === "human") {
-                this.props.setEnabledButtons(["fold", "call", "minBet", "betHalfPot", "betPot", "allIn", "betCustom"])
+                this.enableHumanButtons();
             } else {
                 this.cpuAction();
             }
@@ -140,3 +192,5 @@ class Game extends Component {
 };
 
 export default Game;
+
+

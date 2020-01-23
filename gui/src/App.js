@@ -1,6 +1,5 @@
 import React, {Component} from 'react';
 import Game from './game';
-import logo from './logo.svg';
 import Score from './components/score';
 import Table from './components/table';
 import Buttons from './components/buttons';
@@ -15,7 +14,12 @@ class App extends Component {
   };
 
   logMessage = (message) => {
-    const log = this.state.log + "\n" + message;
+    let log = "";
+    if (this.state.log === "") {
+        log = message;
+    } else {
+        log = this.state.log + "\n" + message;
+    }
     this.setState({log: log});
   };
 
@@ -25,7 +29,6 @@ class App extends Component {
   };
 
   dealHumanCards = (humanCards) => {
-      this.state.humanCards = humanCards
       this.setState({humanCards: humanCards});
   };
 
@@ -50,13 +53,19 @@ class App extends Component {
       this.setState({enabledButtons: enabled})
   }
 
+  addToPot = (amount) => {
+    let newPot = this.state.pot + amount;
+    this.state.pot = newPot;
+    this.setState({pot: newPot});
+  }
 
   state = {
     game: new Game({logMessage: this.logMessage,
                     clearLog: this.clearLog,
                     clearPot: this.clearPot,
                     dealHumanCards: this.dealHumanCards,
-                    setEnabledButtons: this.setEnabledButtons}),
+                    setEnabledButtons: this.setEnabledButtons,
+                    addToPot: this.addToPot}),
     log: "Welcome to Poker!",
     pot: 0,
     humanCards: ["back", "back"],
@@ -86,6 +95,14 @@ class App extends Component {
                cpuCards={this.state.cpuCards}
                board={this.state.board}/>
         <Buttons onNextHand={this.state.game.nextHand}
+                 fold={this.state.game.fold}
+                 check={this.state.game.check}
+                 call={this.state.game.call}
+                 minBet={this.state.game.minBet}
+                 betHalfPot={this.state.game.betHalfPot}
+                 betPot={this.state.game.betPot}
+                 allIn={this.state.game.allIn}
+                 betCustom={this.state.game.betCustom}
                  enabledButtons={this.state.enabledButtons}
           />
         <Log text={this.state.log}/>
