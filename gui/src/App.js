@@ -127,6 +127,7 @@ class App extends Component {
                  betPot={this.state.game.betPot}
                  allIn={this.state.game.allIn}
                  betCustom={this.state.game.betCustom}
+                 updateCustomBet={this.state.game.updateCustomBet}
                  enabledButtons={this.state.enabledButtons}
           />
         <Log text={this.state.log}/>

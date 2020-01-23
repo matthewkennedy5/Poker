@@ -45,11 +45,11 @@ class Game extends Component {
         this.score = 0;
         this.numHands = 0;
         this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
+        this.custBetAmount = 0;
     };
 
     nextHand = () => {
         this.street = "preflop";
-        console.log(this.street);
         if (this.dealer === "cpu") {
             this.dealer = "human";
         } else {
@@ -118,9 +118,30 @@ class Game extends Component {
         this.registerAction({action: "bet", amount: amount})
     };
 
-    betPot = () => {};
-    allIn = () => {};
-    betCustom = (amount) => {};
+    betPot = () => {
+        this.registerAction({action: "bet", amount: this.props.getPot()});
+    };
+
+    allIn = () => {
+        this.registerAction({action: "bet", amount: this.stacks["human"]})
+    };
+
+    updateCustomBet = (event) => {
+        this.custBetAmount = event.target.value;
+    };
+
+    betCustom = () => {
+        const amount = parseInt(this.custBetAmount);
+        if (isNaN(amount)) {
+            alert("Invalid bet amount")
+        } else if (amount > this.stacks["human"]) {
+            alert("Bet size is too large");
+        } else if (amount < this.getMinBetAmount()) {
+            alert("Must bet at least " + this.getMinBetAmount());
+        } else {
+            this.registerAction({action: "bet", amount: amount})
+        }
+    };
 
     cpuAction() {
         if (this.bettingIsOver()) {
