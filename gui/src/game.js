@@ -1,9 +1,6 @@
 import {Random} from "random-js";
 import React, {Component} from 'react';
 
-const HUMAN = 0;
-const CPU = 1;
-
 const PREFLOP = 0;
 const FLOP = 1;
 const TURN = 2;
@@ -39,7 +36,7 @@ class Game extends Component {
 
     constructor(props) {
         super(props);
-        this.whoseTurn = CPU;
+        this.dealer = "cpu";
         this.street = PREFLOP;
         this.pot = 0;
         this.bets = [0, 0];
@@ -60,14 +57,22 @@ class Game extends Component {
         this.cpuCards = this.deck.slice(2, 4);
         this.board = this.deck.slice(4, 9);
         this.props.dealHumanCards(this.humanCards);
-        this.turn();
+        if (this.dealer === "human") {
+            this.props.setEnabledButtons(["fold", "call", "minBet", "betHalfPot", "betPot", "allIn", "betCustom"])
+        } else {
+            this.cpuAction();
+        }
     };
 
     fold = () => {
 
     };
 
-    check() {};
+    check() {
+      // ...
+      this.cpuAction();
+    };
+
     call() {};
     minBet() {};
     betHalfPot() {};
@@ -75,8 +80,14 @@ class Game extends Component {
     allIn() {};
     betCustom(amount) {};
 
-    turn() {
-
+    cpuAction() {
+        // send card / history info to server
+        // wait for action from server
+        // if (this.bettingIsOver()) {
+            // handle next street
+        // } else {
+            // turn on human's buttons
+        // }
     };
 
 };

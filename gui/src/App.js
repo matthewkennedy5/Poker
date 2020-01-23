@@ -7,7 +7,6 @@ import Buttons from './components/buttons';
 import Log from './components/log';
 import './App.css';
 
-// TODO: Figure out how to change tab thumbnail and title
 class App extends Component {
 
   clearLog = () => {
@@ -42,17 +41,40 @@ class App extends Component {
 
   };
 
+  setEnabledButtons = (buttons) => {
+      let enabled = {}
+      for (let button of buttons) {
+          enabled[button] = true;
+          this.state.enabledButtons[button] = true;
+      }
+      this.setState({enabledButtons: enabled})
+  }
+
 
   state = {
     game: new Game({logMessage: this.logMessage,
                     clearLog: this.clearLog,
                     clearPot: this.clearPot,
-                    dealHumanCards: this.dealHumanCards}),
+                    dealHumanCards: this.dealHumanCards,
+                    setEnabledButtons: this.setEnabledButtons}),
     log: "Welcome to Poker!",
     pot: 0,
     humanCards: ["back", "back"],
     cpuCards: ["back", "back"],
     board: ["back", "back", "back", "back", "back"],  // TODO: Make board not appear before its time
+
+    enabledButtons: {
+        nextHand: true,
+        fold: false,
+        check: false,
+        call: false,
+        minBet: false,
+        betHalfPot: false,
+        betPot: false,
+        allIn: false,
+        peek: false,
+        betCustom:false
+    }
   };
 
   render() {
@@ -63,8 +85,8 @@ class App extends Component {
                humanCards={this.state.humanCards}
                cpuCards={this.state.cpuCards}
                board={this.state.board}/>
-        <Buttons
-          onNextHand={this.state.game.nextHand}
+        <Buttons onNextHand={this.state.game.nextHand}
+                 enabledButtons={this.state.enabledButtons}
           />
         <Log text={this.state.log}/>
       </div>
@@ -75,3 +97,7 @@ class App extends Component {
 
 
 export default App;
+
+// Improvement ideas
+// TODO: Figure out how to change tab thumbnail and title
+// TODO: Make a display label for Slumbot's bets (and the user's bet)
