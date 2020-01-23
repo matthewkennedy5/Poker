@@ -29,7 +29,7 @@ class Game extends Component {
 
     constructor(props) {
         super(props);
-        this.dealer = "cpu";
+        this.dealer = "human";
         this.street = "preflop";
         this.bets = [0, 0];
         this.deck = DECK;
@@ -49,6 +49,7 @@ class Game extends Component {
 
     nextHand = () => {
         this.street = "preflop";
+        console.log(this.street);
         if (this.dealer === "cpu") {
             this.dealer = "human";
         } else {
@@ -83,12 +84,18 @@ class Game extends Component {
         this.props.setEnabledButtons(["nextHand"]);
     };
 
-    check() {
-      // ...
-      this.cpuAction();
+    check = () => {};
+
+    call = () => {
+        const amount = this.getCallAmount();
+        const action = {action: "call", amount: amount};
+        this.props.addToPot(amount);
+        this.history[this.street].push(action);
+        this.stacks["human"] -= amount;
+        this.updateLog("human", action);
+        this.cpuAction();
     };
 
-    call() {};
     minBet() {};
     betHalfPot() {};
     betPot() {};
@@ -116,6 +123,8 @@ class Game extends Component {
         let message = player.toUpperCase() + " ";
         if (action["action"] === "bet") {
             message += "bets $" + action["amount"];
+        } else if (action["action"] === "call") {
+            message += "calls";
         } else {
             alert("Action not understood");
         }
@@ -138,6 +147,15 @@ class Game extends Component {
             }
         }
         return [humanTotal, cpuTotal];
+    }
+
+    getCallAmount() {
+        // for the human
+        const history = this.history[this.street]
+        const bets = this.streetBets(history);
+        const totalHumanBet = bets[0];
+        const totalCPUBet = bets[1];
+        return (totalCPUBet - totalHumanBet);
     }
 
     enableHumanButtons() {
@@ -202,7 +220,6 @@ class Game extends Component {
         } else if (this.street === SHOWDOWN) {
 
         }
-        this.street++;
     }
 
 };

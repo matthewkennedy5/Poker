@@ -21,6 +21,7 @@ class App extends Component {
         log = this.state.log + "\n" + message;
     }
     this.setState({log: log});
+    this.state.log = log;
   };
 
   clearPot = () => {
