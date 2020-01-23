@@ -33,8 +33,10 @@ class App extends Component {
       this.setState({humanCards: humanCards});
   };
 
-  dealFlop = (card1, card2, card3) => {
-
+  dealFlop = (flopCards) => {
+      flopCards.push("back");
+      flopCards.push("back");
+      this.setState({board: flopCards})
   };
 
   dealTurn = (card) => {
@@ -44,6 +46,15 @@ class App extends Component {
   dealRiver = (card) => {
 
   };
+
+  clearCards = () => {
+      const board = ["back", "back", "back", "back", "back"];
+      const hand = ["back", "back"];
+      this.setState({board: board, humanCards: hand, cpuCards: hand});
+      this.state.board = board;
+      this.state.humanCards = hand;
+      this.state.cpuCards = hand;
+  }
 
   setEnabledButtons = (buttons) => {
       let enabled = {}
@@ -81,7 +92,9 @@ class App extends Component {
                     clearLog: this.clearLog,
                     clearPot: this.clearPot,
                     getPot: this.getPot,
+                    clearCards: this.clearCards,
                     dealHumanCards: this.dealHumanCards,
+                    dealFlop: this.dealFlop,
                     setEnabledButtons: this.setEnabledButtons,
                     addToPot: this.addToPot,
                     addToScore: this.addToScore,

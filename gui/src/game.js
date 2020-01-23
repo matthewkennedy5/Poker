@@ -60,6 +60,7 @@ class Game extends Component {
         this.bets = [0, 0];
         this.props.clearLog();
         this.props.clearPot();
+        this.props.clearCards();
         const random = new Random();
         random.shuffle(this.deck);
         // The deck card order is as follows:
@@ -67,7 +68,7 @@ class Game extends Component {
         this.humanCards = this.deck.slice(0, 2);
         this.cpuCards = this.deck.slice(2, 4);
         this.board = this.deck.slice(4, 9);
-        this.advanceStreet();
+        this.playStreet();
     };
 
     fold = () => {
@@ -86,6 +87,19 @@ class Game extends Component {
         this.updateLog("human", action);
         if (this.bettingIsOver()) {
             this.advanceStreet();
+            this.playStreet();
+        }
+    }
+
+    advanceStreet() {
+        if (this.street === "preflop") {
+            this.street = "flop";
+        } else if (this.street === "flop") {
+            this.street = "turn";
+        } else if (this.street === "turn") {
+            this.street = "river";
+        } else if (this.street === "river") {
+            this.street = "showdown"
         }
     }
 
@@ -151,6 +165,7 @@ class Game extends Component {
         this.enableHumanButtons();
         if (this.bettingIsOver()) {
             this.advanceStreet();
+            this.playStreet();
         }
     };
 
@@ -192,6 +207,7 @@ class Game extends Component {
     getMinBetAmount() {
         let minBetAmount = SMALL_BLIND;
         const prevAction = this.history[this.street].slice(-1)[0];
+        debugger;
         if (prevAction && prevAction["amount"] > 0) {
             minBetAmount = 2 * prevAction["amount"];
         }
@@ -235,11 +251,10 @@ class Game extends Component {
     };
 
     bettingIsOver() {
-        console.log(this.stacks);
         return (this.stacks["human"] === this.stacks["cpu"])
     };
 
-    advanceStreet() {
+    playStreet() {
         if (this.street === "preflop") {
             this.props.dealHumanCards(this.humanCards);
             if (this.dealer === "human") {
@@ -247,9 +262,13 @@ class Game extends Component {
             } else {
                 this.cpuAction();
             }
-            this.street = "flop";
         } else if (this.street === "flop") {
-            this.props.dealFlop(this.flopCards);
+            this.props.dealFlop(this.board.slice(0, 3));
+            if (this.dealer === "human") {
+                this.cpuAction();
+            } else {
+                this.enableHumanButtons();
+            }
         } else if (this.street === "turn") {
 
         } else if (this.street === "river") {
@@ -258,7 +277,6 @@ class Game extends Component {
 
         }
     }
-
 };
 
 export default Game;
