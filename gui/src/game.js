@@ -5,6 +5,7 @@ const PREFLOP = 0;
 const FLOP = 1;
 const TURN = 2;
 const RIVER = 3;
+const SHOWDOWN = 4;
 
 // Constants for card placement in deck
 const HUMAN_CARD_1 = 0;
@@ -44,9 +45,11 @@ class Game extends Component {
         this.humanCards = [];
         this.cpuCards = [];
         this.board = [];
+        this.history = [];
     };
 
     nextHand = () => {
+        this.street = PREFLOP;
         this.props.clearLog();
         this.props.clearPot();
         const random = new Random();
@@ -56,12 +59,7 @@ class Game extends Component {
         this.humanCards = this.deck.slice(0, 2);
         this.cpuCards = this.deck.slice(2, 4);
         this.board = this.deck.slice(4, 9);
-        this.props.dealHumanCards(this.humanCards);
-        if (this.dealer === "human") {
-            this.props.setEnabledButtons(["fold", "call", "minBet", "betHalfPot", "betPot", "allIn", "betCustom"])
-        } else {
-            this.cpuAction();
-        }
+        this.advanceStreet();
     };
 
     fold = () => {
@@ -81,14 +79,63 @@ class Game extends Component {
     betCustom(amount) {};
 
     cpuAction() {
+        if (this.bettingIsOver()) {
+            this.advanceStreet();
+        } else {
+        // TODO: Write a Flask server to integrate with the bot
         // send card / history info to server
         // wait for action from server
-        // if (this.bettingIsOver()) {
-            // handle next street
-        // } else {
-            // turn on human's buttons
-        // }
+        // right now I'm going to say that the bot always check/calls
+            const action = {action: "bet", amount: 20};  // placeholder, but a good format for the action
+            this.updateLog("cpu", action);
+            this.addToPot(action["amount"]);
+            // TODO: keep track and update action history
+            this.enableHumanButtons();
+        }
     };
+
+    updateLog(player, action) {
+        let message = player.toUpperCase() + " ";
+        if (action["action"] === "bet") {
+            message += "bets $" + action["amount"];
+        } else {
+            alert("Action not understood");
+        }
+        this.props.logMessage(message);
+    };
+
+    addToPot(amount) {
+
+    };
+
+    enableHumanButtons() {
+
+    };
+
+    bettingIsOver() {
+        // TODO
+        return false;
+    };
+
+    advanceStreet() {
+        if (this.street === PREFLOP) {
+            this.props.dealHumanCards(this.humanCards);
+            if (this.dealer === "human") {
+                this.props.setEnabledButtons(["fold", "call", "minBet", "betHalfPot", "betPot", "allIn", "betCustom"])
+            } else {
+                this.cpuAction();
+            }
+        } else if (this.street === FLOP) {
+
+        } else if (this.street === TURN) {
+
+        } else if (this.street === RIVER) {
+
+        } else if (this.street === SHOWDOWN) {
+
+        }
+        this.street++;
+    }
 
 };
 
