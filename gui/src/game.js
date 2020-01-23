@@ -84,19 +84,25 @@ class Game extends Component {
         this.props.setEnabledButtons(["nextHand"]);
     };
 
+    registerAction(action) {
+        this.props.addToPot(action["amount"]);
+        this.history[this.street].push(action);
+        this.stacks["human"] -= action["amount"];
+        this.updateLog("human", action);
+    }
+
     check = () => {};
 
     call = () => {
         const amount = this.getCallAmount();
         const action = {action: "call", amount: amount};
-        this.props.addToPot(amount);
-        this.history[this.street].push(action);
-        this.stacks["human"] -= amount;
-        this.updateLog("human", action);
-        this.cpuAction();
+        this.registerAction(action);
+        this.advanceStreet();
     };
 
-    minBet() {};
+    minBet() {
+
+    };
     betHalfPot() {};
     betPot() {};
     allIn() {};
@@ -211,6 +217,7 @@ class Game extends Component {
             } else {
                 this.cpuAction();
             }
+            this.street = "flop";
         } else if (this.street === FLOP) {
 
         } else if (this.street === TURN) {
