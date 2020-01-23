@@ -2,22 +2,29 @@ import React, {Component} from 'react';
 
 class Table extends Component {
 
-    state = {};
-
     feltStyle = {
         fill: "green",
         stroke: "green",
         opacity: 0.9
     };
 
+    card2imagePath = {
+
+    }
+
     render() {
         return (
-            <div class="table">
-                <img class="humanCard1" src="/cards/As.svg"></img>
-                <img class="humanCard2" src="/cards/Ah.svg"></img>
-                <img class="cpuCard1" src="/cards/back.png"></img>
-                <img class="cpuCard2" src="/cards/back.png"></img>
-                <label class="pot">pot: $1234</label>
+            <div className="table">
+                <img className="humanCard1" src={"/cards/" + this.props.humanCards[0] + ".svg"}></img>
+                <img className="humanCard2" src={"/cards/" + this.props.humanCards[1] + ".svg"}></img>
+                <img className="cpuCard1" src={"/cards/" + this.props.cpuCards[0] + ".svg"}></img>
+                <img className="cpuCard2" src={"/cards/" + this.props.cpuCards[1] + ".svg"}></img>
+                <img className="board1" src={"/cards/" + this.props.board[0] + ".svg"}></img>
+                <img className="board2" src={"/cards/" + this.props.board[1] + ".svg"}></img>
+                <img className="board3" src={"/cards/" + this.props.board[2] + ".svg"}></img>
+                <img className="board4" src={"/cards/" + this.props.board[3] + ".svg"}></img>
+                <img className="board5" src={"/cards/" + this.props.board[4] + ".svg"}></img>
+                <label className="pot">pot: ${this.props.pot}</label>
                 <svg width="2000" height="600">
                     <rect x="50" y="20" rx="100" ry="100" width="1000" height="500" style={this.feltStyle}/>
                 </svg>

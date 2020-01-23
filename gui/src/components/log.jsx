@@ -1,9 +1,9 @@
 import React, {Component} from 'react';
 
 class Log extends Component {
-    state = {};
+
     render() {
-        return <h4 class="log">Placeholder Log</h4>;
+        return <p class="log">{this.props.text}</p>;
     };
 };
 
