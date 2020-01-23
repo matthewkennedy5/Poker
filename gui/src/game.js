@@ -89,6 +89,9 @@ class Game extends Component {
         this.history[this.street].push(action);
         this.stacks["human"] -= action["amount"];
         this.updateLog("human", action);
+        if (this.bettingIsOver()) {
+            this.advanceStreet();
+        }
     }
 
     check = () => {};
@@ -97,16 +100,19 @@ class Game extends Component {
         const amount = this.getCallAmount();
         const action = {action: "call", amount: amount};
         this.registerAction(action);
-        this.advanceStreet();
+    };
+    // TODO: Group public button methods
+
+    minBet = () => {
+        const amount = this.getMinBetAmount();
+        const action = {action: "bet", amount: amount};
+        this.registerAction(action);
     };
 
-    minBet() {
-
-    };
-    betHalfPot() {};
-    betPot() {};
-    allIn() {};
-    betCustom(amount) {};
+    betHalfPot = () => {};
+    betPot = () => {};
+    allIn = () => {};
+    betCustom = (amount) => {};
 
     cpuAction() {
         if (this.bettingIsOver()) {
@@ -164,6 +170,15 @@ class Game extends Component {
         return (totalCPUBet - totalHumanBet);
     }
 
+    getMinBetAmount() {
+        let minBetAmount = SMALL_BLIND;
+        const prevAction = this.history[this.street].slice(-1)[0];
+        if (prevAction && prevAction["amount"] > 0) {
+            minBetAmount = 2 * prevAction["amount"];
+        }
+        return minBetAmount;
+    }
+
     enableHumanButtons() {
         // TODO: Dynamically figure out which human buttons should be allowed
         // depending on the previous bets / pot size.
@@ -184,12 +199,8 @@ class Game extends Component {
         if (totalHumanBet < totalCPUBet) {
             enabled.push("call");
         }
-        let minBetAmount = SMALL_BLIND;
-        if (prevAction["amount"] > 0) {
-            minBetAmount = 2 * prevAction["amount"];
-        }
         const stack = this.stacks["human"];
-        if (minBetAmount <= stack) {
+        if (this.getMinBetAmount() <= stack) {
             enabled.push("minBet");
         }
         const pot = this.props.getPot();
