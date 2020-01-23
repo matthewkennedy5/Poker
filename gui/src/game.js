@@ -73,7 +73,14 @@ class Game extends Component {
 
     fold = () => {
         // update score with losings from this hand
-        const losings = STACK_SIZE - this.stacks["human"];
+        let losings = STACK_SIZE - this.stacks["human"];
+        if (losings === 0) {
+            if (this.dealer === "human") {
+                losings = SMALL_BLIND;
+            } else {
+                losings = BIG_BLIND;
+            }
+        }
         this.props.addToScore(-losings);
         this.props.incrementHands();
         this.props.logMessage("HUMAN folds.");
