@@ -109,7 +109,15 @@ class Game extends Component {
         this.registerAction(action);
     };
 
-    betHalfPot = () => {};
+    roundToSmallBlind(number) {
+        return Math.round(number / SMALL_BLIND) * SMALL_BLIND;
+    };
+
+    betHalfPot = () => {
+        const amount = this.roundToSmallBlind(this.props.getPot() / 2);
+        this.registerAction({action: "bet", amount: amount})
+    };
+
     betPot = () => {};
     allIn = () => {};
     betCustom = (amount) => {};
@@ -122,7 +130,7 @@ class Game extends Component {
         // send card / history info to server
         // wait for action from server
         // right now I'm going to say that the bot always check/calls
-            const action = {action: "bet", amount: 20};  // placeholder, but a good format for the action
+            const action = {action: "bet", amount: 3*BIG_BLIND};  // placeholder, but a good format for the action
             this.stacks["cpu"] -= action["amount"];
             this.updateLog("cpu", action);
             this.props.addToPot(action["amount"]);
