@@ -49,6 +49,19 @@ class Game extends Component {
 
     nextHand = () => {
         this.street = "preflop";
+        if (this.dealer === "cpu") {
+            this.dealer = "human";
+        } else {
+            this.dealer = "cpu";
+        }
+        this.history = {
+            preflop: [],
+            flop: [],
+            turn: [],
+            river: []
+        };
+        this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
+        this.bets = [0, 0];
         this.props.clearLog();
         this.props.clearPot();
         const random = new Random();
