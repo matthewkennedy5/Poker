@@ -24,8 +24,8 @@ class App extends Component {
   };
 
   clearPot = () => {
-    this.state.pot = 0;
-    this.setState({pot: 0})
+      this.state.pot = 0;
+      this.setState({pot: 0});
   };
 
   dealHumanCards = (humanCards) => {
@@ -59,18 +59,39 @@ class App extends Component {
     this.setState({pot: newPot});
   }
 
+  getPot = () => {
+      return this.state.pot;
+  }
+
+  addToScore = (winnings) => {
+      const score = this.state.score + winnings;
+      this.state.score = score;
+      this.setState({score: score});
+  }
+
+  incrementHands = () => {
+      const nHands = this.state.hands + 1;
+      this.state.hands = nHands;
+      this.setState({hands: nHands});
+  }
+
   state = {
     game: new Game({logMessage: this.logMessage,
                     clearLog: this.clearLog,
                     clearPot: this.clearPot,
+                    getPot: this.getPot,
                     dealHumanCards: this.dealHumanCards,
                     setEnabledButtons: this.setEnabledButtons,
-                    addToPot: this.addToPot}),
+                    addToPot: this.addToPot,
+                    addToScore: this.addToScore,
+                    incrementHands: this.incrementHands}),
     log: "Welcome to Poker!",
     pot: 0,
     humanCards: ["back", "back"],
     cpuCards: ["back", "back"],
     board: ["back", "back", "back", "back", "back"],  // TODO: Make board not appear before its time
+    score: 0,
+    hands: 0,
 
     enabledButtons: {
         nextHand: true,
@@ -89,7 +110,9 @@ class App extends Component {
   render() {
     return (
       <div>
-        <Score className="score"/>
+        <Score className="score"
+               score={this.state.score}
+               hands={this.state.hands}/>
         <Table pot={this.state.pot}
                humanCards={this.state.humanCards}
                cpuCards={this.state.cpuCards}

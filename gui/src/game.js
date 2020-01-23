@@ -31,7 +31,6 @@ class Game extends Component {
         super(props);
         this.dealer = "cpu";
         this.street = "preflop";
-        this.pot = 0;
         this.bets = [0, 0];
         this.deck = DECK;
         this.humanCards = [];
@@ -45,6 +44,7 @@ class Game extends Component {
         };
         this.score = 0;
         this.numHands = 0;
+        this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
     };
 
     nextHand = () => {
@@ -63,6 +63,9 @@ class Game extends Component {
 
     fold = () => {
         // update score with losings from this hand
+        const losings = STACK_SIZE - this.stacks["human"];
+        this.props.addToScore(-losings);
+        this.props.incrementHands();
         this.props.logMessage("HUMAN folds.");
         this.props.setEnabledButtons(["nextHand"]);
     };
@@ -88,6 +91,7 @@ class Game extends Component {
         // wait for action from server
         // right now I'm going to say that the bot always check/calls
             const action = {action: "bet", amount: 20};  // placeholder, but a good format for the action
+            this.stacks["cpu"] -= action["amount"];
             this.updateLog("cpu", action);
             this.props.addToPot(action["amount"]);
             this.history[this.street].push(action);
@@ -131,7 +135,6 @@ class Game extends Component {
         const bets = this.streetBets(history);
         const totalHumanBet = bets[0];
         const totalCPUBet = bets[1];
-        const stack = STACK_SIZE - totalHumanBet;
         let prevAction = "";
         if (!firstAction) {
             prevAction = history[history.length - 1]
@@ -148,20 +151,20 @@ class Game extends Component {
         if (prevAction["amount"] > 0) {
             minBetAmount = 2 * prevAction["amount"];
         }
+        const stack = this.stacks["human"];
         if (minBetAmount <= stack) {
             enabled.push("minBet");
         }
-        if (stack >= this.pot/2) {
+        const pot = this.props.getPot();
+        if (stack >= pot/2) {
             enabled.push("betHalfPot");
         }
-        if (stack >= this.pot) {
+        if (stack >= pot) {
             enabled.push("betPot");
         }
         enabled.push("allIn");
         enabled.push("betCustom");
-
         this.props.setEnabledButtons(enabled);
-
     };
 
     bettingIsOver() {
