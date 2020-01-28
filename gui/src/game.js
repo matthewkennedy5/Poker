@@ -275,8 +275,13 @@ class Game extends Component {
     };
 
     bettingIsOver() {
-        const prevAction = this.getPrevAction();
-        return (prevAction !== "check" && this.stacks["human"] === this.stacks["cpu"]);
+        const prevAction = this.getPrevAction()["action"];
+        if (prevAction === "check") {
+            // If the second player to go checks, we're done with betting.
+            return (this.history[this.street].length === 2);
+        } else {
+            return (this.stacks["human"] === this.stacks["cpu"]);
+        }
     };
 
     playStreet() {
@@ -296,8 +301,20 @@ class Game extends Component {
             }
         } else if (this.street === "turn") {
             this.props.dealTurn(this.board[3]);
+            if (this.dealer === "human") {
+                this.cpuAction();
+            } else {
+                this.enableHumanButtons();
+            }
 
         } else if (this.street === "river") {
+            this.props.dealRiver(this.board[4]);
+            if (this.dealer === "human") {
+                this.cpuAction();
+            } else {
+                this.enableHumanButtons();
+            }
+
 
         } else if (this.street === "showdown") {
 

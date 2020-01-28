@@ -46,7 +46,9 @@ class App extends Component {
   };
 
   dealRiver = (card) => {
-
+      let board = this.state.board;
+      board[4] = card;
+      this.setState({board: board});
   };
 
   clearCards = () => {
