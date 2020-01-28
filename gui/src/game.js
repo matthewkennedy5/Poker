@@ -95,10 +95,13 @@ class Game extends Component {
         if (this.bettingIsOver()) {
             this.advanceStreet();
             this.playStreet();
+        } else {
+            this.cpuAction();
         }
     }
 
     advanceStreet() {
+        // TODO: Log the street in the log
         if (this.street === "preflop") {
             this.street = "flop";
         } else if (this.street === "flop") {
@@ -110,7 +113,9 @@ class Game extends Component {
         }
     }
 
-    check = () => {};
+    check = () => {
+        this.registerAction({action: "check", amount: 0})
+    };
 
     call = () => {
         const amount = this.getCallAmount();
@@ -164,7 +169,14 @@ class Game extends Component {
     // send card / history info to server
     // wait for action from server
     // right now I'm going to say that the bot always check/calls
-        const action = {action: "bet", amount: 3*BIG_BLIND};  // placeholder, but a good format for the action
+        let action;
+        if (this.street === "preflop" && this.history["preflop"].length === 0) {
+            action = {action: "bet", amount: 3*BIG_BLIND};
+        } else if (this.stacks["cpu"] === this.stacks["human"]) {
+            action = {action: "check", amount: 0};
+        } else {
+            action = {action: "call", amount: this.stacks["cpu"] - this.stacks["human"]};
+        }
         this.stacks["cpu"] -= action["amount"];
         this.updateLog("cpu", action);
         this.props.addToPot(action["amount"]);
@@ -182,7 +194,10 @@ class Game extends Component {
             message += "bets $" + action["amount"];
         } else if (action["action"] === "call") {
             message += "calls $" + action["amount"];
-        } else {
+        } else if (action["action"] === "check") {
+            message += "checks"
+        }
+        else {
             alert("Action not understood");
         }
         this.props.logMessage(message);
@@ -213,17 +228,18 @@ class Game extends Component {
 
     getMinBetAmount() {
         let minBetAmount = SMALL_BLIND;
-        const prevAction = this.history[this.street].slice(-1)[0];
-        debugger;
+        const prevAction = this.getPrevAction();
         if (prevAction && prevAction["amount"] > 0) {
             minBetAmount = 2 * prevAction["amount"];
         }
         return minBetAmount;
     }
 
+    getPrevAction() {
+        return this.history[this.street].slice(-1)[0];
+    }
+
     enableHumanButtons() {
-        // TODO: Dynamically figure out which human buttons should be allowed
-        // depending on the previous bets / pot size.
         const history = this.history[this.street]
         const firstAction = history.length === 0;
         const bets = this.streetBets(history);
@@ -235,6 +251,7 @@ class Game extends Component {
         }
 
         let enabled = ["fold"];
+
         if (this.street !== "preflop" && (firstAction || prevAction["action"] === "check")) {
             enabled.push("check");
         }
@@ -258,7 +275,8 @@ class Game extends Component {
     };
 
     bettingIsOver() {
-        return (this.stacks["human"] === this.stacks["cpu"])
+        const prevAction = this.getPrevAction();
+        return (prevAction !== "check" && this.stacks["human"] === this.stacks["cpu"]);
     };
 
     playStreet() {
@@ -277,6 +295,7 @@ class Game extends Component {
                 this.enableHumanButtons();
             }
         } else if (this.street === "turn") {
+            this.props.dealTurn(this.board[3]);
 
         } else if (this.street === "river") {
 

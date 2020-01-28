@@ -40,7 +40,9 @@ class App extends Component {
   };
 
   dealTurn = (card) => {
-
+      let board = this.state.board;
+      board[3] = card;
+      this.setState({board: board});
   };
 
   dealRiver = (card) => {
@@ -95,6 +97,8 @@ class App extends Component {
                     clearCards: this.clearCards,
                     dealHumanCards: this.dealHumanCards,
                     dealFlop: this.dealFlop,
+                    dealTurn: this.dealTurn,
+                    dealRiver: this.dealRiver,
                     setEnabledButtons: this.setEnabledButtons,
                     addToPot: this.addToPot,
                     addToScore: this.addToScore,
@@ -156,3 +160,5 @@ export default App;
 // Improvement ideas
 // TODO: Figure out how to change tab thumbnail and title
 // TODO: Make a display label for Slumbot's bets (and the user's bet)
+// TODO: The player's cards move in a weird way when the window gets resized.
+
