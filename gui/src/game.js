@@ -285,43 +285,40 @@ class Game extends Component {
     };
 
     playStreet() {
+        if (this.street === "showdown") {
+            const winner = "human"; // TODO: Replace with API call
+            const pot = this.props.getPot();
+            if (winner === "human") {
+                this.props.addToScore(pot);
+                this.props.logMessage("HUMAN wins a pot of $" + pot);
+            } else {
+                this.props.addToScore(pot);
+                this.props.logMessage("CPU wins a pot of $" + pot);
+            }
+            this.props.incrementHands();
+            this.props.setEnabledButtons(["nextHand"]);
+            return;
+        }
+
         if (this.street === "preflop") {
             this.props.dealHumanCards(this.humanCards);
-            if (this.dealer === "human") {
-                this.enableHumanButtons();
-            } else {
-                this.cpuAction();
-            }
         } else if (this.street === "flop") {
             this.props.dealFlop(this.board.slice(0, 3));
-            if (this.dealer === "human") {
-                this.cpuAction();
-            } else {
-                this.enableHumanButtons();
-            }
         } else if (this.street === "turn") {
             this.props.dealTurn(this.board[3]);
-            if (this.dealer === "human") {
-                this.cpuAction();
-            } else {
-                this.enableHumanButtons();
-            }
-
         } else if (this.street === "river") {
             this.props.dealRiver(this.board[4]);
-            if (this.dealer === "human") {
-                this.cpuAction();
-            } else {
-                this.enableHumanButtons();
-            }
-
-
-        } else if (this.street === "showdown") {
-
+        }
+        if (this.dealer === "human") {
+            this.enableHumanButtons();
+        } else {
+            this.cpuAction();
         }
     }
 };
 
 export default Game;
 
-
+// TODO: There may be a translation bug to take into account because if CPU
+// leads with $600 and the human follows with a "full pot" bet, the action
+// translation might not correctly register that as a call.
