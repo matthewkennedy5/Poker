@@ -297,6 +297,7 @@ class Game extends Component {
             }
             this.props.incrementHands();
             this.props.setEnabledButtons(["nextHand"]);
+            this.props.showCPUCards(this.cpuCards);
             return;
         }
 

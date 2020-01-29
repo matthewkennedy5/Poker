@@ -33,6 +33,10 @@ class App extends Component {
       this.setState({humanCards: humanCards});
   };
 
+  showCPUCards = (cpuCards) => {
+      this.setState({cpuCards: cpuCards});
+  };
+
   dealFlop = (flopCards) => {
       flopCards.push("back");
       flopCards.push("back");
@@ -98,6 +102,7 @@ class App extends Component {
                     getPot: this.getPot,
                     clearCards: this.clearCards,
                     dealHumanCards: this.dealHumanCards,
+                    showCPUCards: this.showCPUCards,
                     dealFlop: this.dealFlop,
                     dealTurn: this.dealTurn,
                     dealRiver: this.dealRiver,
