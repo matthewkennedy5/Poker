@@ -291,7 +291,11 @@ class Game extends Component {
         this.props.dealTurn(this.board[3]);
         this.props.dealRiver(this.board[4]);
 
-        const winner = "human"; // TODO: Replace with API call
+        // const winner = "human"; // TODO: Replace with API call
+        const humanHand = this.humanCards.concat(this.board);
+        const cpuHand = this.cpuCards.concat(this.board);
+        const winner = this.props.evaluateHands(humanHand, cpuHand);
+
         const pot = this.props.getPot();
         if (winner === "human") {
             this.props.addToScore(pot);

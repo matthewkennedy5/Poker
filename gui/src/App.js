@@ -6,6 +6,8 @@ import Buttons from './components/buttons';
 import Log from './components/log';
 import './App.css';
 
+const axios = require('axios');
+
 class App extends Component {
 
   clearLog = () => {
@@ -96,6 +98,18 @@ class App extends Component {
       this.setState({hands: nHands});
   }
 
+  evaluateHands = (humanHand, cpuHand) => {
+      humanHand = humanHand.join();
+      cpuHand = cpuHand.join();
+      axios.get('http://127.0.0.1:5000/compare?humanHand=' + humanHand + '&cpuHand=' + cpuHand)
+        .then(function (response) {
+            console.log(response)
+        })
+        .catch(function (error) {
+            alert(error);
+        });
+  }
+
   state = {
     game: new Game({logMessage: this.logMessage,
                     clearLog: this.clearLog,
@@ -107,6 +121,7 @@ class App extends Component {
                     dealFlop: this.dealFlop,
                     dealTurn: this.dealTurn,
                     dealRiver: this.dealRiver,
+                    evaluateHands: this.evaluateHands,
                     setEnabledButtons: this.setEnabledButtons,
                     addToPot: this.addToPot,
                     addToScore: this.addToScore,
@@ -118,7 +133,6 @@ class App extends Component {
     board: ["back", "back", "back", "back", "back"],  // TODO: Make board not appear before its time
     score: 0,
     hands: 0,
-
     enabledButtons: {
         nextHand: true,
         fold: false,
