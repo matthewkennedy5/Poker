@@ -294,6 +294,7 @@ class Game extends Component {
         const cpuHand = this.cpuCards.concat(this.board);
         const result = await this.props.evaluateHands(humanHand, cpuHand);
         const winner = result.data
+        // TODO: Allow for split pots
 
         const pot = this.props.getPot();
         if (winner === "human") {

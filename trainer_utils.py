@@ -30,7 +30,7 @@ def normalize(dictionary):
     return dictionary
 
 
-def draw_deck(deck, player, return_hand=False):
+def draw_deck(deck, player=0, return_hand=False):
     if player == 0:
         hole = deck[:2]
     else:
