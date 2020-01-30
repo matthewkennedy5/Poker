@@ -284,7 +284,7 @@ class Game extends Component {
         }
     };
 
-    showdown() {
+    async showdown() {
         // show all cards
         this.props.showCPUCards(this.cpuCards);
         this.props.dealFlop(this.board.slice(0, 3));
@@ -294,15 +294,18 @@ class Game extends Component {
         // const winner = "human"; // TODO: Replace with API call
         const humanHand = this.humanCards.concat(this.board);
         const cpuHand = this.cpuCards.concat(this.board);
-        const winner = this.props.evaluateHands(humanHand, cpuHand);
+        const result = await this.props.evaluateHands(humanHand, cpuHand);
+        const winner = result.data
 
         const pot = this.props.getPot();
         if (winner === "human") {
             this.props.addToScore(pot);
             this.props.logMessage("HUMAN wins a pot of $" + pot);
-        } else {
-            this.props.addToScore(pot);
+        } else if (winner === "cpu") {
+            this.props.addToScore(-pot);
             this.props.logMessage("CPU wins a pot of $" + pot);
+        } else {
+            alert(winner)
         }
         this.props.incrementHands();
         this.props.setEnabledButtons(["nextHand"]);

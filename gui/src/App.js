@@ -98,16 +98,11 @@ class App extends Component {
       this.setState({hands: nHands});
   }
 
-  evaluateHands = (humanHand, cpuHand) => {
+  evaluateHands = async(humanHand, cpuHand) => {
       humanHand = humanHand.join();
       cpuHand = cpuHand.join();
-      axios.get('http://127.0.0.1:5000/compare?humanHand=' + humanHand + '&cpuHand=' + cpuHand)
-        .then(function (response) {
-            console.log(response)
-        })
-        .catch(function (error) {
-            alert(error);
-        });
+      const response = await axios.get('http://127.0.0.1:5000/compare?humanHand=' + humanHand + '&cpuHand=' + cpuHand);
+      return response;
   }
 
   state = {
