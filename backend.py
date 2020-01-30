@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 from flask import request
+import json
 
 from texas_hands import TexasHand
 
@@ -19,3 +20,16 @@ def compare_hands():
         return "human"
     else:
         return "cpu"
+
+
+@app.route('/bot')
+def get_cpu_action():
+    cpu_cards = request.args.get('cpuCards').split(',')
+    board = request.args.get('board').split(',')
+    history = request.args.get('history')
+    history = json.loads(history)
+
+    # TODO: Get this to link up to the AI
+
+    return {"action": "call", "amount": 600}
+

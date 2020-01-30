@@ -164,19 +164,17 @@ class Game extends Component {
         }
     };
 
-    cpuAction() {
-    // TODO: Write a Flask server to integrate with the bot
-    // send card / history info to server
-    // wait for action from server
-    // right now I'm going to say that the bot always check/calls
-        let action;
-        if (this.street === "preflop" && this.history["preflop"].length === 0) {
-            action = {action: "bet", amount: 3*BIG_BLIND};
-        } else if (this.stacks["cpu"] === this.stacks["human"]) {
-            action = {action: "check", amount: 0};
-        } else {
-            action = {action: "call", amount: this.stacks["cpu"] - this.stacks["human"]};
-        }
+    async cpuAction() {
+        // let action;
+        // if (this.street === "preflop" && this.history["preflop"].length === 0) {
+        //     action = {action: "bet", amount: 3*BIG_BLIND};
+        // } else if (this.stacks["cpu"] === this.stacks["human"]) {
+        //     action = {action: "check", amount: 0};
+        // } else {
+        //     action = {action: "call", amount: this.stacks["cpu"] - this.stacks["human"]};
+        // }
+        const result = await this.props.getCPUAction(this.history);
+        const action = result.data;
         this.stacks["cpu"] -= action["amount"];
         this.updateLog("cpu", action);
         this.props.addToPot(action["amount"]);

@@ -105,6 +105,17 @@ class App extends Component {
       return response;
   }
 
+  getCPUAction = async(history) => {
+      const response = await axios.get('http://127.0.0.1:5000/bot', {
+          params: {
+              cpuCards: this.state.humanCards.join(),
+              board: this.state.board.join(),
+              history: history
+          }
+      });
+      return response;
+  }
+
   state = {
     game: new Game({logMessage: this.logMessage,
                     clearLog: this.clearLog,
@@ -120,7 +131,8 @@ class App extends Component {
                     setEnabledButtons: this.setEnabledButtons,
                     addToPot: this.addToPot,
                     addToScore: this.addToScore,
-                    incrementHands: this.incrementHands}),
+                    incrementHands: this.incrementHands,
+                    getCPUAction: this.getCPUAction}),
     log: "Welcome to Poker!",
     pot: 0,
     humanCards: ["back", "back"],
