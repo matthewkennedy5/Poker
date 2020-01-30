@@ -197,5 +197,5 @@ class TexasHand:
 
 
     def __str__(self):
-        raise NotImplementedError
+        return ','.join(self.cards)
 
