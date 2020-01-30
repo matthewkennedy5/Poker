@@ -101,7 +101,6 @@ class Game extends Component {
     }
 
     advanceStreet() {
-        // TODO: Log the street in the log
         if (this.street === "preflop") {
             this.street = "flop";
         } else if (this.street === "flop") {
@@ -111,6 +110,7 @@ class Game extends Component {
         } else if (this.street === "river") {
             this.street = "showdown"
         }
+        this.props.logMessage("--------------------------------");
     }
 
     check = () => {
@@ -236,7 +236,6 @@ class Game extends Component {
     }
 
     getPrevAction() {
-        console.log(this.history)
         return this.history[this.street].slice(-1)[0];
     }
 
@@ -277,7 +276,6 @@ class Game extends Component {
 
     bettingIsOver() {
         const prevAction = this.getPrevAction()["action"];
-        console.log(prevAction);
         if (prevAction === "check") {
             // If the second player to go checks, we're done with betting.
             return (this.history[this.street].length === 2);
