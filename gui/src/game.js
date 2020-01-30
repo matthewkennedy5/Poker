@@ -209,7 +209,7 @@ class Game extends Component {
         let cpuTotal = 0;
         let humanTotal = 0;
 
-        streetActions.reverse();
+        streetActions = streetActions.slice().reverse();
         for (let i = 0; i < streetActions.length; i++) {
             if (i % 2 === 0) {
                 // This is a CPU action
@@ -236,6 +236,7 @@ class Game extends Component {
     }
 
     getPrevAction() {
+        console.log(this.history)
         return this.history[this.street].slice(-1)[0];
     }
 
@@ -276,6 +277,7 @@ class Game extends Component {
 
     bettingIsOver() {
         const prevAction = this.getPrevAction()["action"];
+        console.log(prevAction);
         if (prevAction === "check") {
             // If the second player to go checks, we're done with betting.
             return (this.history[this.street].length === 2);
@@ -284,38 +286,54 @@ class Game extends Component {
         }
     };
 
+    showdown() {
+        // show all cards
+        this.props.showCPUCards(this.cpuCards);
+        this.props.dealFlop(this.board.slice(0, 3));
+        this.props.dealTurn(this.board[3]);
+        this.props.dealRiver(this.board[4]);
+
+        const winner = "human"; // TODO: Replace with API call
+        const pot = this.props.getPot();
+        if (winner === "human") {
+            this.props.addToScore(pot);
+            this.props.logMessage("HUMAN wins a pot of $" + pot);
+        } else {
+            this.props.addToScore(pot);
+            this.props.logMessage("CPU wins a pot of $" + pot);
+        }
+        this.props.incrementHands();
+        this.props.setEnabledButtons(["nextHand"]);
+    };
+
     playStreet() {
-        if (this.street === "showdown") {
-            const winner = "human"; // TODO: Replace with API call
-            const pot = this.props.getPot();
-            if (winner === "human") {
-                this.props.addToScore(pot);
-                this.props.logMessage("HUMAN wins a pot of $" + pot);
-            } else {
-                this.props.addToScore(pot);
-                this.props.logMessage("CPU wins a pot of $" + pot);
-            }
-            this.props.incrementHands();
-            this.props.setEnabledButtons(["nextHand"]);
-            this.props.showCPUCards(this.cpuCards);
+        if (this.street === "showdown" || this.stacks["human"] + this.stacks["cpu"] === 0){
+            this.showdown();
             return;
         }
 
         if (this.street === "preflop") {
             this.props.dealHumanCards(this.humanCards);
-        } else if (this.street === "flop") {
-            this.props.dealFlop(this.board.slice(0, 3));
-        } else if (this.street === "turn") {
-            this.props.dealTurn(this.board[3]);
-        } else if (this.street === "river") {
-            this.props.dealRiver(this.board[4]);
-        }
-        if (this.dealer === "human") {
-            this.enableHumanButtons();
+            if (this.dealer === "human") {
+                this.enableHumanButtons();
+            } else {
+                this.cpuAction();
+            }
         } else {
-            this.cpuAction();
+            if (this.street === "flop") {
+                this.props.dealFlop(this.board.slice(0, 3));
+            } else if (this.street === "turn") {
+                this.props.dealTurn(this.board[3]);
+            } else if (this.street === "river") {
+                this.props.dealRiver(this.board[4]);
+            }
+            if (this.dealer === "cpu") {
+                this.enableHumanButtons();
+            } else {
+                this.cpuAction();
+            }
         }
-    }
+    };
 };
 
 export default Game;

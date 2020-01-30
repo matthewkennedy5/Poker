@@ -41,6 +41,7 @@ class App extends Component {
       flopCards.push("back");
       flopCards.push("back");
       this.setState({board: flopCards})
+      this.state.board = flopCards;
   };
 
   dealTurn = (card) => {
