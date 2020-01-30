@@ -271,7 +271,6 @@ class InfoSet:
             self.card_bucket = PREFLOP_ABSTRACTION[hand]
         elif street == 'flop':
             hand = hole + flop
-            breakpoint()
             self.card_bucket = FLOP_ABSTRACTION[hand]
         elif street == 'turn':
             hand = hole + flop + turn
