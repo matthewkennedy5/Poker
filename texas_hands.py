@@ -1,7 +1,6 @@
 """Module for representing and comparing Texas Hold'em hands and abstractions."""
 
 import os
-import abc
 import itertools
 from itertools import product, permutations, combinations
 import math
