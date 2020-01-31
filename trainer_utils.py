@@ -212,6 +212,7 @@ class ActionHistory:
         return tuple(actions)
 
     def hand_over(self):
+        # TODO: Hand is also over after all-ins
         if self.street() == 'over':
             return True
         if self.last_action() == 'fold':
