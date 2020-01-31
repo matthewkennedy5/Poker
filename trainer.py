@@ -26,9 +26,9 @@ class Trainer:
         print('Beginning training...')
         deck = get_deck()
         for i in trange(iterations):
-            # np.random.shuffle(deck)
+            np.random.shuffle(deck)
             self.iterate(0, deck)
-            # np.random.shuffle(deck)
+            np.random.shuffle(deck)
             self.iterate(1, deck)
 
         with open(SAVE_PATH, 'wb') as f:
