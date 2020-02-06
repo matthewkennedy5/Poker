@@ -51,7 +51,7 @@ class Trainer:
         action = np.random.choice(actions, p=strat)
         return action
 
-    def iterate(self, player, deck, history=ActionHistory([]), weights=[1, 1]):
+    def iterate(self, player, deck, history=ActionHistory(), weights=[1, 1]):
         if history.hand_over():
             return self.terminal_utility(deck, history, player)
 
