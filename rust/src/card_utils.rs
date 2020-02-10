@@ -50,9 +50,16 @@ pub fn archetype(cards: &[Card]) -> Vec<Card> {
     Vec::new()
 }
 
+enum Suit {
+    CLUBS,
+    DIAMONDS,
+    HEATS,
+    SPADES
+}
+
 #[derive(Debug, Clone, PartialOrd, Eq)]
 pub struct Card {
-    pub rank: i32,
+    pub rank: u8,
     pub suit: String
 }
 
@@ -73,7 +80,7 @@ impl Card {
             "Q" => 12,
             "K" => 13,
             "A" => 14,
-            _ => panic!("Bad card string")
+            _ => panic!("bad card string")
         };
         let suit = String::from(&card[1..2]);
         return Card { rank: rank, suit: suit };
@@ -88,7 +95,7 @@ impl PartialEq<Card> for Card {
 }
 
 impl Ord for Card {
-    // Orders first based on rank, and if ranks are equal, then on alphebetical
+    // orders first based on rank, and if ranks are equal, then on alphebetical
     // order of the suit
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         (self.rank, self.suit.clone()).cmp(&(other.rank, other.suit.clone()))
@@ -156,17 +163,17 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
     let bar = indicatif::ProgressBar::new(n);
     bar.set_style(indicatif::ProgressStyle::default_bar()
         .template("[{elapsed_precise}/{eta_precise}] {wide_bar} {pos:>7}/{len:7} {msg}"));
-    // Make sure the drawing doesn't dominate computation for large n
+    // make sure the drawing doesn't dominate computation for large n
     bar.set_draw_delta(n / 1000);
     bar
 }
 
 
-// Canonical / archetypal hand methods
-// Thanks to StackOverflow user Daniel Slutzbach: https://stackoverflow.com/a/3831682
+// canonical / archetypal hand methods
+// thanks to stackoverflow user Daniel Slutzbach: https://stackoverflow.com/a/3831682
 
-// Returns true if the given list of ints contains duplicate elements.
-fn contains_duplicates(list: &[i32]) -> bool {
+// returns true if the given list of ints contains duplicate elements.
+fn contains_duplicates(list: &[u8]) -> bool {
     for i in 0..list.len() {
         for j in i+1..list.len() {
             if &list[i] == &list[j] {
@@ -177,30 +184,69 @@ fn contains_duplicates(list: &[i32]) -> bool {
     false
 }
 
-// Given a list of cards, returns true if they are canonical. The rules for being
+fn suit_first_greater_than(card1: &Card, card2: &Card) -> bool {
+    if (card1.suit < card2.suit) {
+        return false;
+    }
+    if (card1.suit == card2.suit && card1.rank <= card2.rank) {
+        return false;
+    }
+    return true;
+}
+
+fn sorted_correctly(cards: &[Card], streets: bool) -> bool {
+    if streets {
+        if cards.len() >= 2 && suit_first_greater_than(&cards[0], &cards[1]) {
+            // preflop is out of order
+            return false;
+        }
+        if cards.len() > 2 {
+            // Check that the board cards are sorted relative to each other
+            let board = &cards[2..].to_vec();
+            let mut sorted_board = board.clone();
+            sorted_board.sort_by_key(|c| (c.suit.clone(), c.rank));
+            return board == &sorted_board;
+        }
+        // 1 or 0 cards, always sorted correctly
+        return true;
+    } else {
+        // make sure that all the cards are sorted since we aren't looking at streets
+        let mut sorted_cards = cards.to_vec();
+        sorted_cards.sort_by_key(|c| (c.suit.clone(), c.rank));
+        return sorted_cards == cards;
+    }
+}
+
+// Given a list of cards, returns true if they are canonical. the rules for being
 // canonical are as follows:
-// 1. Cards must be in sorted order (suit-first, alphabetic order of suits)
-// 2. Each suit must have at least as many cards as later suits
-// 3. When two suits have the same number of cards, the first suit must have
+// 1. cards must be in sorted order (suit-first, alphabetic order of suits)
+// 2. each suit must have at least as many cards as later suits
+// 3. when two suits have the same number of cards, the first suit must have
 //    lower or equal ranks lexicographically, eg ([1, 5] < [2, 4])
-// 4. No duplicate cards
+// 4. no duplicate cards
 // Thanks again to StackOverflow user Daniel Stutzbach for thinking of these rules.
-pub fn is_canonical(cards: &[Card]) -> bool {
-    let mut sorted_cards = cards.to_vec();
-    sorted_cards.sort_by_key(|c| (c.suit.clone(), c.rank));
-    if sorted_cards != cards {
-        // Rule 1
+//
+// Inputs:
+// cards - array of card instances representing the hand
+// streets - whether to distinguish cards from different streets. meaning,
+//    if the first two cards represent the preflop and the last three are the,
+//    flop, that asad|jh9c2s is different than as2s|jh9cad. both hands have a
+//    pair of aces, but in the first hand, the player has pocket aces on the
+//    preflop and is in a much stronger position than the second hand.
+pub fn is_canonical(cards: &[Card], streets: bool) -> bool {
+    if !sorted_correctly(cards, streets) {
+        // rule 1
         return false;
     }
     // by_suits is a different way of representing the hand -- it maps suits to
     // the ranks present for that suit
-    let mut by_suits: HashMap<&str, Vec<i32>> = HashMap::new();
+    let mut by_suits: HashMap<&str, Vec<u8>> = HashMap::new();
     for suit in &SUITS {
         let ranks = c![card.rank, for card in cards, if card.suit == suit.to_string()];
         by_suits.insert(suit, ranks.to_vec());
         if contains_duplicates(&ranks) {
-            // Duplicate cards have been provided, so this cannot be a real hand
-            // Rule 4
+            // duplicate cards have been provided, so this cannot be a real hand
+            // rule 4
             return false;
         }
 
@@ -209,18 +255,18 @@ pub fn is_canonical(cards: &[Card]) -> bool {
         let suit1 = by_suits.get(&SUITS[i-1]).unwrap();
         let suit2 = by_suits.get(&SUITS[i]).unwrap();
         if suit1.len() < suit2.len() {
-            // Rule 2
+            // rule 2
             return false;
         }
         if suit1.len() == suit2.len() && suit1 > suit2 {
-            // Rule 3. The ranks of the cards are compared for lexicographic ordering.
+            // rule 3. the ranks of the cards are compared for lexicographic ordering.
             return false;
         }
     }
     true
 }
 
-// Recursively deals canonical hands of a given length.
+// recursively deals canonical hands of a given length.
 fn deal_cards(mut permutations: &mut Vec<Vec<Card>>, n: u32, cards: &[Card]) {
     let mut cards = cards.to_vec();
     if cards.len() as u32 == n {
@@ -229,14 +275,14 @@ fn deal_cards(mut permutations: &mut Vec<Vec<Card>>, n: u32, cards: &[Card]) {
     }
     for card in deck() {
         cards.push(card);
-        if is_canonical(&cards) {
+        if is_canonical(&cards, true) {
             deal_cards(&mut permutations, n, &cards);
         }
         cards.pop();
     }
 }
 
-// Returns all possible canonical hands of length n.
+// returns all possible canonical hands of length n.
 pub fn deal_canonical(n: u32) -> Vec<Vec<Card>> {
     let mut permutations = Vec::new();
     deal_cards(&mut permutations, n, &[]);
