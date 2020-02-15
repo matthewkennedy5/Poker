@@ -3,8 +3,6 @@ use std::collections::HashMap;
 use rand::thread_rng;
 use rand::prelude::SliceRandom;
 
-// const CANONICAL_SUIT_ORDER: [&str; 4] = ["s", "h", "d", "c"];
-
 const SUITS: [&str; 4] = ["c", "d", "h", "s"];
 
 // When dealing with poker hands that come up in the game, there is some

@@ -58,7 +58,7 @@ impl Abstraction {
         if cards[0].suit == cards[1].suit {
             bin += 1;
         }
-        return bin;
+        return bin as i32;
     }
 
     fn flop_bin(&self, cards: &[Card]) -> i32 {
@@ -110,7 +110,7 @@ fn make_flop_equity() -> HashMap<String, Vec<f64>> {
         let hand = card_utils::deepcopy(hand);
         // if hand == card_utils::archetype(hand.as_slice()) {
         n_total += 1;
-        if card_utils::is_canonical(&hand) {
+        if card_utils::is_canonical(&hand, true) {
             n_canon += 1;
             // println!("{} = {}", card_utils::cards2str(&hand), card_utils::cards2str(&card_utils::archetype(hand.as_slice())));
             let equity = equity_distribution(hand.as_slice());
