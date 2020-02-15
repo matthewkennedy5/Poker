@@ -11,12 +11,18 @@ mod card_utils;
 mod tests;
 
 use card_utils::Card;
+use std::fs::File;
+use std::io::Write;
 
 fn main() {
-    let cards = vec![Card::new("3c"), Card::new("9c"), Card::new("4d"),
-                     Card::new("9h"), Card::new("Ts")];
 
-    let a = card_abstraction::Abstraction::new();
-    let bin = a.abstract_id(&cards);
-    println!("Bin: {}", bin);
+
+    let cards = vec![Card::new("Ac"), Card::new("Kc"), Card::new("Qc"),
+                     Card::new("Jc"), Card::new("Tc")];
+
+    let table = card_utils::HandTable::new();
+    println!("{}", table.hand_strength(&cards));
+    // let a = card_abstraction::Abstraction::new();
+    // let bin = a.abstract_id(&cards);
+    // println!("Bin: {}", bin);
 }

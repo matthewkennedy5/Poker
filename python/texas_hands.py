@@ -197,5 +197,5 @@ class TexasHand:
 
 
     def __str__(self):
-        return ','.join(self.cards)
+        return ''.join(self.cards)
 

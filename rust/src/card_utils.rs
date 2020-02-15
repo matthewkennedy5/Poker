@@ -1,7 +1,14 @@
 use std::fmt;
+use std::fs::File;
+use std::io::Read;
+use std::io::Write;
 use std::collections::HashMap;
 use rand::thread_rng;
 use rand::prelude::SliceRandom;
+use serde::Serialize;
+use serde::Deserialize;
+
+const HAND_TABLE_PATH: &str = "products/strengths.json";
 
 // When dealing with poker hands that come up in the game, there is some
 // information that doesn't matter. For example, we don't care about the order
@@ -51,7 +58,7 @@ const DIAMONDS: u8 = 1;
 const HEARTS: u8 = 2;
 const SPADES: u8 = 3;
 
-#[derive(Debug, Clone, PartialOrd, Eq)]
+#[derive(Hash, Debug, Clone, PartialOrd, Eq, Serialize, Deserialize)]
 pub struct Card {
     pub rank: u8,
     pub suit: u8,
@@ -120,7 +127,14 @@ impl fmt::Display for Card {
             14 => "A",
             _ => panic!("Bad rank value")
         };
-        write!(f, "{}{}", rank, self.suit)
+        let suit = match self.suit {
+            CLUBS => "c",
+            DIAMONDS => "d",
+            HEARTS => "h",
+            SPADES => "s",
+            _ => panic!("Bad suit value")
+        };
+        write!(f, "{}{}", rank, suit)
     }
 }
 
@@ -135,7 +149,8 @@ pub fn deck() -> Vec<Card> {
     return deck;
 }
 
-pub fn deepcopy(vec: Vec<&Card>) -> Vec<Card> {
+pub fn deepcopy(vec: &Vec<&Card>) -> Vec<Card> {
+    let vec = vec.clone();
     let mut result: Vec<Card> = Vec::new();
     for v in vec {
         result.push(v.clone());
@@ -275,7 +290,7 @@ fn deal_cards(mut permutations: &mut Vec<Vec<Card>>, n: u32, cards: &[Card]) {
     }
     for card in deck() {
         cards.push(card);
-        if is_canonical(&cards, true) {
+        if is_canonical(&cards, false) {
             deal_cards(&mut permutations, n, &cards);
         }
         cards.pop();
@@ -289,5 +304,46 @@ pub fn deal_canonical(n: u32) -> Vec<Vec<Card>> {
     permutations
 }
 
+// Writes canonical hands to a file
+pub fn write_canonical(n: u32, fname: &str) {
+    let hands = deal_canonical(n);
+    let mut hands_str = String::new();
+    for hand in hands {
+        hands_str += &cards2str(&hand);
+        hands_str += "\n";
+    }
+
+    let mut file = File::create(fname).unwrap();
+    file.write_all(hands_str.as_bytes());
+}
+
+// For fast poker hand comparison, look up relative strength values in a table
+pub struct HandTable {
+    strengths: HashMap<String, i32>
+}
+
+impl HandTable {
+
+    pub fn new() -> HandTable {
+        HandTable{ strengths: HandTable::load_hand_strengths() }
+    }
+
+    pub fn hand_strength(&self, hand: &[Card]) -> i32 {
+        // START HERE: Implement archetype to convert hand to a canonical hand
+        self.strengths.get(&cards2str(hand)).unwrap().clone()
+    }
+
+    fn load_hand_strengths() -> HashMap<String, i32> {
+        match File::open(HAND_TABLE_PATH) {
+            Err(e) => panic!("Hand table not found"),
+            Ok(mut file) => {
+                // Load up the hand table from the JSON
+                let mut buffer = String::new();
+                file.read_to_string(&mut buffer).expect("Error");
+                serde_json::from_str(&buffer).unwrap()
+            }
+        }
+    }
+}
 
 

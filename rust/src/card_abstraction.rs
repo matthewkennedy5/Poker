@@ -6,6 +6,7 @@
 
 use crate::card_utils;
 use crate::card_utils::Card;
+use crate::card_utils::deepcopy;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -18,6 +19,8 @@ const FLOP_PATH: &str = "products/flop_abstraction.json";
 const TURN_PATH: &str = "products/get_turn_abstraction.json";
 const FLOP_EQUITY_PATH: &str = "products/flop_equity_distributions.json";
 const TURN_EQUITY_PATH: &str = "products/turn_equity_distributions.json";
+
+const EQUITY_BINS: usize = 50;
 
 // flop and turn map card strings such as "As4d8c9h2d" to their corresponding
 // abastract bin. Each string key is an archetypal hand, meaning that
@@ -75,7 +78,7 @@ impl Abstraction {
 }
 
 fn load_flop_abstraction() -> HashMap<String, i32> {
-    let abst = match File::open(FLOP_PATH) {
+    match File::open(FLOP_PATH) {
         Err(_error) => make_flop_abstraction(),
         Ok(mut file) => {
             let mut buffer = String::new();
@@ -83,6 +86,7 @@ fn load_flop_abstraction() -> HashMap<String, i32> {
             serde_json::from_str(&buffer).unwrap()
         }
     };
+    // TODO: Change
     return HashMap::new();
 }
 
@@ -96,18 +100,17 @@ fn make_flop_abstraction() -> HashMap<String, i32> {
 }
 
 fn make_flop_equity() -> HashMap<String, Vec<f64>> {
+    println!("[INFO] Calculating flop equity distributions...");
     let mut distributions = HashMap::new();
-    let bar = card_utils::pbar(311875200);
-    let mut deck = card_utils::deck();
+    let flop_hands = card_utils::deal_canonical(5);
+    let bar = card_utils::pbar(flop_hands.len() as u64);
 
-    for hand in deck.iter().permutations(5) {
-        let hand = card_utils::deepcopy(hand);
-        if card_utils::is_canonical(&hand, true) {
-            let equity = equity_distribution(hand.as_slice());
-            // We store hands as strings in the HashMap for their equity distributions
-            let hand_str = card_utils::cards2str(hand.as_slice());
-            &distributions.insert(hand_str, equity);
-        }
+    for hand in flop_hands {
+        let equity = equity_distribution(&hand);
+        let hand_str = card_utils::cards2str(&hand);
+        // We store hands as strings in the HashMap for their equity distributions
+        // TODO: Really?
+        distributions.insert(hand_str, equity);
         bar.inc(1);
     }
     bar.finish();
@@ -115,7 +118,43 @@ fn make_flop_equity() -> HashMap<String, Vec<f64>> {
 }
 
 fn equity_distribution(cards: &[Card]) -> Vec<f64> {
-    return Vec::new();
+    let cards = cards.to_vec();
+    let mut distribution: Vec<f64> = vec![0.0; EQUITY_BINS];
+    let board = (&cards[2..]).to_vec();
+
+    let mut deck = card_utils::deck();
+    // Remove the already-dealt cards from the deck
+    deck.retain(|c| !cards.contains(&c));
+    for opp_preflop in deck.iter().combinations(2) {
+        let mut n_wins = 0.0;
+        let mut n_rollouts = 0;
+        // Remove the opponent's hand from the deck
+        let mut subdeck = deck.clone();
+        subdeck.retain(|c| !opp_preflop.contains(&c));
+
+        for rollout in subdeck.iter().combinations(7 - cards.len()) {
+            let rollout = rollout.to_vec();
+            n_rollouts += 1;
+
+            // Create the poker hands by concatenating cards
+            let my_hand = [cards.clone(), deepcopy(&rollout)].concat();
+            let opp_hand = [deepcopy(&opp_preflop), board.clone(), deepcopy(&rollout)].concat();
+
+            // let my_strength = card_utils::hand_strength(&my_hand);
+            // let opp_strength = card_utils::hand_strength(&opp_hand);
+
+            // if my_strength > opp_strength {
+            //     n_wins += 1.0;
+            // } else if my_strength == opp_strength {
+            //     n_wins += 0.5;
+            // }
+        }
+        let equity = n_wins / (n_rollouts as f64);
+        let equity_bin = (equity * EQUITY_BINS as f64) as usize;
+        distribution[equity_bin] += 1.0;
+    }
+    // distribution = normalize(distribution);
+    return distribution;
 }
 
 fn cluster(data: HashMap<String, Vec<f64>>) -> HashMap<String, i32> {

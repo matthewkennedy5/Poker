@@ -41,6 +41,7 @@ class HandTable:
         for i, hand in enumerate(hands):
             table[tuple(hand.cards)] = i
         # Hands that are equal need to be assigned the same integer.
+        # TODO: Bug here with 1 starting at 0 (I think)
         for i, hand in enumerate(hands[1:]):
             prev_hand = hands[i-1]
             if hand == prev_hand:
