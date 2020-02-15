@@ -3,8 +3,6 @@ use std::collections::HashMap;
 use rand::thread_rng;
 use rand::prelude::SliceRandom;
 
-const SUITS: [&str; 4] = ["c", "d", "h", "s"];
-
 // When dealing with poker hands that come up in the game, there is some
 // information that doesn't matter. For example, we don't care about the order
 // of the flop cards or the hole cards. There is also suit isomorphism, where
@@ -46,13 +44,6 @@ pub fn archetype(cards: &[Card]) -> Vec<Card> {
 //     result = [preflop, flop].concat();
 //     result
     Vec::new()
-}
-
-enum Suit {
-    CLUBS,
-    DIAMONDS,
-    HEARTS,
-    SPADES
 }
 
 const CLUBS: u8 = 0;
@@ -194,10 +185,10 @@ fn contains_duplicates(list: &[u8]) -> bool {
 }
 
 fn suit_first_greater_than(card1: &Card, card2: &Card) -> bool {
-    if (card1.suit < card2.suit) {
+    if card1.suit < card2.suit {
         return false;
     }
-    if (card1.suit == card2.suit && card1.rank <= card2.rank) {
+    if card1.suit == card2.suit && card1.rank <= card2.rank {
         return false;
     }
     return true;

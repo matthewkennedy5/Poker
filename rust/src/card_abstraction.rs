@@ -98,34 +98,19 @@ fn make_flop_abstraction() -> HashMap<String, i32> {
 fn make_flop_equity() -> HashMap<String, Vec<f64>> {
     let mut distributions = HashMap::new();
     let bar = card_utils::pbar(311875200);
-    let mut n_total = 0;
-    let mut n_canon = 0;
-    let mut canonical = Vec::new();
     let mut deck = card_utils::deck();
-    let mut rng = thread_rng();
-    deck.shuffle(&mut rng);
 
     for hand in deck.iter().permutations(5) {
-        // println!("{:?}", hand);
         let hand = card_utils::deepcopy(hand);
-        // if hand == card_utils::archetype(hand.as_slice()) {
-        n_total += 1;
         if card_utils::is_canonical(&hand, true) {
-            n_canon += 1;
-            // println!("{} = {}", card_utils::cards2str(&hand), card_utils::cards2str(&card_utils::archetype(hand.as_slice())));
             let equity = equity_distribution(hand.as_slice());
             // We store hands as strings in the HashMap for their equity distributions
             let hand_str = card_utils::cards2str(hand.as_slice());
-            // &distributions.insert(hand_str, equity);
-            canonical.push(hand_str.clone());
+            &distributions.insert(hand_str, equity);
         }
         bar.inc(1);
     }
     bar.finish();
-    println!("{}, {}", n_canon, n_total);
-    let mut file = File::create("rust_canonical.txt").unwrap();
-    let canonical_str = format!("{:#?}", canonical);
-    file.write_all(canonical_str.as_bytes());
     return distributions;
 }
 
