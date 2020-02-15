@@ -51,14 +51,19 @@ pub fn archetype(cards: &[Card]) -> Vec<Card> {
 enum Suit {
     CLUBS,
     DIAMONDS,
-    HEATS,
+    HEARTS,
     SPADES
 }
+
+const CLUBS: u8 = 0;
+const DIAMONDS: u8 = 1;
+const HEARTS: u8 = 2;
+const SPADES: u8 = 3;
 
 #[derive(Debug, Clone, PartialOrd, Eq)]
 pub struct Card {
     pub rank: u8,
-    pub suit: String
+    pub suit: u8,
 }
 
 impl Card {
@@ -80,7 +85,13 @@ impl Card {
             "A" => 14,
             _ => panic!("bad card string")
         };
-        let suit = String::from(&card[1..2]);
+        let suit = match &card[1..2] {
+            "c" => CLUBS,
+            "d" => DIAMONDS,
+            "h" => HEARTS,
+            "s" => SPADES,
+            _ => panic!("bad card string")
+        };
         return Card { rank: rank, suit: suit };
     }
 }
@@ -126,8 +137,8 @@ pub fn deck() -> Vec<Card> {
     let mut deck = Vec::new();
     let ranks = std::ops::Range { start: 2, end: 15};
     for rank in ranks {
-        for suit in &["s", "d", "c", "h"] {
-            deck.push(Card { rank: rank, suit: suit.to_string()});
+        for suit in 0..4 {
+            deck.push(Card { rank: rank, suit: suit});
         }
     }
     return deck;
@@ -238,10 +249,10 @@ pub fn is_canonical(cards: &[Card], streets: bool) -> bool {
     }
     // by_suits is a different way of representing the hand -- it maps suits to
     // the ranks present for that suit
-    let mut by_suits: HashMap<&str, Vec<u8>> = HashMap::new();
-    for suit in &SUITS {
-        let ranks = c![card.rank, for card in cards, if card.suit == suit.to_string()];
-        by_suits.insert(suit, ranks.to_vec());
+    let mut by_suits: Vec<Vec<u8>> = Vec::new();
+    for suit in 0..4 {
+        let ranks = c![card.rank, for card in cards, if card.suit == suit];
+        by_suits.push(ranks.to_vec());
         if contains_duplicates(&ranks) {
             // duplicate cards have been provided, so this cannot be a real hand
             // rule 4
@@ -250,8 +261,8 @@ pub fn is_canonical(cards: &[Card], streets: bool) -> bool {
 
     }
     for i in 1..4 {
-        let suit1 = by_suits.get(&SUITS[i-1]).unwrap();
-        let suit2 = by_suits.get(&SUITS[i]).unwrap();
+        let suit1 = &by_suits[i-1];
+        let suit2 = &by_suits[i];
         if suit1.len() < suit2.len() {
             // rule 2
             return false;
