@@ -7,6 +7,7 @@ use rand::thread_rng;
 use rand::prelude::SliceRandom;
 use serde::Serialize;
 use serde::Deserialize;
+use crate::itertools::Itertools;
 
 const HAND_TABLE_PATH: &str = "products/strengths.json";
 
@@ -317,8 +318,24 @@ pub fn write_canonical(n: u32, fname: &str) {
     file.write_all(hands_str.as_bytes());
 }
 
+fn sort_canonical(cards: &[Card], streets: bool) -> Vec<Card> {
+    let mut sorted = Vec::new();
+    if streets && cards.len() > 2 {
+        let mut preflop = (&cards[..2]).to_vec();
+        let mut board = (&cards[2..]).to_vec();
+        preflop.sort_by_key(|c| (c.suit.clone(), c.rank));
+        board.sort_by_key(|c| (c.suit.clone(), c.rank));
+        sorted = [preflop, board].concat();
+    } else {
+        sorted = cards.to_vec();
+        sorted.sort_by_key(|c| (c.suit.clone(), c.rank));
+    }
+    sorted
+}
+
 // Translates the given cards into their equivalent canonical representation.
 fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
+    let cards = &sort_canonical(&cards, streets);
     // Separate the cards by suit
     let mut by_suits: Vec<Vec<u8>> = Vec::new();
     for suit in 0..4 {
@@ -345,16 +362,7 @@ fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
         by_suits[min] = vec![];
     }
 
-    // Sort the cards correctly
-    if streets && cards.len() > 2 {
-        let mut preflop = (&canonical[..2]).to_vec();
-        let mut board = (&canonical[2..]).to_vec();
-        preflop.sort_by_key(|c| (c.suit.clone(), c.rank));
-        board.sort_by_key(|c| (c.suit.clone(), c.rank));
-        canonical = [preflop, board].concat();
-    } else {
-        canonical.sort_by_key(|c| (c.suit.clone(), c.rank));
-    }
+    canonical = sort_canonical(&canonical, streets);
 
     if !is_canonical(&canonical, streets) {
         panic!("Not canonical: {:?}", canonical);
@@ -374,8 +382,16 @@ impl HandTable {
     }
 
     pub fn hand_strength(&self, hand: &[Card]) -> i32 {
-        let hand = canonical_hand(&hand, false);
-        self.strengths.get(&cards2str(&hand)).unwrap().clone()
+        // Return the best hand out of all 5-card subsets
+        let mut max_strength = 0;
+        for five_card in hand.iter().combinations(5) {
+            let canonical = canonical_hand(&deepcopy(&five_card), false);
+            let strength = self.strengths.get(&cards2str(&canonical)).unwrap().clone();
+            if strength > max_strength {
+                max_strength = strength;
+            }
+        }
+        max_strength
     }
 
     fn load_hand_strengths() -> HashMap<String, i32> {
