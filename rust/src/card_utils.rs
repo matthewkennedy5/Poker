@@ -317,6 +317,51 @@ pub fn write_canonical(n: u32, fname: &str) {
     file.write_all(hands_str.as_bytes());
 }
 
+// Translates the given cards into their equivalent canonical representation.
+fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
+    // Separate the cards by suit
+    let mut by_suits: Vec<Vec<u8>> = Vec::new();
+    for suit in 0..4 {
+        let ranks = c![card.rank, for card in cards, if card.suit == suit];
+        by_suits.push(ranks.to_vec());
+    }
+
+    let mut canonical = Vec::new();
+    // Retrieve the suits in size order with lexicographic tie breaking
+    for new_suit in 0..4 {
+        let mut min = 0;
+        for old_suit in 1..4 {
+            // The next suit must have the largest length, using lower lexicographic ordering
+            // to break ties.
+            if (by_suits[old_suit].len() > by_suits[min].len()) {
+                min = old_suit;
+            } else if (by_suits[old_suit].len() == by_suits[min].len() && by_suits[old_suit] < by_suits[min]) {
+                min = old_suit;
+            }
+        }
+        for rank in by_suits[min].clone() {
+            canonical.push(Card {rank: rank, suit: new_suit})
+        }
+        by_suits[min] = vec![];
+    }
+
+    // Sort the cards correctly
+    if streets && cards.len() > 2 {
+        let mut preflop = (&canonical[..2]).to_vec();
+        let mut board = (&canonical[2..]).to_vec();
+        preflop.sort_by_key(|c| (c.suit.clone(), c.rank));
+        board.sort_by_key(|c| (c.suit.clone(), c.rank));
+        canonical = [preflop, board].concat();
+    } else {
+        canonical.sort_by_key(|c| (c.suit.clone(), c.rank));
+    }
+
+    if !is_canonical(&canonical, streets) {
+        panic!("Not canonical: {:?}", canonical);
+    }
+    canonical
+}
+
 // For fast poker hand comparison, look up relative strength values in a table
 pub struct HandTable {
     strengths: HashMap<String, i32>
@@ -329,8 +374,8 @@ impl HandTable {
     }
 
     pub fn hand_strength(&self, hand: &[Card]) -> i32 {
-        // START HERE: Implement archetype to convert hand to a canonical hand
-        self.strengths.get(&cards2str(hand)).unwrap().clone()
+        let hand = canonical_hand(&hand, false);
+        self.strengths.get(&cards2str(&hand)).unwrap().clone()
     }
 
     fn load_hand_strengths() -> HashMap<String, i32> {

@@ -16,9 +16,8 @@ use std::io::Write;
 
 fn main() {
 
-
-    let cards = vec![Card::new("Ac"), Card::new("Kc"), Card::new("Qc"),
-                     Card::new("Jc"), Card::new("Tc")];
+    let cards = vec![Card::new("5c"), Card::new("9c"), Card::new("Qc"),
+                     Card::new("2d"), Card::new("Ah")];
 
     let table = card_utils::HandTable::new();
     println!("{}", table.hand_strength(&cards));
