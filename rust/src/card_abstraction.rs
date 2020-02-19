@@ -1,3 +1,4 @@
+
 // This is the main interface for card abstractions. You can think of this as a
 // black box that maps a poker hand to an ID number corresponding to the
 // hand's abstraction bin. The idea is that similar hands will have the same
@@ -42,7 +43,6 @@ impl Abstraction {
     }
 
     pub fn abstract_id(&self, cards: &[Card]) -> i32 {
-        // let cards = card_utils::archetype(cards);
         match cards.len() {
             2 => self.preflop_bin(&cards),
             5 => self.flop_bin(&cards),
@@ -101,13 +101,13 @@ fn make_flop_abstraction() -> HashMap<String, i32> {
 
 fn make_flop_equity() -> HashMap<String, Vec<f64>> {
     println!("[INFO] Calculating flop equity distributions...");
-    let mut distributions = HashMap::new();
-    let flop_hands = card_utils::deal_canonical(5);
+    let mut distributions: HashMap<String, Vec<f64>> = HashMap::new();
+    let flop_hands = card_utils::deal_canonical(5, true);
     let bar = card_utils::pbar(flop_hands.len() as u64);
 
     for hand in flop_hands {
         let equity = equity_distribution(&hand);
-        let hand_str = card_utils::cards2str(&hand);
+        let hand_str = card_utils::cards2str(&hand).to_string();
         // We store hands as strings in the HashMap for their equity distributions
         // TODO: Really?
         distributions.insert(hand_str, equity);
@@ -122,38 +122,23 @@ fn equity_distribution(cards: &[Card]) -> Vec<f64> {
     let mut distribution: Vec<f64> = vec![0.0; EQUITY_BINS];
     let board = (&cards[2..]).to_vec();
 
+    let equity_table = card_utils::EquityTable::new();
+
     let mut deck = card_utils::deck();
     // Remove the already-dealt cards from the deck
     deck.retain(|c| !cards.contains(&c));
-    for opp_preflop in deck.iter().combinations(2) {
-        let mut n_wins = 0.0;
-        let mut n_rollouts = 0;
-        // Remove the opponent's hand from the deck
-        let mut subdeck = deck.clone();
-        subdeck.retain(|c| !opp_preflop.contains(&c));
 
-        for rollout in subdeck.iter().combinations(7 - cards.len()) {
-            let rollout = rollout.to_vec();
-            n_rollouts += 1;
-
-            // Create the poker hands by concatenating cards
-            let my_hand = [cards.clone(), deepcopy(&rollout)].concat();
-            let opp_hand = [deepcopy(&opp_preflop), board.clone(), deepcopy(&rollout)].concat();
-
-            // let my_strength = card_utils::hand_strength(&my_hand);
-            // let opp_strength = card_utils::hand_strength(&opp_hand);
-
-            // if my_strength > opp_strength {
-            //     n_wins += 1.0;
-            // } else if my_strength == opp_strength {
-            //     n_wins += 0.5;
-            // }
+    for rollout in deck.iter().combinations(7 - cards.len()) {
+        let rollout = rollout.to_vec();
+        let my_hand = [cards.clone(), deepcopy(&rollout)].concat();
+        let equity = equity_table.lookup(&my_hand);
+        let mut equity_bin = (equity * EQUITY_BINS as f64) as usize;
+        if equity_bin == EQUITY_BINS {
+            equity_bin -= 1;
         }
-        let equity = n_wins / (n_rollouts as f64);
-        let equity_bin = (equity * EQUITY_BINS as f64) as usize;
         distribution[equity_bin] += 1.0;
     }
-    // distribution = normalize(distribution);
+    distribution = card_utils::normalize(&distribution);
     return distribution;
 }
 

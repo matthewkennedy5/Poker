@@ -1,4 +1,7 @@
+use std::thread;
 use std::fmt;
+use std::time::Duration;
+use std::sync::mpsc;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
@@ -7,51 +10,15 @@ use rand::thread_rng;
 use rand::prelude::SliceRandom;
 use serde::Serialize;
 use serde::Deserialize;
+use rayon::prelude::*;
 use crate::itertools::Itertools;
+use crate::rand::prelude::IteratorRandom;
 
 const HAND_TABLE_PATH: &str = "products/strengths.json";
+const EQUITY_TABLE_PATH: &str = "products/river_equities.json";
 
-// When dealing with poker hands that come up in the game, there is some
-// information that doesn't matter. For example, we don't care about the order
-// of the flop cards or the hole cards. There is also suit isomorphism, where
-// for example a 5-card flush of hearts is essentially the same as a 5-card
-// flush of diamonds. This function maps the set of all hands to the much
-// smaller set of distinct isomorphic hands.
-pub fn archetype(cards: &[Card]) -> Vec<Card> {
-//     let mut sorted = Vec::new();
-//     // Sort the preflop and flop since order doesn't matter within those streets
-//     // let mut cards = cards.to_vec();
-//     let mut cards = cards.to_vec();
-//     // let (&preflop, &flop) = cards.split_at(2);
-//     let mut preflop = (&cards[..2]).to_vec();
-//     let mut flop = (&cards[2..5]).to_vec();
-//     preflop.sort();
-//     flop.sort();
-//     sorted = [preflop, flop].concat();
-//     let mut suits = CANONICAL_SUIT_ORDER.to_vec();
-//     suits.reverse();
-//     let mut suit_mapping: HashMap<String, String> = HashMap::new();
-//     let mut result = Vec::new();
-//     for card in sorted {
-//         if suit_mapping.contains_key(&card.suit) {
-//             // We've seen this suit before -- use the correct corresponding suit
-//             let new_suit = suit_mapping.get(&card.suit).unwrap().to_string();
-//             result.push(Card { rank: card.rank, suit: new_suit});
-//         } else {
-//             // New suit -- choose an isomorphic suit from the standard order
-//             let new_suit = suits.pop().unwrap().to_string();
-//             suit_mapping.insert(card.suit, new_suit.clone());
-//             result.push(Card { rank: card.rank, suit: new_suit});
-//         }
-//     }
-//     // Sort by suit because the suits have changed and there can be redundancies
-//     let mut preflop = (&result[..2]).to_vec();
-//     let mut flop = (&result[2..5]).to_vec();
-//     preflop.sort();
-//     flop.sort();
-//     result = [preflop, flop].concat();
-//     result
-    Vec::new()
+lazy_static! {
+    pub static ref HAND_TABLE: HandTable = HandTable::new();
 }
 
 const CLUBS: u8 = 0;
@@ -180,7 +147,8 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
     bar.set_style(indicatif::ProgressStyle::default_bar()
         .template("[{elapsed_precise}/{eta_precise}] {wide_bar} {pos:>7}/{len:7} {msg}"));
     // make sure the drawing doesn't dominate computation for large n
-    bar.set_draw_delta(n / 1000);
+    // bar.set_draw_delta(n / 1000);
+    bar.set_draw_delta(100);
     bar
 }
 
@@ -283,7 +251,7 @@ pub fn is_canonical(cards: &[Card], streets: bool) -> bool {
 }
 
 // recursively deals canonical hands of a given length.
-fn deal_cards(mut permutations: &mut Vec<Vec<Card>>, n: u32, cards: &[Card]) {
+fn deal_cards(mut permutations: &mut Vec<Vec<Card>>, n: u32, cards: &[Card], streets: bool) {
     let mut cards = cards.to_vec();
     if cards.len() as u32 == n {
         permutations.push(cards);
@@ -291,23 +259,23 @@ fn deal_cards(mut permutations: &mut Vec<Vec<Card>>, n: u32, cards: &[Card]) {
     }
     for card in deck() {
         cards.push(card);
-        if is_canonical(&cards, false) {
-            deal_cards(&mut permutations, n, &cards);
+        if is_canonical(&cards, streets) {
+            deal_cards(&mut permutations, n, &cards, streets);
         }
         cards.pop();
     }
 }
 
 // returns all possible canonical hands of length n.
-pub fn deal_canonical(n: u32) -> Vec<Vec<Card>> {
+pub fn deal_canonical(n: u32, streets: bool) -> Vec<Vec<Card>> {
     let mut permutations = Vec::new();
-    deal_cards(&mut permutations, n, &[]);
+    deal_cards(&mut permutations, n, &[], streets);
     permutations
 }
 
 // Writes canonical hands to a file
-pub fn write_canonical(n: u32, fname: &str) {
-    let hands = deal_canonical(n);
+pub fn write_canonical(n: u32, fname: &str, streets: bool) {
+    let hands = deal_canonical(n, streets);
     let mut hands_str = String::new();
     for hand in hands {
         hands_str += &cards2str(&hand);
@@ -334,6 +302,12 @@ fn sort_canonical(cards: &[Card], streets: bool) -> Vec<Card> {
 }
 
 // Translates the given cards into their equivalent canonical representation.
+// When dealing with poker hands that come up in the game, there is some
+// information that doesn't matter. For example, we don't care about the order
+// of the flop cards or the hole cards. There is also suit isomorphism, where
+// for example a 5-card flush of hearts is essentially the same as a 5-card
+// flush of diamonds. This function maps the set of all hands to the much
+// smaller set of distinct isomorphic hands.
 fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
     let cards = &sort_canonical(&cards, streets);
     // Separate the cards by suit
@@ -350,9 +324,9 @@ fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
         for old_suit in 1..4 {
             // The next suit must have the largest length, using lower lexicographic ordering
             // to break ties.
-            if (by_suits[old_suit].len() > by_suits[min].len()) {
+            if by_suits[old_suit].len() > by_suits[min].len() {
                 min = old_suit;
-            } else if (by_suits[old_suit].len() == by_suits[min].len() && by_suits[old_suit] < by_suits[min]) {
+            } else if by_suits[old_suit].len() == by_suits[min].len() && by_suits[old_suit] < by_suits[min] {
                 min = old_suit;
             }
         }
@@ -361,18 +335,13 @@ fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
         }
         by_suits[min] = vec![];
     }
-
     canonical = sort_canonical(&canonical, streets);
-
-    if !is_canonical(&canonical, streets) {
-        panic!("Not canonical: {:?}", canonical);
-    }
     canonical
 }
 
 // For fast poker hand comparison, look up relative strength values in a table
 pub struct HandTable {
-    strengths: HashMap<String, i32>
+    strengths: HashMap<Vec<Card>, i32>
 }
 
 impl HandTable {
@@ -386,7 +355,7 @@ impl HandTable {
         let mut max_strength = 0;
         for five_card in hand.iter().combinations(5) {
             let canonical = canonical_hand(&deepcopy(&five_card), false);
-            let strength = self.strengths.get(&cards2str(&canonical)).unwrap().clone();
+            let strength = self.strengths.get(&canonical).unwrap().clone();
             if strength > max_strength {
                 max_strength = strength;
             }
@@ -394,8 +363,8 @@ impl HandTable {
         max_strength
     }
 
-    fn load_hand_strengths() -> HashMap<String, i32> {
-        match File::open(HAND_TABLE_PATH) {
+    fn load_hand_strengths() -> HashMap<Vec<Card>, i32> {
+        let str_map: HashMap<String, i32> = match File::open(HAND_TABLE_PATH) {
             Err(e) => panic!("Hand table not found"),
             Ok(mut file) => {
                 // Load up the hand table from the JSON
@@ -403,8 +372,117 @@ impl HandTable {
                 file.read_to_string(&mut buffer).expect("Error");
                 serde_json::from_str(&buffer).unwrap()
             }
+        };
+        // Translate the card strings to Vec<Card> keys
+        let mut vec_map: HashMap<Vec<Card>, i32> = HashMap::new();
+        for (hand, strength) in str_map {
+            let cards = vec![&hand[0..2], &hand[2..4], &hand[4..6], &hand[6..8], &hand[8..10]];
+            let cards = strvec2cards(&cards);
+            vec_map.insert(cards, strength);
         }
+        vec_map
     }
 }
 
+// Normalize the vector so that its elements sum to 1.
+pub fn normalize(vector: &Vec<f64>) -> Vec<f64> {
+    let mut sum = 0.0;
+    for elem in vector {
+        sum += elem;
+    }
+    let mut noramlized = Vec::new();
+    for elem in vector {
+        noramlized.push(elem / sum);
+    }
+    noramlized
+}
+
+// Stores the equities for every canonical river hand (~41 million). This allows
+// for fast equity distribution calculation, and fast river card bucket lookup,
+// which is the main bottleneck of training.
+pub struct EquityTable {
+    equities: HashMap<String, f64>
+}
+
+impl EquityTable {
+
+    pub fn new() -> EquityTable {
+        EquityTable {equities: EquityTable::load_equity_table()}
+    }
+
+    pub fn lookup(&self, cards: &[Card]) -> f64 {
+        0.0
+    }
+
+    fn load_equity_table() -> HashMap<String, f64> {
+        match File::open(EQUITY_TABLE_PATH) {
+            Err(e) => EquityTable::make_equity_table(),
+            Ok(mut file) => {
+                let mut buffer = String::new();
+                file.read_to_string(&mut buffer).expect("Error");
+                serde_json::from_str(&buffer).unwrap()
+            }
+        }
+    }
+
+    fn make_equity_table() -> HashMap<String, f64> {
+        println!("[INFO] Constructing the river equity table...");
+        let mut table: HashMap<String, f64> = HashMap::new();
+        let river_hands = (&deal_canonical(7, true)).to_vec();
+
+        let bar = pbar(river_hands.len() as u64);
+
+        let equities: Vec<f64> = river_hands.par_iter()
+                                            .map(|h| {
+                                                bar.inc(1);
+                                                EquityTable::river_equity(&h)})
+                                            .collect();
+        bar.finish();
+
+        for i in 0..equities.len() {
+            let hand_str = cards2str(&river_hands[i].to_vec());
+            table.insert(hand_str, equities[i]);
+        }
+
+        let json = serde_json::to_string_pretty(&table).unwrap();
+
+        let mut file = File::create(EQUITY_TABLE_PATH).unwrap();
+        file.write_all(json.as_bytes());
+        println!("[INFO] Done.");
+        panic!("done");
+        table
+    }
+
+    pub fn river_equity(hand: &[Card]) -> f64 {
+        let mut deck = deck();
+        // Remove the already-dealt cards from the deck
+        deck.retain(|c| !hand.contains(&c));
+
+        let board = (&hand[2..]).to_vec();
+        let mut n_wins = 0.0;
+        let mut n_runs = 0;
+
+        let mut rng = &mut rand::thread_rng();
+
+        for opp_preflop in deck.iter().combinations(2) {//.choose_multiple(&mut rng, 10) {
+
+            n_runs += 1;
+
+            // Create the poker hands by concatenating cards
+            let my_hand = hand.to_vec();
+            let opp_hand = [deepcopy(&opp_preflop), board.clone()].concat();
+
+            let my_strength = HAND_TABLE.hand_strength(&my_hand);
+            let opp_strength = HAND_TABLE.hand_strength(&opp_hand);
+
+            if my_strength > opp_strength {
+                n_wins += 1.0;
+            } else if my_strength == opp_strength {
+                n_wins += 0.5;
+            }
+        }
+        let equity = n_wins / (n_runs as f64);
+        equity
+    }
+}
 

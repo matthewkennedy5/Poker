@@ -1,5 +1,4 @@
 use crate::card_utils::strvec2cards;
-use crate::card_utils::archetype;
 use crate::card_utils::cards2str;
 use crate::card_utils;
 

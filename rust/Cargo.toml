@@ -13,3 +13,7 @@ itertools = "*"
 indicatif = "*"
 cute = "*"
 rand = "*"
+flame = "*"
+lazy_static = "*"
+rayon = "*"
+
