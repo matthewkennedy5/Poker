@@ -61,13 +61,16 @@ Another goal of this project was to write a bot that could be trained and run on
 
 ## Papers cited
 
-[1](https://science.sciencemag.org/content/359/6374/418)
-[2](https://arxiv.org/abs/1805.08195)
-[3](https://poker.cs.ualberta.ca/publications/NIPS07-cfr.pdf)
-[4](https://www.cs.cmu.edu/~sandholm/potential-aware_imperfect-recall.aaai14.pdf)
-[5](https://arxiv.org/abs/1809.04040)
-[6](https://arxiv.org/abs/1612.07547)
+1. [Superhuman AI for heads-up no-limit poker: Libratus beats top professionals](https://science.sciencemag.org/content/359/6374/418)
+2. [Depth-Limited Solving for Imperfect-Information Games](https://arxiv.org/abs/1805.08195)
+3. [Regret Minimization in Games with Incomplete Information](https://poker.cs.ualberta.ca/publications/NIPS07-cfr.pdf)
+4. [Potential-Aware Imperfect-Recall Abstraction with Earth Mover’s Distance in Imperfect-Information Games](https://www.cs.cmu.edu/~sandholm/potential-aware_imperfect-recall.aaai14.pdf)
+5. [Solving Imperfect-Information Games via Discounted Regret Minimization](https://arxiv.org/abs/1809.04040)
+6. [Equilibrium Approximation Quality of Current No-Limit Poker Bots](https://arxiv.org/abs/1612.07547)
 
-## Further reading
+## Further resources
 
-
+- [An Introduction to Counterfactual Regret Minimization](http://modelai.gettysburg.edu/2013/cfr/cfr.pdf)
+- [Noam Brown - YouTube](https://www.youtube.com/channel/UCIOWAxXS5dvYKf73B6FR2iw)
+- [AI for Imperfect-Information Games: Beating Top Humans in No-Limit Poker](https://www.youtube.com/watch?v=McV4a6umbAY)
+- [The State of Techniques for Solving Large Imperfect-Information Games, Including Poker](https://www.youtube.com/watch?v=QgCxCeoW5JI)
