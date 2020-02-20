@@ -35,11 +35,11 @@ Finding good ways to group hands together for abstraction has historically been 
 
 The above analysis only applies to the flop and turn. On the river, there are no rollouts and no notion of an equity distributions, so hands are just clustered based on their equity. On the preflop, there are only 169 strategically distinct hands, so we can just include all of them in the abstraction.
 
-It is up to the programmer to decide how many clusters there are--more clusters will produce a better strategy, but will be slower to train. I chose to use ?? buckets on the flop, ?? on the turn, and ?? on the river. 
+It is up to the programmer to decide how many clusters to use--more clusters will produce a better strategy, but will be slower to train. I chose to use ?? buckets on the flop, ?? on the turn, and ?? on the river. 
 
 #### Action abstraction
 
-Simplifying the actions is a much simpler task and can be succesfully done by a human. Since there are many possible Nash equilibria, chances are that one will exist for the actions you choose to include in your abstraction. For my bot I allowed the following bet sizes: (half pot, full pot, 2x pot, all in). 
+Simplifying the actions is a much simpler task and can be succesfully done by a human. Since there are many possible Nash equilibria, chances are good that one will exist for the actions you choose to include in your abstraction. For my bot I allowed the following bet sizes: (half pot, full pot, 2x pot, all in). 
 
 ### Training
 
