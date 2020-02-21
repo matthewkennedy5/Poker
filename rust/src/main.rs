@@ -1,3 +1,4 @@
+
 extern crate serde;
 extern crate serde_json;
 extern crate itertools;
@@ -30,9 +31,11 @@ fn main() {
 
     // let table = card_utils::HandTable::new();
     // println!("{}", table.hand_strength(&cards));
-    let a = card_abstraction::Abstraction::new();
-    let bin = a.abstract_id(&cards);
-    println!("Bin: {}", bin);
+    // let a = card_abstraction::Abstraction::new();
+    // let bin = a.abstract_id(&cards);
+    // println!("Bin: {}", bin);
+
+    card_utils::EquityTable::make_equity_table();
 }
 
 

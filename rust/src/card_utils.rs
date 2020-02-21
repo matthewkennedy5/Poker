@@ -425,29 +425,41 @@ impl EquityTable {
         }
     }
 
-    fn make_equity_table() -> HashMap<String, f64> {
+    pub fn make_equity_table() -> HashMap<String, f64> {
         println!("[INFO] Constructing the river equity table...");
         let mut table: HashMap<String, f64> = HashMap::new();
         let river_hands = (&deal_canonical(7, true)).to_vec();
 
+        // For loading old checkpoint -- delete later
+        // let mut table: HashMap<String, f64> = match File::open(EQUITY_TABLE_PATH) {
+        //     Err(e) => panic!("Hand table not found"),
+        //     Ok(mut file) => {
+        //         // Load up the hand table from the JSON
+        //         let mut buffer = String::new();
+        //         file.read_to_string(&mut buffer).expect("Error");
+        //         serde_json::from_str(&buffer).unwrap()
+        //     }
+        // };
+
         let bar = pbar(river_hands.len() as u64);
 
-        let equities: Vec<f64> = river_hands.par_iter()
-                                            .map(|h| {
-                                                bar.inc(1);
-                                                EquityTable::river_equity(&h)})
-                                            .collect();
+        for chunk in river_hands.chunks(1000000) {
+            let equities: Vec<f64> = chunk.par_iter()
+                                          .map(|h| {
+                                              bar.inc(1);
+                                              EquityTable::river_equity(&h)})
+                                          .collect();
+            for i in 0..equities.len() {
+                let hand_str = cards2str(&chunk[i].to_vec());
+                table.insert(hand_str, equities[i]);
+            }
+            let json = serde_json::to_string_pretty(&table).unwrap();
+            let mut file = File::create(EQUITY_TABLE_PATH).unwrap();
+            file.write_all(json.as_bytes());
+            println!("[INFO] Checkpoint");
+        }
         bar.finish();
 
-        for i in 0..equities.len() {
-            let hand_str = cards2str(&river_hands[i].to_vec());
-            table.insert(hand_str, equities[i]);
-        }
-
-        let json = serde_json::to_string_pretty(&table).unwrap();
-
-        let mut file = File::create(EQUITY_TABLE_PATH).unwrap();
-        file.write_all(json.as_bytes());
         println!("[INFO] Done.");
         panic!("done");
         table

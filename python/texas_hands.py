@@ -188,6 +188,16 @@ class TexasHand:
                 return 1
             return 0    # Both pairs and the kicker are all equal.
 
+        # When there are low ace straights (A 2 3 4 5) we need to count the ace
+        # as low by transforming it to a 1.
+        if self.type in (STRAIGHT, STRAIGHT_FLUSH):
+            if 14 in my_ranks and 5 in my_ranks:    # 14 is Ace
+                my_ranks[0] = 1     # Transform the ace (in the front) to a 1
+                my_ranks = np.sort(my_ranks)[::-1]
+            if 14 in other_ranks and 5 in other_ranks:
+                other_ranks[0] = 1
+                other_ranks = np.sort(other_ranks)[::-1]
+
         for i in range(len(my_ranks)):
             if my_ranks[i] < other_ranks[i]:
                 return -1

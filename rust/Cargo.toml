@@ -17,3 +17,6 @@ flame = "*"
 lazy_static = "*"
 rayon = "*"
 
+# For profiling
+# [profile.release]
+# debug = 1

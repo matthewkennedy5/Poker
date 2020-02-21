@@ -8,14 +8,19 @@ fn hand_comparisons() {
 
         // Define the hands we'll be using
         let royal_flush = vec!["Jd", "As", "Js", "Ks", "Qs", "Ts", "2c"];
+        let royal_flush2 = vec!["Jd", "Ac", "Jc", "Kc", "Qc", "Tc", "2c"];
         let straight_flush = vec!["7d", "2c", "8d", "Jd", "9d", "3d", "Td"];
         let four = vec!["2h", "2c", "3d", "5c", "7d", "2d", "2s"];
         let full_house = vec!["As", "Jd", "Qs", "Jc", "2c", "Ac", "Ah"];
         let same_full_house = vec!["As", "Js", "2s", "Jc", "2c", "Ac", "Ah"];
+        let better_full_house = vec!["2d", "9s", "Qd", "Qs", "Ac", "Ah", "As"];
+        let full_house3 = vec!["3d", "3h", "3c", "2c", "2d"];
+        let full_house2 = vec!["3d", "3h", "2c", "2h", "2d"];
         let flush = vec!["Jh", "2c", "2h", "3h", "7h", "As", "9h"];
         let same_flush = vec!["Jh", "2c", "2h", "3h", "7h", "2s", "9h"];
         let better_flush = vec!["Jh", "2c", "Ah", "3h", "7h", "Ts", "9h"];
         let straight = vec!["Ah", "2s", "3d", "5c", "4c"];
+        let better_straight = vec!["6h", "2s", "3d", "5c", "4c"];
         let trips = vec!["5d", "4c", "6d", "6h", "6c"];
         let two_pair = vec!["6d", "5c", "5h", "Ah", "Ac"];
         let better_two_pair = vec!["Td", "Th", "Ad", "Ac", "6h"];
@@ -27,14 +32,19 @@ fn hand_comparisons() {
 
         // Get strengths
         let royal_flush = table.hand_strength(&strvec2cards(&royal_flush));
+        let royal_flush2 = table.hand_strength(&strvec2cards(&royal_flush2));
         let straight_flush = table.hand_strength(&strvec2cards(&straight_flush));
         let four = table.hand_strength(&strvec2cards(&four));
         let full_house = table.hand_strength(&strvec2cards(&full_house));
+        let full_house2 = table.hand_strength(&strvec2cards(&full_house2));
+        let full_house3 = table.hand_strength(&strvec2cards(&full_house3));
         let same_full_house = table.hand_strength(&strvec2cards(&same_full_house));
+        let better_full_house = table.hand_strength(&strvec2cards(&better_full_house));
         let flush = table.hand_strength(&strvec2cards(&flush));
         let same_flush = table.hand_strength(&strvec2cards(&same_flush));
         let better_flush = table.hand_strength(&strvec2cards(&better_flush));
         let straight = table.hand_strength(&strvec2cards(&straight));
+        let better_straight = table.hand_strength(&strvec2cards(&better_straight));
         let trips = table.hand_strength(&strvec2cards(&trips));
         let two_pair = table.hand_strength(&strvec2cards(&two_pair));
         let better_two_pair = table.hand_strength(&strvec2cards(&better_two_pair));
@@ -56,8 +66,13 @@ fn hand_comparisons() {
         assert!(better_two_pair > two_pair);
         assert!(better_flush > flush);
         assert!(better_kicker > ace_pair);
+        assert!(better_straight > straight);
+        assert!(better_full_house > full_house);
+        assert!(full_house3 > full_house2);
+        assert!(full_house > full_house3);
 
         // Test for ties
+        assert_eq!(royal_flush, royal_flush2);
         assert_eq!(same_full_house, full_house);
         assert_eq!(other_high_card, high_card);
         assert_eq!(same_flush, flush);
