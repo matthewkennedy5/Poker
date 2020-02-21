@@ -1,6 +1,6 @@
 # Poker
 
-## Description
+## Introduction
 
 Recent advancements in game AI have produced astounding results, such as Google's AlphaGo and OpenAI's Dota bot. However, for many years, the goal of writing a computer program to beat humans at No Limit Texas Holdem has remained elusive. That is until 2017, when researchers at Carnegie Mellon University were finally able to crack the barrier, when their bot Libratus defeated top human opponents with statistical significance. (cite) Libratus required a supercomputer, but in 2018 a technique called Depth Limited Solving was discovered which vastly reduced the required computational resources to the point that a superhuman poker program could run on your laptop. (cite) The goal of this project is to use depth-limited solving to implement the first opensource superhuman AI for Heads Up No Limit Texas Holdem. 
 
@@ -17,7 +17,7 @@ It's guaranteed that for any two player imperfect information game (like Heads U
 
 So we know that this strategy exists, but how do we solve for it? In 2007, researchers at Google Brain invented a technique known as "Counterfactual Regret Minimization" (cite) which solves for the Nash Equilibrium. This algorithm works by having two bots play against each other. First they just make random moves, but at each decision point, they write down what they regret not doing. Then over time, they do more of what they regret doing and less of what they don't regret. It is proven that if you run this algorithm for long enough, it will give you a Nash Equilibrium strategy. 
 
-While this algorithm works in theory, in reality HUNL Texas Holdem is just too big a game to solve directly. Checkers has 10<sup>21</sup> possible positions, chess has 10<sup>120</sup>, but HUNL has 10^<sup>180</sup>, which is more than the number of atoms in the universe squared. So in order to solve it before the universe ends, you need to find a way to shrink the game down. This is accomplished using a technique known as **abstraction**, with two prongs of attack:
+While this algorithm works in theory, in reality HUNL Texas Holdem is just too big a game to solve directly. Checkers has 10<sup>21</sup> possible positions, chess has 10<sup>120</sup>, but HUNL has 10<sup>180</sup>, which is more than the number of atoms in the universe squared. So in order to solve it before the universe ends, you need to find a way to shrink the game down. This is accomplished using a technique known as **abstraction**, with two prongs of attack:
 1. Treat similar hands as identical. AsKs 2c3cAc is close enough to AsKs 3c4cAc. 
 2. Treat similar bet sizes as equal. A bet of $1000 is close enough to a bet of $1001. 
 
