@@ -1,4 +1,3 @@
-
 extern crate serde;
 extern crate serde_json;
 extern crate itertools;
@@ -9,9 +8,13 @@ extern crate rand;
 #[macro_use]
 extern crate lazy_static;
 extern crate rayon;
+extern crate emd;
+#[macro_use(array)]
+extern crate ndarray;
 
 mod card_abstraction;
 mod card_utils;
+mod cluster;
 mod tests;
 
 use card_utils::Card;

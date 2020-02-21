@@ -8,6 +8,7 @@
 use crate::card_utils;
 use crate::card_utils::Card;
 use crate::card_utils::deepcopy;
+use crate::cluster;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -96,7 +97,7 @@ fn load_turn_abstraction() -> HashMap<String, i32> {
 
 fn make_flop_abstraction() -> HashMap<String, i32> {
     let distributions = make_flop_equity();
-    cluster(distributions)
+    cluster::cluster(&distributions, 100)
 }
 
 fn make_flop_equity() -> HashMap<String, Vec<f64>> {
@@ -142,7 +143,4 @@ fn equity_distribution(cards: &[Card]) -> Vec<f64> {
     return distribution;
 }
 
-fn cluster(data: HashMap<String, Vec<f64>>) -> HashMap<String, i32> {
-    return HashMap::new();
-}
 

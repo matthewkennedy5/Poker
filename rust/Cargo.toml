@@ -16,6 +16,8 @@ rand = "*"
 flame = "*"
 lazy_static = "*"
 rayon = "*"
+emd = "*"
+ndarray = "*"
 
 # For profiling
 # [profile.release]
