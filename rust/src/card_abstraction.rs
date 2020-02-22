@@ -22,6 +22,9 @@ const TURN_PATH: &str = "products/get_turn_abstraction.json";
 const FLOP_EQUITY_PATH: &str = "products/flop_equity_distributions.json";
 const TURN_EQUITY_PATH: &str = "products/turn_equity_distributions.json";
 
+const FLOP_BUCKETS: i32 = 100;
+const TURN_BUCKETS: i32 = 100;
+const RIVER_BUCKETS: i32 = 100;
 const EQUITY_BINS: usize = 50;
 
 // flop and turn map card strings such as "As4d8c9h2d" to their corresponding
@@ -80,37 +83,41 @@ impl Abstraction {
 
 fn load_flop_abstraction() -> HashMap<String, i32> {
     match File::open(FLOP_PATH) {
-        Err(_error) => make_flop_abstraction(),
+        Err(_error) => make_abstraction(5, FLOP_BUCKETS),
         Ok(mut file) => {
             let mut buffer = String::new();
             file.read_to_string(&mut buffer).expect("Error reading file");
             serde_json::from_str(&buffer).unwrap()
         }
-    };
-    // TODO: Change
-    return HashMap::new();
+    }
 }
 
 fn load_turn_abstraction() -> HashMap<String, i32> {
-    return HashMap::new();
+    match File::open(TURN_PATH) {
+        Err(_error) => make_abstraction(6, TURN_BUCKETS),
+        Ok(mut file) => {
+            let mut buffer = String::new();
+            file.read_to_string(&mut buffer).expect("Error reading file");
+            serde_json::from_str(&buffer).unwrap()
+        }
+    }
 }
 
-fn make_flop_abstraction() -> HashMap<String, i32> {
-    let distributions = make_flop_equity();
-    cluster::cluster(&distributions, 100)
+fn make_abstraction(n_cards: i32, n_buckets: i32) -> HashMap<String, i32> {
+    if n_cards != 5 && n_cards != 6 {
+        panic!("Must have 5 or 6 cards for flop or turn abstraction");
+    }
+    let distributions = make_equity_distributions(n_cards);
+    cluster::cluster_ehs2(&distributions, n_buckets)
 }
 
-fn make_flop_equity() -> HashMap<String, Vec<f64>> {
-    println!("[INFO] Calculating flop equity distributions...");
+fn make_equity_distributions(n_cards: i32) -> HashMap<String, Vec<f64>> {
     let mut distributions: HashMap<String, Vec<f64>> = HashMap::new();
-    let flop_hands = card_utils::deal_canonical(5, true);
-    let bar = card_utils::pbar(flop_hands.len() as u64);
-
-    for hand in flop_hands {
+    let hands = card_utils::deal_canonical(n_cards as u32, true);
+    let bar = card_utils::pbar(hands.len() as u64);
+    for hand in hands {
         let equity = equity_distribution(&hand);
         let hand_str = card_utils::cards2str(&hand).to_string();
-        // We store hands as strings in the HashMap for their equity distributions
-        // TODO: Really?
         distributions.insert(hand_str, equity);
         bar.inc(1);
     }

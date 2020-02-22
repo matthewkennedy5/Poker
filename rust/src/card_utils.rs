@@ -374,6 +374,8 @@ impl HandTable {
             }
         };
         // Translate the card strings to Vec<Card> keys
+        // TODO: If necessary for more speedup, change all lookup tables to
+        // Vec<Card> keys instead of String
         let mut vec_map: HashMap<Vec<Card>, i32> = HashMap::new();
         for (hand, strength) in str_map {
             let cards = vec![&hand[0..2], &hand[2..4], &hand[4..6], &hand[6..8], &hand[8..10]];
