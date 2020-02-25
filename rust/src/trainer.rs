@@ -45,6 +45,8 @@ fn iterate(player: usize, deck: &[Card], history: ActionHistory,
         return terminal_utility(&deck, history, player);
     }
 
+    // Look up the CFR node for this information set, or make a new one if it
+    // doesn't exist
     let mut infoset = InfoSet::from(&deck, &history);
     if !nodes.contains_key(&infoset) {
         nodes.insert(infoset.clone(), Node::new(&infoset));
@@ -53,7 +55,7 @@ fn iterate(player: usize, deck: &[Card], history: ActionHistory,
 
     let opponent = 1 - player;
     if history.whose_turn() == opponent {
-        // Sample a move from the opponent
+        // Process the opponent's turn
         history.add(opponent_action(node));
         if history.hand_over() {
             return terminal_utility(&deck, history, player);
@@ -65,10 +67,34 @@ fn iterate(player: usize, deck: &[Card], history: ActionHistory,
         node = nodes.get(&infoset).unwrap();
     }
 
+    // Grab the current strategy at this node
     let [p0, p1] = weights;
     let strategy = node.current_strategy(weights[player]);
-    let mut utility: HashMap<Action, f64> = HashMap::new();
+    let mut utilities: HashMap<Action, f64> = HashMap::new();
     let mut node_utility = 0.0;
+
+    // Recurse to further nodes in the game tree. Find the utilities for each action.
+    for (action, prob) in strategy {
+        let mut next_history = history.clone();
+        next_history.add(action.clone());
+        let weights = match player {
+            1 => [p0 * prob, p1],
+            2 => [p0, p1 * prob],
+            _ => panic!("Bad player value")
+        };
+        let utility = iterate(player, &deck, next_history, weights, nodes);
+        utilities.insert(action, utility);
+        node_utility += prob * utility;
+    }
+
+    let node = nodes.get(&infoset).unwrap();
+
+    // Update regrets
+    for (action, utility) in &utilities {
+        let regret = utilities.get(&action).unwrap() - node_utility;
+        node.add_regret(&action, weights[opponent] * regret);
+    }
+
     node_utility
 }
 
@@ -154,6 +180,11 @@ impl Node {
     }
 
     pub fn current_strategy(&self, prob: f64) -> HashMap<Action, f64> {
+        // TODO
         HashMap::new()
+    }
+
+    pub fn add_regret(&self, action: &Action, regret: f64) {
+        // TODO
     }
 }
