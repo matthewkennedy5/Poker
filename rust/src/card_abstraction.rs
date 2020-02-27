@@ -112,6 +112,7 @@ fn make_abstraction(n_cards: i32, n_buckets: i32) -> HashMap<String, i32> {
 }
 
 fn make_equity_distributions(n_cards: i32) -> HashMap<String, Vec<f64>> {
+    println!("[INFO] Constructing equity distributions...");
     let mut distributions: HashMap<String, Vec<f64>> = HashMap::new();
     let hands = card_utils::deal_canonical(n_cards as u32, true);
     let bar = card_utils::pbar(hands.len() as u64);
@@ -130,8 +131,6 @@ fn equity_distribution(cards: &[Card]) -> Vec<f64> {
     let mut distribution: Vec<f64> = vec![0.0; EQUITY_BINS];
     let board = (&cards[2..]).to_vec();
 
-    let equity_table = card_utils::EquityTable::new();
-
     let mut deck = card_utils::deck();
     // Remove the already-dealt cards from the deck
     deck.retain(|c| !cards.contains(&c));
@@ -139,7 +138,7 @@ fn equity_distribution(cards: &[Card]) -> Vec<f64> {
     for rollout in deck.iter().combinations(7 - cards.len()) {
         let rollout = rollout.to_vec();
         let my_hand = [cards.clone(), deepcopy(&rollout)].concat();
-        let equity = equity_table.lookup(&my_hand);
+        let equity = card_utils::EQUITY_TABLE.lookup(&my_hand);
         let mut equity_bin = (equity * EQUITY_BINS as f64) as usize;
         if equity_bin == EQUITY_BINS {
             equity_bin -= 1;

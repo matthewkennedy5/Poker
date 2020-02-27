@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
+use std::fmt;
 use rand::thread_rng;
 use rand::prelude::SliceRandom;
 use crate::card_utils;
@@ -34,10 +35,26 @@ pub fn train(iters: i32) {
     }
     bar.finish();
 
-    let json = serde_json::to_string_pretty(&nodes).unwrap();
+    // Convert nodes to have string keys for JSON serialization
+    let mut str_nodes: HashMap<String, Node> = HashMap::new();
+    for (infoset, node) in nodes {
+        str_nodes.insert(infoset.to_string(), node);
+    }
+
+    let json = serde_json::to_string_pretty(&str_nodes).unwrap();
     let mut file = File::create(BLUEPRINT_STRATEGY_PATH).unwrap();
     file.write_all(json.as_bytes());
 }
+
+// Parser for the string format I'm using to store infoset keys in the JSON.
+// Format example: "312|bet 500, call 500; fold"
+fn str2infoset(str: String) -> InfoSet {
+    // TODO
+    InfoSet { history: ActionHistory::new(), card_bucket: 0}
+}
+
+// START HERE: Implement the helper functions to get this thing churning out strategies!
+// Incorporate the abstractions.
 
 fn iterate(player: usize, deck: &[Card], history: ActionHistory,
            weights: [f64; 2], nodes: &mut HashMap<InfoSet, Node>) -> f64 {
@@ -113,6 +130,17 @@ struct Action {
     amount: i32
 }
 
+impl fmt::Display for Action {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let a = match &self.action {
+            FOLD => "fold",
+            CALL => "call",
+            BET => "bet"
+        };
+        write!(f, "{} {}", a, self.amount)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 struct ActionHistory {
     preflop: Vec<Action>,
@@ -147,6 +175,20 @@ impl ActionHistory {
     }
 }
 
+impl fmt::Display for ActionHistory {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut result = String::new();
+        for street in &[&self.preflop, &self.flop, &self.turn, &self.river] {
+            for action in street.to_vec() {
+                result.push_str(&action.to_string());
+                result.push_str(",");
+            }
+            result.push_str(";");
+        }
+        write!(f, "{}", result)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 struct InfoSet {
     history: ActionHistory,
@@ -162,8 +204,16 @@ impl InfoSet {
 
 }
 
+impl fmt::Display for InfoSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}|{}", self.card_bucket, self.history.to_string())
+    }
+}
+
+
 #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 struct Node {
+    // TODO: Does a Node really have to store its corresponding InfoSet?
     infoset: InfoSet,
     regrets: HashMap<Action, f64>,
     t: i32

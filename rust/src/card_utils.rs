@@ -5,7 +5,7 @@ use std::sync::mpsc;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use rand::thread_rng;
 use rand::prelude::SliceRandom;
 use serde::Serialize;
@@ -16,9 +16,11 @@ use crate::rand::prelude::IteratorRandom;
 
 const HAND_TABLE_PATH: &str = "products/strengths.json";
 const EQUITY_TABLE_PATH: &str = "products/river_equities.json";
+const CANONICAL_HANDS_PATH: &str = "products/canonical_hands.json";
 
 lazy_static! {
     pub static ref HAND_TABLE: HandTable = HandTable::new();
+    pub static ref EQUITY_TABLE: EquityTable = EquityTable::new();
 }
 
 const CLUBS: u8 = 0;
@@ -147,8 +149,7 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
     bar.set_style(indicatif::ProgressStyle::default_bar()
         .template("[{elapsed_precise}/{eta_precise}] {wide_bar} {pos:>7}/{len:7} {msg}"));
     // make sure the drawing doesn't dominate computation for large n
-    // bar.set_draw_delta(n / 1000);
-    bar.set_draw_delta(100);
+    bar.set_draw_delta(n / 10000);
     bar
 }
 
@@ -259,18 +260,58 @@ fn deal_cards(mut permutations: &mut Vec<Vec<Card>>, n: u32, cards: &[Card], str
     }
     for card in deck() {
         cards.push(card);
-        if is_canonical(&cards, streets) {
+        if is_canonical(&cards, streets) || (streets && cards.len() < n as usize) {
             deal_cards(&mut permutations, n, &cards, streets);
         }
         cards.pop();
     }
 }
 
-// returns all possible canonical hands of length n.
+// Returns all possible canonical hands of length n.
 pub fn deal_canonical(n: u32, streets: bool) -> Vec<Vec<Card>> {
+    // if streets {
+    //     // Read the canonical hands from the file, or make the file if it doesn't exist
+    //     let canonical_hands: HashMap<u32, Vec<Vec<Card>>> = match File::open(CANONICAL_HANDS_PATH) {
+    //         Err(e) => make_canonical_hands();
+    //         Ok(mut file) => {
+    //             // Load up the hand table from the JSON
+    //             let mut buffer = String::new();
+    //             file.read_to_string(&mut buffer).expect("Error");
+    //             serde_json::from_str(&buffer).unwrap()
+    //         }
+    //     };
     let mut permutations = Vec::new();
     deal_cards(&mut permutations, n, &[], streets);
     permutations
+}
+
+// When we want a list of canonical hands with street order information
+// preserved, we can't use deal_canonical because that doesn't hit all possible
+// canonical hands. So our best bet is to brute-force it and find all canonical
+// hands, then write them to a file to read later.
+// fn make_canonical_hands() -> HashMap<u32, Vec<Vec<Card>>> {
+//     let mut canonical5 = Vec::new();
+//     let mut canonical6 = Vec::new();
+//     let mut canonical7 = Vec::new();
+//     let deck = deck();
+//     let bar = pbar()
+// }
+
+pub fn deal_river_canonical() -> HashSet<Vec<Card>> {
+    let mut canonical: HashSet<Vec<Card>> = HashSet::new();
+    let deck = deck();
+    let bar = pbar(2809475760);
+    for preflop in deck.iter().combinations(2) {
+        let mut subdeck = deck.clone();
+        subdeck.retain(|c| !preflop.contains(&c));
+        for board in subdeck.iter().combinations(5) {
+            let hand = [deepcopy(&preflop), deepcopy(&board)].concat();
+            canonical.insert(canonical_hand(&hand, true));
+            bar.inc(1);
+        }
+    }
+    bar.finish();
+    canonical
 }
 
 // Writes canonical hands to a file
@@ -308,7 +349,8 @@ fn sort_canonical(cards: &[Card], streets: bool) -> Vec<Card> {
 // for example a 5-card flush of hearts is essentially the same as a 5-card
 // flush of diamonds. This function maps the set of all hands to the much
 // smaller set of distinct isomorphic hands.
-fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
+pub fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
+    let cards_copy = cards.clone();
     let cards = &sort_canonical(&cards, streets);
     // Separate the cards by suit
     let mut by_suits: Vec<Vec<u8>> = Vec::new();
@@ -317,25 +359,42 @@ fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
         by_suits.push(ranks.to_vec());
     }
 
-    let mut canonical = Vec::new();
+    // Define a mapping from old suits to new suits. suit_mapping[old_suit] = new_suit.
+    let mut suit_mapping = [0, 0, 0, 0];
+
     // Retrieve the suits in size order with lexicographic tie breaking
+
+    let mut unused_suits = vec![0, 1, 2, 3];
     for new_suit in 0..4 {
-        let mut min = 0;
-        for old_suit in 1..4 {
+        let mut max = unused_suits[0];
+        for old_suit in &unused_suits {
+            let old_suit = *old_suit as usize;
             // The next suit must have the largest length, using lower lexicographic ordering
             // to break ties.
-            if by_suits[old_suit].len() > by_suits[min].len() {
-                min = old_suit;
-            } else if by_suits[old_suit].len() == by_suits[min].len() && by_suits[old_suit] < by_suits[min] {
-                min = old_suit;
+            if by_suits[old_suit].len() > by_suits[max].len() {
+                max = old_suit;
+            } else if by_suits[old_suit].len() == by_suits[max].len() && by_suits[old_suit] < by_suits[max] {
+                max = old_suit;
             }
         }
-        for rank in by_suits[min].clone() {
-            canonical.push(Card {rank: rank, suit: new_suit})
-        }
-        by_suits[min] = vec![];
+        suit_mapping[max] = new_suit;
+        // Wipe the current suit in by_suits so it doesn't get used twice
+        unused_suits.retain(|s| s != &max);
+        // for rank in by_suits[min].clone() {
+        //     canonical.push(Card {rank: rank, suit: new_suit})
+        // }
+    }
+    let mut canonical = Vec::new();
+    for card in cards {
+        canonical.push(Card {rank: card.rank, suit: suit_mapping[card.suit as usize]});
     }
     canonical = sort_canonical(&canonical, streets);
+
+    // TODO: Remove once I'm convinced it's working
+    if (!is_canonical(&canonical, streets)) {
+        panic!("Not canonical: {}\nOriginal: {}", cards2str(&canonical), cards2str(&cards_copy));
+    }
+
     canonical
 }
 
@@ -413,7 +472,10 @@ impl EquityTable {
     }
 
     pub fn lookup(&self, cards: &[Card]) -> f64 {
-        0.0
+        let canonical = canonical_hand(&cards, true);
+        let card_str = cards2str(&canonical);
+        println!("{}", cards2str(&cards));
+        *self.equities.get(&card_str).unwrap()
     }
 
     fn load_equity_table() -> HashMap<String, f64> {
@@ -427,24 +489,11 @@ impl EquityTable {
         }
     }
 
-    pub fn make_equity_table() -> HashMap<String, f64> {
+    fn make_equity_table() -> HashMap<String, f64> {
         println!("[INFO] Constructing the river equity table...");
         let mut table: HashMap<String, f64> = HashMap::new();
         let river_hands = (&deal_canonical(7, true)).to_vec();
-
-        // For loading old checkpoint -- delete later
-        // let mut table: HashMap<String, f64> = match File::open(EQUITY_TABLE_PATH) {
-        //     Err(e) => panic!("Hand table not found"),
-        //     Ok(mut file) => {
-        //         // Load up the hand table from the JSON
-        //         let mut buffer = String::new();
-        //         file.read_to_string(&mut buffer).expect("Error");
-        //         serde_json::from_str(&buffer).unwrap()
-        //     }
-        // };
-
         let bar = pbar(river_hands.len() as u64);
-
         for chunk in river_hands.chunks(1000000) {
             let equities: Vec<f64> = chunk.par_iter()
                                           .map(|h| {
@@ -461,13 +510,11 @@ impl EquityTable {
             println!("[INFO] Checkpoint");
         }
         bar.finish();
-
         println!("[INFO] Done.");
-        panic!("done");
         table
     }
 
-    pub fn river_equity(hand: &[Card]) -> f64 {
+    fn river_equity(hand: &[Card]) -> f64 {
         let mut deck = deck();
         // Remove the already-dealt cards from the deck
         deck.retain(|c| !hand.contains(&c));
