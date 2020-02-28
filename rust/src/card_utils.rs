@@ -23,10 +23,10 @@ lazy_static! {
     pub static ref EQUITY_TABLE: EquityTable = EquityTable::new();
 }
 
-const CLUBS: u8 = 0;
-const DIAMONDS: u8 = 1;
-const HEARTS: u8 = 2;
-const SPADES: u8 = 3;
+pub const CLUBS: i32 = 0;
+pub const DIAMONDS: i32 = 1;
+pub const HEARTS: i32 = 2;
+pub const SPADES: i32 = 3;
 
 #[derive(Hash, Debug, Clone, PartialOrd, Eq, Serialize, Deserialize)]
 pub struct Card {
@@ -60,7 +60,7 @@ impl Card {
             "s" => SPADES,
             _ => panic!("bad card string")
         };
-        return Card { rank: rank, suit: suit };
+        return Card { rank: rank, suit: suit as u8};
     }
 }
 
@@ -97,7 +97,7 @@ impl fmt::Display for Card {
             14 => "A",
             _ => panic!("Bad rank value")
         };
-        let suit = match self.suit {
+        let suit = match self.suit as i32 {
             CLUBS => "c",
             DIAMONDS => "d",
             HEARTS => "h",
@@ -149,7 +149,7 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
     bar.set_style(indicatif::ProgressStyle::default_bar()
         .template("[{elapsed_precise}/{eta_precise}] {wide_bar} {pos:>7}/{len:7} {msg}"));
     // make sure the drawing doesn't dominate computation for large n
-    bar.set_draw_delta(n / 10000);
+    // bar.set_draw_delta(n / 10000);
     bar
 }
 
@@ -300,16 +300,22 @@ pub fn deal_canonical(n: u32, streets: bool) -> Vec<Vec<Card>> {
 pub fn deal_river_canonical() -> HashSet<Vec<Card>> {
     let mut canonical: HashSet<Vec<Card>> = HashSet::new();
     let deck = deck();
-    let bar = pbar(2809475760);
+    let bar = pbar(674274182400);
+    let mut count = 0;
     for preflop in deck.iter().combinations(2) {
         let mut subdeck = deck.clone();
         subdeck.retain(|c| !preflop.contains(&c));
         for board in subdeck.iter().combinations(5) {
             let hand = [deepcopy(&preflop), deepcopy(&board)].concat();
             canonical.insert(canonical_hand(&hand, true));
+            // if is_canonical(&hand, true) {
+            //     count += 1;
+            // }
             bar.inc(1);
         }
+        println!("{}\n", count);
     }
+    println!("{}\n", count);
     bar.finish();
     canonical
 }
@@ -547,3 +553,101 @@ impl EquityTable {
     }
 }
 
+// u64 hand representation
+// Each card is a single u8 byte, where
+//
+//      suit = card / 15   (integer division)
+//      rank = card % 15
+//
+// I chose 15 so that ranks can have their true value, ie a 7c has rank 7.
+// The cards are stored as bytes from right to left in the u64, which is
+// right-padded by zeros. If no card is present, the value will be zero, which
+// is how the length is determined. This byte representation allows for a
+// small memory footprint without needing to use Rust's lifetime parameters.
+
+pub fn card(hand: u64, card_index: i32) -> i32 {
+    ((hand & 0xFF << 8*card_index) >> 8*card_index) as i32
+}
+
+pub fn suit(hand: u64, card_index: i32) -> i32 {
+    println!("{}", hand);
+    card(hand, card_index) / 15 as i32
+}
+
+pub fn rank(hand: u64, card_index: i32) -> i32 {
+    card(hand, card_index) % 15 as i32
+}
+
+pub fn len(hand: u64) -> i32 {
+    for n in 0..8 {
+        if 256_u64.pow(n) > hand {
+            return n as i32;
+        }
+    }
+    -1
+}
+
+pub fn str2hand(hand_str: &str) -> u64 {
+    let mut result: u64 = 0;
+    let hand_str = hand_str.to_string();
+    for i in (0..hand_str.len()).step_by(2) {
+        let rank = match &hand_str[i..i+1] {
+            "2" => 2,
+            "3" => 3,
+            "4" => 4,
+            "5" => 5,
+            "6" => 6,
+            "7" => 7,
+            "8" => 8,
+            "9" => 9,
+            "T" => 10,
+            "J" => 11,
+            "Q" => 12,
+            "K" => 13,
+            "A" => 14,
+            _ => panic!("bad card string")
+        };
+        let suit = match &hand_str[i+1..i+2] {
+            "c" => CLUBS,
+            "d" => DIAMONDS,
+            "h" => HEARTS,
+            "s" => SPADES,
+            _ => panic!("bad card string")
+        };
+        let card = (15 * suit + rank) as u64;
+        result += card << 4*i
+    }
+    result
+}
+
+pub fn hand2str(hand: u64) -> String {
+    let mut hand_str = String::new();
+    for card_index in 0..len(hand) {
+        let rank = match rank(hand, card_index) {
+            2 => "2",
+            3 => "3",
+            4 => "4",
+            5 => "5",
+            6 => "6",
+            7 => "7",
+            8 => "8",
+            9 => "9",
+            10 => "T",
+            11 => "J",
+            12 => "Q",
+            13 => "K",
+            14 => "A",
+            _ => panic!("Bad rank value")
+        };
+        let suit = match suit(hand, card_index) {
+            CLUBS => "c",
+            DIAMONDS => "d",
+            HEARTS => "h",
+            SPADES => "s",
+            _ => panic!("Bad suit value")
+        };
+        hand_str.push_str(rank);
+        hand_str.push_str(suit);
+    }
+    hand_str
+}

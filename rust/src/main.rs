@@ -25,15 +25,24 @@ use std::fs::File;
 use std::io::Write;
 use std::mem::size_of_val;
 use std::time::Instant;
+use std::collections::HashMap;
 
 fn main() {
 
     let cards = vec![Card::new("2c"), Card::new("2d"), Card::new("2h"),
                      Card::new("3c"), Card::new("3d"), Card::new("3h"), Card::new("4c")];
 
-    card_utils::canonical_hand(&cards, true);
+    let hand = [Card::new("2c"), Card::new("2c"), Card::new("2c"),
+                Card::new("2c"), Card::new("2c"), Card::new("2c"), Card::new("2c")];
+
+    // let mut abs: HashMap<&[Card], i32> = HashMap::new();
+    // abs.insert(&hand, 0);
+    // println!("{}", size_of_val(&abs));
+    // println!("{}", size_of_val(&cards) + 7 * size_of_val(&Card::new("2c")));
+
+    // card_utils::canonical_hand(&cards, true);
     let canonical = card_utils::deal_river_canonical();
-    println!("{}", canonical.len());
+    // println!("{}", canonical.len());
     // let now = Instant::now();
     // let canonical = card_utils::deal_canonical(5, true);
     // println!("{}", canonical.len());
