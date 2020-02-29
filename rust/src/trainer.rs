@@ -12,9 +12,9 @@ const BLUEPRINT_STRATEGY_PATH: &str = "blueprint.json";
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 enum ActionType {
-    FOLD,
-    CALL,
-    BET
+    fold,
+    call,
+    bet
 }
 
 // TODO: Chance sample opponent actions or all possible opponent actions?
@@ -43,7 +43,7 @@ pub fn train(iters: i32) {
 
     let json = serde_json::to_string_pretty(&str_nodes).unwrap();
     let mut file = File::create(BLUEPRINT_STRATEGY_PATH).unwrap();
-    file.write_all(json.as_bytes());
+    file.write_all(json.as_bytes()).unwrap();
 }
 
 // Parser for the string format I'm using to store infoset keys in the JSON.
@@ -116,7 +116,7 @@ fn iterate(player: usize, deck: &[Card], history: ActionHistory,
 }
 
 fn opponent_action(node: &Node) -> Action {
-    Action { action: ActionType::FOLD, amount: 0}
+    Action { action: ActionType::fold, amount: 0}
 }
 
 fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64 {
@@ -133,9 +133,9 @@ struct Action {
 impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let a = match &self.action {
-            FOLD => "fold",
-            CALL => "call",
-            BET => "bet"
+            ActionType::fold => "fold",
+            ActionType::call => "call",
+            ActionType::bet => "bet"
         };
         write!(f, "{} {}", a, self.amount)
     }

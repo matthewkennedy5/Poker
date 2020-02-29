@@ -18,6 +18,7 @@ lazy_static = "*"
 rayon = "*"
 emd = "*"
 ndarray = "*"
+bio = "*"
 
 # For profiling
 # [profile.release]

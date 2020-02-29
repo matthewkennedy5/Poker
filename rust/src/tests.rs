@@ -6,14 +6,14 @@ use crate::card_utils::*;
 #[test]
 fn uint_hands() {
     let hand: u64 = str2hand("Ac2d7h9cTd2s8c");
-    assert_eq!(suit(hand, 0), CLUBS);
-    assert_eq!(rank(hand, 0), 14);
-    assert_eq!(suit(hand, 1), DIAMONDS);
-    assert_eq!(rank(hand, 1), 2);
-    assert_eq!(suit(hand, 4), DIAMONDS);
-    assert_eq!(rank(hand, 4), 10);
-    assert_eq!(suit(hand, 6), CLUBS);
-    assert_eq!(rank(hand, 6), 8);
+    assert_eq!(suit(card(hand, 0)), CLUBS);
+    assert_eq!(rank(card(hand, 0)), 14);
+    assert_eq!(suit(card(hand, 1)), DIAMONDS);
+    assert_eq!(rank(card(hand, 1)), 2);
+    assert_eq!(suit(card(hand, 4)), DIAMONDS);
+    assert_eq!(rank(card(hand, 4)), 10);
+    assert_eq!(suit(card(hand, 6)), CLUBS);
+    assert_eq!(rank(card(hand, 6)), 8);
     assert_eq!(len(hand), 7);
     assert_eq!(hand2str(str2hand("9d8c7c6s5hQh")), "9d8c7c6s5hQh");
 }

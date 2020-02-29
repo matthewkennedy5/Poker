@@ -8,7 +8,6 @@
 use crate::card_utils;
 use crate::card_utils::Card;
 use crate::card_utils::deepcopy;
-use crate::cluster;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -18,14 +17,12 @@ use rand::thread_rng;
 use rand::prelude::SliceRandom;
 
 const FLOP_PATH: &str = "products/flop_abstraction.json";
-const TURN_PATH: &str = "products/get_turn_abstraction.json";
-const FLOP_EQUITY_PATH: &str = "products/flop_equity_distributions.json";
-const TURN_EQUITY_PATH: &str = "products/turn_equity_distributions.json";
+const TURN_PATH: &str = "products/turn_abstraction.json";
+const RIVER_PATH: &str = "products/river_abstraction.json";
 
 const FLOP_BUCKETS: i32 = 100;
 const TURN_BUCKETS: i32 = 100;
 const RIVER_BUCKETS: i32 = 100;
-const EQUITY_BINS: usize = 50;
 
 // flop and turn map card strings such as "As4d8c9h2d" to their corresponding
 // abastract bin. Each string key is an archetypal hand, meaning that
@@ -33,26 +30,26 @@ const EQUITY_BINS: usize = 50;
 // about the order of the flop cards, so we don't need separate entries for
 // every permutation.
 pub struct Abstraction {
-    flop: HashMap<String, i32>,
-    turn: HashMap<String, i32>,
+    flop: HashMap<u64, i32>,
+    turn: HashMap<u64, i32>,
+    river: HashMap<u64, i32>,
 }
 
 impl Abstraction {
 
     pub fn new() -> Abstraction {
         Abstraction {
-            flop: load_flop_abstraction(),
-            turn: load_turn_abstraction()
+            flop: load_abstraction(FLOP_PATH, 5, FLOP_BUCKETS),
+            turn: load_abstraction(TURN_PATH, 6, TURN_BUCKETS),
+            river: load_abstraction(RIVER_PATH, 7, RIVER_BUCKETS)
         }
     }
 
     pub fn abstract_id(&self, cards: &[Card]) -> i32 {
-        match cards.len() {
-            2 => self.preflop_bin(&cards),
-            5 => self.flop_bin(&cards),
-            6 => self.turn_bin(&cards),
-            7 => self.river_bin(&cards),
-            _ => panic!("Bad number of cards"),
+        if cards.len() == 2 {
+            self.preflop_bin(&cards)
+        } else {
+            self.postflop_bin(&cards)
         }
     }
 
@@ -68,85 +65,56 @@ impl Abstraction {
         return bin as i32;
     }
 
-    fn flop_bin(&self, cards: &[Card]) -> i32 {
-        return 0;
-    }
+    // Lookup methods: Translate the card to its canonical version and return
+    // the ID stored in the corresponding abstraction lookup table
 
-    fn turn_bin(&self, cards: &[Card]) -> i32 {
-        return 0;
-    }
-
-    fn river_bin(&self, cards: &[Card]) -> i32 {
-        return 0;
+    fn postflop_bin(&self, cards: &[Card]) -> i32 {
+        let canonical = card_utils::canonical_hand(cards, true);
+        let hand_str = card_utils::cards2str(&canonical);
+        let hand = card_utils::str2hand(&hand_str);
+        match cards.len() {
+            5 => self.flop.get(&hand).unwrap().clone(),
+            6 => self.turn.get(&hand).unwrap().clone(),
+            7 => self.river.get(&hand).unwrap().clone(),
+            _ => panic!("Bad number of cards")
+        }
     }
 }
 
-fn load_flop_abstraction() -> HashMap<String, i32> {
-    match File::open(FLOP_PATH) {
-        Err(_error) => make_abstraction(5, FLOP_BUCKETS),
+fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
+    match File::open(path) {
+        Err(_error) => make_abstraction(n_cards, n_buckets),
         Ok(mut file) => {
             let mut buffer = String::new();
             file.read_to_string(&mut buffer).expect("Error reading file");
             serde_json::from_str(&buffer).unwrap()
         }
     }
+    // TODO here: translate str hands to u64s
 }
 
-fn load_turn_abstraction() -> HashMap<String, i32> {
-    match File::open(TURN_PATH) {
-        Err(_error) => make_abstraction(6, TURN_BUCKETS),
-        Ok(mut file) => {
-            let mut buffer = String::new();
-            file.read_to_string(&mut buffer).expect("Error reading file");
-            serde_json::from_str(&buffer).unwrap()
-        }
-    }
-}
-
-fn make_abstraction(n_cards: i32, n_buckets: i32) -> HashMap<String, i32> {
-    if n_cards != 5 && n_cards != 6 {
+fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
+    if n_cards != 5 && n_cards != 6 && n_cards != 7 {
         panic!("Must have 5 or 6 cards for flop or turn abstraction");
     }
-    let distributions = make_equity_distributions(n_cards);
-    cluster::cluster_ehs2(&distributions, n_buckets)
-}
-
-fn make_equity_distributions(n_cards: i32) -> HashMap<String, Vec<f64>> {
-    println!("[INFO] Constructing equity distributions...");
-    let mut distributions: HashMap<String, Vec<f64>> = HashMap::new();
-    let hands = card_utils::deal_canonical(n_cards as u32, true);
-    let bar = card_utils::pbar(hands.len() as u64);
-    for hand in hands {
-        let equity = equity_distribution(&hand);
-        let hand_str = card_utils::cards2str(&hand).to_string();
-        distributions.insert(hand_str, equity);
-        bar.inc(1);
+    // Cluster the hands based on E[HS^2] percentile bucketing.
+    let canonical_hands = match n_cards {
+        5 => card_utils::load_flop_canonical(),
+        6 => card_utils::load_turn_canonical(),
+        7 => card_utils::load_river_canonical(),
+        _ => panic!("Bad number of cards")
+    };
+    let mut hand_ehs2: Vec<(u64, f64)> = Vec::new();
+    for hand in canonical_hands {
+        hand_ehs2.push((hand, card_utils::expected_hs2(hand)));
     }
-    bar.finish();
-    return distributions;
-}
-
-fn equity_distribution(cards: &[Card]) -> Vec<f64> {
-    let cards = cards.to_vec();
-    let mut distribution: Vec<f64> = vec![0.0; EQUITY_BINS];
-    let board = (&cards[2..]).to_vec();
-
-    let mut deck = card_utils::deck();
-    // Remove the already-dealt cards from the deck
-    deck.retain(|c| !cards.contains(&c));
-
-    for rollout in deck.iter().combinations(7 - cards.len()) {
-        let rollout = rollout.to_vec();
-        let my_hand = [cards.clone(), deepcopy(&rollout)].concat();
-        let equity = card_utils::EQUITY_TABLE.lookup(&my_hand);
-        let mut equity_bin = (equity * EQUITY_BINS as f64) as usize;
-        if equity_bin == EQUITY_BINS {
-            equity_bin -= 1;
-        }
-        distribution[equity_bin] += 1.0;
+    hand_ehs2.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let mut clusters = HashMap::new();
+    for (idx, (hand, val)) in hand_ehs2.iter().enumerate() {
+        // Bucket the hand according to the percentile of its E[HS^2]
+        let bucket: i32 = ((n_buckets as f64) * (idx as f64) / (hand_ehs2.len() as f64)) as i32;
+        clusters.insert(hand.clone(), bucket);
     }
-    distribution = card_utils::normalize(&distribution);
-    return distribution;
+    clusters
+    // TODO: Serialize the abstraction
 }
-
-
