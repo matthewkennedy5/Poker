@@ -1,7 +1,4 @@
-use std::thread;
 use std::fmt;
-use std::time::Duration;
-use std::sync::mpsc;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
@@ -17,7 +14,6 @@ use crate::itertools::Itertools;
 use crate::rand::prelude::IteratorRandom;
 
 const HAND_TABLE_PATH: &str = "products/strengths.json";
-const EQUITY_TABLE_PATH: &str = "products/river_equities.json";
 const FLOP_CANONICAL_PATH: &str = "products/flop_canonical.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_canonical.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_canonical.txt";
@@ -152,7 +148,7 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
     bar.set_style(indicatif::ProgressStyle::default_bar()
         .template("[{elapsed_precise}/{eta_precise}] {wide_bar} {pos:>7}/{len:7} {msg}"));
     // make sure the drawing doesn't dominate computation for large n
-    bar.set_draw_delta(n / 100000);
+    // bar.set_draw_delta(n / 100000);
     bar
 }
 
@@ -255,7 +251,7 @@ pub fn is_canonical(cards: &[Card], streets: bool) -> bool {
 }
 
 fn sort_canonical(cards: &[Card], streets: bool) -> Vec<Card> {
-    let mut sorted = Vec::new();
+    let mut sorted;
     if streets && cards.len() > 2 {
         let mut preflop = (&cards[..2]).to_vec();
         let mut board = (&cards[2..]).to_vec();
@@ -318,7 +314,7 @@ pub fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
     canonical = sort_canonical(&canonical, streets);
 
     // TODO: Remove once I'm convinced it's working
-    if (!is_canonical(&canonical, streets)) {
+    if !is_canonical(&canonical, streets) {
         panic!("Not canonical: {}\nOriginal: {}", cards2str(&canonical), cards2str(&cards_copy));
     }
 
@@ -351,7 +347,7 @@ impl HandTable {
 
     fn load_hand_strengths() -> HashMap<Vec<Card>, i32> {
         let str_map: HashMap<String, i32> = match File::open(HAND_TABLE_PATH) {
-            Err(e) => panic!("Hand table not found"),
+            Err(_e) => panic!("Hand table not found"),
             Ok(mut file) => {
                 // Load up the hand table from the JSON
                 let mut buffer = String::new();
@@ -487,7 +483,13 @@ pub fn hand2str(hand: u64) -> String {
 // Converts the compact u64 hand representation to the old-fashioned vector of
 // Card instances.
 fn hand2cards(hand: u64) -> Vec<Card> {
-    unimplemented!();
+    let mut result = Vec::new();
+    for i in 0..len(hand) {
+        let suit = suit(card(hand, i)) as u8;
+        let rank = rank(card(hand, i)) as u8;
+        result.push(Card{suit: suit, rank: rank});
+    }
+    result
 }
 
 // TODO: Have 2 general functions for using serde. A reading function and writing function.
@@ -507,20 +509,19 @@ pub fn load_river_canonical() -> HashSet<u64> {
 fn load_canonical(n_cards: usize, path: &str) -> HashSet<u64> {
     let mut canonical = HashSet::new();
     match File::open(path) {
-        Ok(mut file) => {
-            let file = File::open(path).unwrap();
+        Ok(file) => {
             let reader = BufReader::new(file);
             for line in reader.lines() {
                 canonical.insert(str2hand(&line.unwrap()));
             }
         },
-        Err(e) => {
+        Err(_e) => {
             // Find the canonical hands and write them to disk.
             canonical = deal_canonical(n_cards);
             let mut buffer = File::create(path).unwrap();
             for hand in &canonical {
-                buffer.write(hand2str(hand.clone()).as_bytes());
-                buffer.write(b"\n");
+                buffer.write(hand2str(hand.clone()).as_bytes()).unwrap();
+                buffer.write(b"\n").unwrap();
             }
             println!("[INFO] Wrote canonical hands to {}.", path);
         }
@@ -584,7 +585,7 @@ fn river_equity(hand: &[Card]) -> f64 {
 
     let mut rng = &mut rand::thread_rng();
 
-    for opp_preflop in deck.iter().combinations(2) {//.choose_multiple(&mut rng, 10) {
+    for opp_preflop in deck.iter().combinations(2).choose_multiple(&mut rng, 10) {
 
         n_runs += 1;
 

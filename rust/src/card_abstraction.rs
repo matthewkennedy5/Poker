@@ -7,12 +7,9 @@
 
 use crate::card_utils;
 use crate::card_utils::Card;
-use crate::card_utils::deepcopy;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::io::Write;
-use itertools::Itertools;
 use rand::thread_rng;
 use rand::prelude::SliceRandom;
 
@@ -104,13 +101,17 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
         7 => card_utils::load_river_canonical(),
         _ => panic!("Bad number of cards")
     };
+
+    let bar = card_utils::pbar(canonical_hands.len() as u64);
     let mut hand_ehs2: Vec<(u64, f64)> = Vec::new();
     for hand in canonical_hands {
         hand_ehs2.push((hand, card_utils::expected_hs2(hand)));
+        bar.inc(1);
     }
+    bar.finish();
     hand_ehs2.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let mut clusters = HashMap::new();
-    for (idx, (hand, val)) in hand_ehs2.iter().enumerate() {
+    for (idx, (hand, _ehs2)) in hand_ehs2.iter().enumerate() {
         // Bucket the hand according to the percentile of its E[HS^2]
         let bucket: i32 = ((n_buckets as f64) * (idx as f64) / (hand_ehs2.len() as f64)) as i32;
         clusters.insert(hand.clone(), bucket);
