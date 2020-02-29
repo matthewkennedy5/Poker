@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use rand::thread_rng;
-use rand::prelude::SliceRandom;
-use ndarray::Array;
 use crate::card_utils;
+use ndarray::Array;
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
+use std::collections::HashMap;
 
 // Cluster hands based on the second moment of the equity distribution, aka E[HS^2].
 // This approach is much faster but becomes inferior for larger abstractions.

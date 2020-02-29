@@ -1,22 +1,28 @@
+use crate::itertools::Itertools;
+use crate::rand::prelude::IteratorRandom;
+use bio::stats::combinatorics::combinations;
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
+use rayon::prelude::*;
+use serde::Deserialize;
+use serde::Serialize;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
-use std::io::{BufReader, BufRead};
-use std::collections::{HashMap, HashSet};
-use rand::thread_rng;
-use rand::prelude::SliceRandom;
-use serde::Serialize;
-use serde::Deserialize;
-use rayon::prelude::*;
-use bio::stats::combinatorics::combinations;
-use crate::itertools::Itertools;
-use crate::rand::prelude::IteratorRandom;
+use std::io::{BufRead, BufReader};
 
 const HAND_TABLE_PATH: &str = "products/strengths.json";
 const FLOP_CANONICAL_PATH: &str = "products/flop_canonical.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_canonical.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_canonical.txt";
+
+// To compute the E[HS^2], researchers in the past have exhaustively computed
+// all possible rollouts over all possible opponent hands. But that takes way
+// too long and is overkill for our purposes, so we can sample rollouts and
+// opponent hands to arrive at a reasonable approximation of the true E[HS^2].
+const EQUITY_SAMPLES: usize = 10;
 
 lazy_static! {
     pub static ref HAND_TABLE: HandTable = HandTable::new();
@@ -34,7 +40,6 @@ pub struct Card {
 }
 
 impl Card {
-
     pub fn new(card: &str) -> Card {
         let rank = match &card[0..1] {
             "2" => 2,
@@ -50,19 +55,21 @@ impl Card {
             "Q" => 12,
             "K" => 13,
             "A" => 14,
-            _ => panic!("bad card string")
+            _ => panic!("bad card string"),
         };
         let suit = match &card[1..2] {
             "c" => CLUBS,
             "d" => DIAMONDS,
             "h" => HEARTS,
             "s" => SPADES,
-            _ => panic!("bad card string")
+            _ => panic!("bad card string"),
         };
-        return Card { rank: rank, suit: suit as u8};
+        return Card {
+            rank: rank,
+            suit: suit as u8,
+        };
     }
 }
-
 
 impl PartialEq<Card> for Card {
     fn eq(&self, other: &Self) -> bool {
@@ -94,14 +101,14 @@ impl fmt::Display for Card {
             12 => "Q",
             13 => "K",
             14 => "A",
-            _ => panic!("Bad rank value")
+            _ => panic!("Bad rank value"),
         };
         let suit = match self.suit as i32 {
             CLUBS => "c",
             DIAMONDS => "d",
             HEARTS => "h",
             SPADES => "s",
-            _ => panic!("Bad suit value")
+            _ => panic!("Bad suit value"),
         };
         write!(f, "{}{}", rank, suit)
     }
@@ -109,10 +116,13 @@ impl fmt::Display for Card {
 
 pub fn deck() -> Vec<Card> {
     let mut deck = Vec::new();
-    let ranks = std::ops::Range { start: 2, end: 15};
+    let ranks = std::ops::Range { start: 2, end: 15 };
     for rank in ranks {
         for suit in 0..4 {
-            deck.push(Card { rank: rank, suit: suit});
+            deck.push(Card {
+                rank: rank,
+                suit: suit,
+            });
         }
     }
     return deck;
@@ -145,13 +155,14 @@ pub fn strvec2cards(strvec: &[&str]) -> Vec<Card> {
 
 pub fn pbar(n: u64) -> indicatif::ProgressBar {
     let bar = indicatif::ProgressBar::new(n);
-    bar.set_style(indicatif::ProgressStyle::default_bar()
-        .template("[{elapsed_precise}/{eta_precise}] {wide_bar} {pos:>7}/{len:7} {msg}"));
+    bar.set_style(
+        indicatif::ProgressStyle::default_bar()
+            .template("[{elapsed_precise}/{eta_precise}] {wide_bar} {pos:>7}/{len:7} {msg}"),
+    );
     // make sure the drawing doesn't dominate computation for large n
     // bar.set_draw_delta(n / 100000);
     bar
 }
-
 
 // canonical / archetypal hand methods
 // thanks to stackoverflow user Daniel Slutzbach: https://stackoverflow.com/a/3831682
@@ -159,7 +170,7 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
 // returns true if the given list of ints contains duplicate elements.
 fn contains_duplicates(list: &[u8]) -> bool {
     for i in 0..list.len() {
-        for j in i+1..list.len() {
+        for j in i + 1..list.len() {
             if &list[i] == &list[j] {
                 return true;
             }
@@ -233,10 +244,9 @@ pub fn is_canonical(cards: &[Card], streets: bool) -> bool {
             // rule 4
             return false;
         }
-
     }
     for i in 1..4 {
-        let suit1 = &by_suits[i-1];
+        let suit1 = &by_suits[i - 1];
         let suit2 = &by_suits[i];
         if suit1.len() < suit2.len() {
             // rule 2
@@ -296,40 +306,43 @@ pub fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
             // to break ties.
             if by_suits[old_suit].len() > by_suits[max].len() {
                 max = old_suit;
-            } else if by_suits[old_suit].len() == by_suits[max].len() && by_suits[old_suit] < by_suits[max] {
+            } else if by_suits[old_suit].len() == by_suits[max].len()
+                && by_suits[old_suit] < by_suits[max]
+            {
                 max = old_suit;
             }
         }
         suit_mapping[max] = new_suit;
         // Wipe the current suit in by_suits so it doesn't get used twice
         unused_suits.retain(|s| s != &max);
-        // for rank in by_suits[min].clone() {
-        //     canonical.push(Card {rank: rank, suit: new_suit})
-        // }
     }
     let mut canonical = Vec::new();
     for card in cards {
-        canonical.push(Card {rank: card.rank, suit: suit_mapping[card.suit as usize]});
+        canonical.push(Card {
+            rank: card.rank,
+            suit: suit_mapping[card.suit as usize],
+        });
     }
     canonical = sort_canonical(&canonical, streets);
 
     // TODO: Remove once I'm convinced it's working
-    if !is_canonical(&canonical, streets) {
-        panic!("Not canonical: {}\nOriginal: {}", cards2str(&canonical), cards2str(&cards_copy));
-    }
+    // if !is_canonical(&canonical, streets) {
+    //     panic!("Not canonical: {}\nOriginal: {}", cards2str(&canonical), cards2str(&cards_copy));
+    // }
 
     canonical
 }
 
 // For fast poker hand comparison, look up relative strength values in a table
 pub struct HandTable {
-    strengths: HashMap<Vec<Card>, i32>
+    strengths: HashMap<Vec<Card>, i32>,
 }
 
 impl HandTable {
-
     pub fn new() -> HandTable {
-        HandTable{ strengths: HandTable::load_hand_strengths() }
+        HandTable {
+            strengths: HandTable::load_hand_strengths(),
+        }
     }
 
     pub fn hand_strength(&self, hand: &[Card]) -> i32 {
@@ -360,7 +373,13 @@ impl HandTable {
         // Vec<Card> keys instead of String
         let mut vec_map: HashMap<Vec<Card>, i32> = HashMap::new();
         for (hand, strength) in str_map {
-            let cards = vec![&hand[0..2], &hand[2..4], &hand[4..6], &hand[6..8], &hand[8..10]];
+            let cards = vec![
+                &hand[0..2],
+                &hand[2..4],
+                &hand[4..6],
+                &hand[6..8],
+                &hand[8..10],
+            ];
             let cards = strvec2cards(&cards);
             vec_map.insert(cards, strength);
         }
@@ -381,7 +400,6 @@ pub fn normalize(vector: &Vec<f64>) -> Vec<f64> {
     noramlized
 }
 
-
 // u64 hand representation
 // Each card is a single u8 byte, where
 //
@@ -395,7 +413,7 @@ pub fn normalize(vector: &Vec<f64>) -> Vec<f64> {
 // small memory footprint without needing to use Rust's lifetime parameters.
 
 pub fn card(hand: u64, card_index: i32) -> i32 {
-    ((hand & 0xFF << 8*card_index) >> 8*card_index) as i32
+    ((hand & 0xFF << 8 * card_index) >> 8 * card_index) as i32
 }
 
 pub fn suit(card: i32) -> i32 {
@@ -419,7 +437,7 @@ pub fn str2hand(hand_str: &str) -> u64 {
     let mut result: u64 = 0;
     let hand_str = hand_str.to_string();
     for i in (0..hand_str.len()).step_by(2) {
-        let rank = match &hand_str[i..i+1] {
+        let rank = match &hand_str[i..i + 1] {
             "2" => 2,
             "3" => 3,
             "4" => 4,
@@ -433,17 +451,17 @@ pub fn str2hand(hand_str: &str) -> u64 {
             "Q" => 12,
             "K" => 13,
             "A" => 14,
-            _ => panic!("bad card string")
+            _ => panic!("bad card string"),
         };
-        let suit = match &hand_str[i+1..i+2] {
+        let suit = match &hand_str[i + 1..i + 2] {
             "c" => CLUBS,
             "d" => DIAMONDS,
             "h" => HEARTS,
             "s" => SPADES,
-            _ => panic!("bad card string")
+            _ => panic!("bad card string"),
         };
         let card = (15 * suit + rank) as u64;
-        result += card << 4*i
+        result += card << 4 * i
     }
     result
 }
@@ -465,14 +483,14 @@ pub fn hand2str(hand: u64) -> String {
             12 => "Q",
             13 => "K",
             14 => "A",
-            _ => panic!("Bad rank value")
+            _ => panic!("Bad rank value"),
         };
         let suit = match suit(card(hand, card_index)) {
             CLUBS => "c",
             DIAMONDS => "d",
             HEARTS => "h",
             SPADES => "s",
-            _ => panic!("Bad suit value")
+            _ => panic!("Bad suit value"),
         };
         hand_str.push_str(rank);
         hand_str.push_str(suit);
@@ -487,7 +505,10 @@ fn hand2cards(hand: u64) -> Vec<Card> {
     for i in 0..len(hand) {
         let suit = suit(card(hand, i)) as u8;
         let rank = rank(card(hand, i)) as u8;
-        result.push(Card{suit: suit, rank: rank});
+        result.push(Card {
+            suit: suit,
+            rank: rank,
+        });
     }
     result
 }
@@ -514,7 +535,7 @@ fn load_canonical(n_cards: usize, path: &str) -> HashSet<u64> {
             for line in reader.lines() {
                 canonical.insert(str2hand(&line.unwrap()));
             }
-        },
+        }
         Err(_e) => {
             // Find the canonical hands and write them to disk.
             canonical = deal_canonical(n_cards);
@@ -534,7 +555,7 @@ fn deal_canonical(n_cards: usize) -> HashSet<u64> {
         5 => println!("[INFO] Finding all canonical flop hands."),
         6 => println!("[INFO] Finding all canonical turn hands."),
         7 => println!("[INFO] Finding all canonical river hands."),
-        _ => panic!("Bad number of cards")
+        _ => panic!("Bad number of cards"),
     };
 
     let mut canonical: HashSet<u64> = HashSet::new();
@@ -564,7 +585,18 @@ pub fn expected_hs2(hand: u64) -> f64 {
     let mut count = 0.0;
     let mut deck = deck();
     deck.retain(|c| !hand.contains(&c));
-    for rollout in deck.iter().combinations(7 - hand.len()) {
+    let mut rng = &mut rand::thread_rng();
+
+    let rollouts = deck
+        .iter()
+        .combinations(7 - hand.len())
+        .choose_multiple(&mut rng, EQUITY_SAMPLES);
+
+    for rollout in deck
+        .iter()
+        .combinations(7 - hand.len())
+        .choose_multiple(&mut rng, 10)
+    {
         let full_hand = [hand.clone(), deepcopy(&rollout)].concat();
         let equity = river_equity(&full_hand);
         sum += equity.powi(2);
@@ -586,7 +618,6 @@ fn river_equity(hand: &[Card]) -> f64 {
     let mut rng = &mut rand::thread_rng();
 
     for opp_preflop in deck.iter().combinations(2).choose_multiple(&mut rng, 10) {
-
         n_runs += 1;
 
         // Create the poker hands by concatenating cards

@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::Write;
-use std::fmt;
-use rand::thread_rng;
-use rand::prelude::SliceRandom;
 use crate::card_utils;
 use crate::card_utils::Card;
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
+use std::collections::HashMap;
+use std::fmt;
+use std::fs::File;
+use std::io::Write;
 
 // TODO: Use a parameter file
 const BLUEPRINT_STRATEGY_PATH: &str = "blueprint.json";
@@ -14,7 +14,7 @@ const BLUEPRINT_STRATEGY_PATH: &str = "blueprint.json";
 enum ActionType {
     fold,
     call,
-    bet
+    bet,
 }
 
 // TODO: Chance sample opponent actions or all possible opponent actions?
@@ -50,14 +50,22 @@ pub fn train(iters: i32) {
 // Format example: "312|bet 500, call 500; fold"
 fn str2infoset(str: String) -> InfoSet {
     // TODO
-    InfoSet { history: ActionHistory::new(), card_bucket: 0}
+    InfoSet {
+        history: ActionHistory::new(),
+        card_bucket: 0,
+    }
 }
 
 // START HERE: Implement the helper functions to get this thing churning out strategies!
 // Incorporate the abstractions.
 
-fn iterate(player: usize, deck: &[Card], history: ActionHistory,
-           weights: [f64; 2], nodes: &mut HashMap<InfoSet, Node>) -> f64 {
+fn iterate(
+    player: usize,
+    deck: &[Card],
+    history: ActionHistory,
+    weights: [f64; 2],
+    nodes: &mut HashMap<InfoSet, Node>,
+) -> f64 {
     if history.hand_over() {
         return terminal_utility(&deck, history, player);
     }
@@ -97,7 +105,7 @@ fn iterate(player: usize, deck: &[Card], history: ActionHistory,
         let weights = match player {
             1 => [p0 * prob, p1],
             2 => [p0, p1 * prob],
-            _ => panic!("Bad player value")
+            _ => panic!("Bad player value"),
         };
         let utility = iterate(player, &deck, next_history, weights, nodes);
         utilities.insert(action, utility);
@@ -116,7 +124,10 @@ fn iterate(player: usize, deck: &[Card], history: ActionHistory,
 }
 
 fn opponent_action(node: &Node) -> Action {
-    Action { action: ActionType::fold, amount: 0}
+    Action {
+        action: ActionType::fold,
+        amount: 0,
+    }
 }
 
 fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64 {
@@ -127,7 +138,7 @@ fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 struct Action {
     action: ActionType,
-    amount: i32
+    amount: i32,
 }
 
 impl fmt::Display for Action {
@@ -135,7 +146,7 @@ impl fmt::Display for Action {
         let a = match &self.action {
             ActionType::fold => "fold",
             ActionType::call => "call",
-            ActionType::bet => "bet"
+            ActionType::bet => "bet",
         };
         write!(f, "{} {}", a, self.amount)
     }
@@ -146,17 +157,16 @@ struct ActionHistory {
     preflop: Vec<Action>,
     flop: Vec<Action>,
     turn: Vec<Action>,
-    river: Vec<Action>
+    river: Vec<Action>,
 }
 
 impl ActionHistory {
-
     pub fn new() -> ActionHistory {
         ActionHistory {
             preflop: Vec::new(),
             flop: Vec::new(),
             turn: Vec::new(),
-            river: Vec::new()
+            river: Vec::new(),
         }
     }
 
@@ -192,16 +202,17 @@ impl fmt::Display for ActionHistory {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 struct InfoSet {
     history: ActionHistory,
-    card_bucket: i32
+    card_bucket: i32,
 }
 
 impl InfoSet {
-
     pub fn from(deck: &[Card], history: &ActionHistory) -> InfoSet {
         // TODO
-        InfoSet {history: ActionHistory::new(), card_bucket: 0}
+        InfoSet {
+            history: ActionHistory::new(),
+            card_bucket: 0,
+        }
     }
-
 }
 
 impl fmt::Display for InfoSet {
@@ -210,22 +221,20 @@ impl fmt::Display for InfoSet {
     }
 }
 
-
 #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 struct Node {
     // TODO: Does a Node really have to store its corresponding InfoSet?
     infoset: InfoSet,
     regrets: HashMap<Action, f64>,
-    t: i32
+    t: i32,
 }
 
 impl Node {
-
     pub fn new(infoset: &InfoSet) -> Node {
         Node {
             infoset: infoset.clone(),
             regrets: HashMap::new(),
-            t: 0
+            t: 0,
         }
     }
 

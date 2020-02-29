@@ -1,4 +1,3 @@
-
 // This is the main interface for card abstractions. You can think of this as a
 // black box that maps a poker hand to an ID number corresponding to the
 // hand's abstraction bin. The idea is that similar hands will have the same
@@ -7,11 +6,11 @@
 
 use crate::card_utils;
 use crate::card_utils::Card;
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use rand::thread_rng;
-use rand::prelude::SliceRandom;
 
 const FLOP_PATH: &str = "products/flop_abstraction.json";
 const TURN_PATH: &str = "products/turn_abstraction.json";
@@ -33,12 +32,11 @@ pub struct Abstraction {
 }
 
 impl Abstraction {
-
     pub fn new() -> Abstraction {
         Abstraction {
             flop: load_abstraction(FLOP_PATH, 5, FLOP_BUCKETS),
             turn: load_abstraction(TURN_PATH, 6, TURN_BUCKETS),
-            river: load_abstraction(RIVER_PATH, 7, RIVER_BUCKETS)
+            river: load_abstraction(RIVER_PATH, 7, RIVER_BUCKETS),
         }
     }
 
@@ -73,7 +71,7 @@ impl Abstraction {
             5 => self.flop.get(&hand).unwrap().clone(),
             6 => self.turn.get(&hand).unwrap().clone(),
             7 => self.river.get(&hand).unwrap().clone(),
-            _ => panic!("Bad number of cards")
+            _ => panic!("Bad number of cards"),
         }
     }
 }
@@ -83,7 +81,8 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, 
         Err(_error) => make_abstraction(n_cards, n_buckets),
         Ok(mut file) => {
             let mut buffer = String::new();
-            file.read_to_string(&mut buffer).expect("Error reading file");
+            file.read_to_string(&mut buffer)
+                .expect("Error reading file");
             serde_json::from_str(&buffer).unwrap()
         }
     }
@@ -91,15 +90,18 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, 
 }
 
 fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
-    if n_cards != 5 && n_cards != 6 && n_cards != 7 {
-        panic!("Must have 5 or 6 cards for flop or turn abstraction");
-    }
+    match n_cards {
+        5 => println!("[INFO] Preparing the flop abstraction."),
+        6 => println!("[INFO] Preparing the turn abstraction."),
+        7 => println!("[INFO] Preparing the river abstraction."),
+        _ => panic!("Bad number of cards"),
+    };
     // Cluster the hands based on E[HS^2] percentile bucketing.
     let canonical_hands = match n_cards {
         5 => card_utils::load_flop_canonical(),
         6 => card_utils::load_turn_canonical(),
         7 => card_utils::load_river_canonical(),
-        _ => panic!("Bad number of cards")
+        _ => panic!("Bad number of cards"),
     };
 
     let bar = card_utils::pbar(canonical_hands.len() as u64);
