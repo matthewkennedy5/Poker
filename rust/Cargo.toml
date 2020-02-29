@@ -22,4 +22,4 @@ bio = "*"
 
 # For profiling
 [profile.release]
-debug = 1
+debug = 0

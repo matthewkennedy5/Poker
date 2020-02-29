@@ -8,17 +8,27 @@ use crate::card_utils;
 use crate::card_utils::Card;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
+use rayon::iter::IntoParallelRefIterator;
+use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+use std::io::Write;
+use std::io::{BufRead, BufReader};
 
-const FLOP_PATH: &str = "products/flop_abstraction.json";
-const TURN_PATH: &str = "products/turn_abstraction.json";
-const RIVER_PATH: &str = "products/river_abstraction.json";
+const FLOP_PATH: &str = "products/flop_abstraction.txt";
+const TURN_PATH: &str = "products/turn_abstraction.txt";
+const RIVER_PATH: &str = "products/river_abstraction.txt";
 
-const FLOP_BUCKETS: i32 = 100;
-const TURN_BUCKETS: i32 = 100;
-const RIVER_BUCKETS: i32 = 100;
+const FLOP_BUCKETS: i32 = 10;
+const TURN_BUCKETS: i32 = 10;
+const RIVER_BUCKETS: i32 = 10;
+
+// To compute the E[HS^2], researchers in the past have exhaustively computed
+// all possible rollouts over all possible opponent hands. But that takes way
+// too long and is overkill for our purposes, so we can sample rollouts and
+// opponent hands to arrive at a reasonable approximation of the true E[HS^2].
+const EQUITY_SAMPLES: usize = 10;
 
 // flop and turn map card strings such as "As4d8c9h2d" to their corresponding
 // abastract bin. Each string key is an archetypal hand, meaning that
@@ -79,14 +89,8 @@ impl Abstraction {
 fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     match File::open(path) {
         Err(_error) => make_abstraction(n_cards, n_buckets),
-        Ok(mut file) => {
-            let mut buffer = String::new();
-            file.read_to_string(&mut buffer)
-                .expect("Error reading file");
-            serde_json::from_str(&buffer).unwrap()
-        }
+        Ok(file) => read_abstraction(file),
     }
-    // TODO here: translate str hands to u64s
 }
 
 fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
@@ -105,11 +109,16 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     };
 
     let bar = card_utils::pbar(canonical_hands.len() as u64);
-    let mut hand_ehs2: Vec<(u64, f64)> = Vec::new();
-    for hand in canonical_hands {
-        hand_ehs2.push((hand, card_utils::expected_hs2(hand)));
-        bar.inc(1);
-    }
+    // Calculate all E[HS^2] values in parallel
+    let mut hand_ehs2: Vec<(u64, f64)> = canonical_hands
+        .par_iter()
+        .map(|h| {
+            bar.inc(1);
+            let ehs2 = card_utils::expected_hs2(h.clone(), EQUITY_SAMPLES);
+            (h.clone(), ehs2)
+        })
+        .collect();
+
     bar.finish();
     hand_ehs2.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let mut clusters = HashMap::new();
@@ -118,6 +127,36 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
         let bucket: i32 = ((n_buckets as f64) * (idx as f64) / (hand_ehs2.len() as f64)) as i32;
         clusters.insert(hand.clone(), bucket);
     }
+    write_abstraction(&clusters);
     clusters
-    // TODO: Serialize the abstraction
 }
+
+fn write_abstraction(clusters: &HashMap<u64, i32>) {
+    let path = match card_utils::len(clusters.iter().next().unwrap().0.clone()) {
+        5 => FLOP_PATH,
+        6 => TURN_PATH,
+        7 => RIVER_PATH,
+        _ => panic!("Bad hand length"),
+    };
+    let mut buffer = File::create(path).unwrap();
+    for (hand, bucket) in clusters {
+        let to_write = format!("{} {}\n", card_utils::hand2str(hand.clone()), bucket);
+        buffer.write(to_write.as_bytes()).unwrap();
+    }
+}
+
+fn read_abstraction(file: File) -> HashMap<u64, i32> {
+    let mut abstraction = HashMap::new();
+    let reader = BufReader::new(file);
+    for line in reader.lines() {
+        let line_str = line.unwrap();
+        let mut data = line_str.split_whitespace();
+        let hand = data.next().unwrap();
+        let bucket = data.next().unwrap();
+        let hand = card_utils::str2hand(hand);
+        let bucket = bucket.to_string().parse().unwrap();
+        abstraction.insert(hand, bucket);
+    }
+    abstraction
+}
+

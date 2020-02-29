@@ -18,12 +18,6 @@ const FLOP_CANONICAL_PATH: &str = "products/flop_canonical.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_canonical.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_canonical.txt";
 
-// To compute the E[HS^2], researchers in the past have exhaustively computed
-// all possible rollouts over all possible opponent hands. But that takes way
-// too long and is overkill for our purposes, so we can sample rollouts and
-// opponent hands to arrive at a reasonable approximation of the true E[HS^2].
-const EQUITY_SAMPLES: usize = 10;
-
 lazy_static! {
     pub static ref HAND_TABLE: HandTable = HandTable::new();
 }
@@ -160,7 +154,7 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
             .template("[{elapsed_precise}/{eta_precise}] {wide_bar} {pos:>7}/{len:7} {msg}"),
     );
     // make sure the drawing doesn't dominate computation for large n
-    // bar.set_draw_delta(n / 100000);
+    bar.set_draw_delta(n / 100_000);
     bar
 }
 
@@ -524,7 +518,10 @@ pub fn load_turn_canonical() -> HashSet<u64> {
 }
 
 pub fn load_river_canonical() -> HashSet<u64> {
-    load_canonical(7, RIVER_CANONICAL_PATH)
+    println!("[INFO] Loading canonical river hands.");
+    let canonical = load_canonical(7, RIVER_CANONICAL_PATH);
+    println!("[INFO] Done.");
+    canonical
 }
 
 fn load_canonical(n_cards: usize, path: &str) -> HashSet<u64> {
@@ -577,7 +574,7 @@ fn deal_canonical(n_cards: usize) -> HashSet<u64> {
 }
 
 // Returns the second moment of the hand's equity distribution.
-pub fn expected_hs2(hand: u64) -> f64 {
+pub fn expected_hs2(hand: u64, n_samples: usize) -> f64 {
     // For river hands, just return HS^2 since there is no distribution
     // Flop and turn, deal rollouts for the EH^s value.
     let hand = hand2cards(hand);
@@ -587,18 +584,17 @@ pub fn expected_hs2(hand: u64) -> f64 {
     deck.retain(|c| !hand.contains(&c));
     let mut rng = &mut rand::thread_rng();
 
-    let rollouts = deck
-        .iter()
-        .combinations(7 - hand.len())
-        .choose_multiple(&mut rng, EQUITY_SAMPLES);
+    if hand.len() == 7 {
+        return river_equity(&hand, n_samples);
+    }
 
     for rollout in deck
         .iter()
         .combinations(7 - hand.len())
-        .choose_multiple(&mut rng, 10)
+        .choose_multiple(&mut rng, n_samples)
     {
         let full_hand = [hand.clone(), deepcopy(&rollout)].concat();
-        let equity = river_equity(&full_hand);
+        let equity = river_equity(&full_hand, n_samples);
         sum += equity.powi(2);
         count += 1.0;
     }
@@ -606,7 +602,7 @@ pub fn expected_hs2(hand: u64) -> f64 {
     average
 }
 
-fn river_equity(hand: &[Card]) -> f64 {
+fn river_equity(hand: &[Card], n_samples: usize) -> f64 {
     let mut deck = deck();
     // Remove the already-dealt cards from the deck
     deck.retain(|c| !hand.contains(&c));
@@ -617,7 +613,7 @@ fn river_equity(hand: &[Card]) -> f64 {
 
     let mut rng = &mut rand::thread_rng();
 
-    for opp_preflop in deck.iter().combinations(2).choose_multiple(&mut rng, 10) {
+    for opp_preflop in deck.iter().combinations(2).choose_multiple(&mut rng, n_samples) {
         n_runs += 1;
 
         // Create the poker hands by concatenating cards
