@@ -41,7 +41,7 @@ fn main() {
     // println!("{}", vector.len());
 
 
-    let a = card_abstraction::Abstraction::new();
+    let mut a = card_abstraction::Abstraction::new();
     let bin = a.abstract_id(&cards);
     println!("Bin: {}", bin);
 }

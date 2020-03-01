@@ -499,8 +499,12 @@ pub fn hand2cards(hand: u64) -> Vec<Card> {
 // Converts the old fashioned Vec<Card> representation into the compact u64
 // representation.
 pub fn cards2hand(cards: &[Card]) -> u64 {
-    // START HERE: Implement this directly using bit operations. Should get at least a 2x speedup
-    str2hand(&cards2str(&cards))
+    let mut result = 0;
+    for (i, card) in cards.iter().enumerate() {
+        let card = (15 * card.suit + card.rank) as u64;
+        result += card << 8 * i;
+    }
+    result
 }
 
 pub fn load_flop_canonical() -> HashSet<u64> {

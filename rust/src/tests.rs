@@ -1,4 +1,3 @@
-use crate::card_utils::strvec2cards;
 use crate::card_utils::*;
 
 #[test]
@@ -14,11 +13,19 @@ fn uint_hands() {
     assert_eq!(rank(card(hand, 6)), 8);
     assert_eq!(len(hand), 7);
     assert_eq!(hand2str(str2hand("9d8c7c6s5hQh")), "9d8c7c6s5hQh");
+
+    let cards = vec![Card::new("8d"),
+                     Card::new("7c"),
+                     Card::new("2d"),
+                     Card::new("9c"),
+                     Card::new("Qd"),
+                     Card::new("Ah")];
+    assert_eq!(hand2cards(cards2hand(&cards)), cards);
 }
 
 #[test]
 fn hand_comparisons() {
-    let table = card_utils::HandTable::new();
+    let table = HandTable::new();
 
     // define the hands we'll be using
     let royal_flush = vec!["jd", "as", "js", "ks", "qs", "ts", "2c"];
