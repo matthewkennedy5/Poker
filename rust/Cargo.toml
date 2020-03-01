@@ -19,6 +19,7 @@ rayon = "*"
 emd = "*"
 ndarray = "*"
 bio = "*"
+thincollections = "*"
 
 # For profiling
 [profile.release]

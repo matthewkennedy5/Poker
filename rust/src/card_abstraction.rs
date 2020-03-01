@@ -5,7 +5,7 @@
 // the number of possibilities in the game.
 
 use crate::card_utils;
-use crate::card_utils::Card;
+use crate::card_utils::{Card, HandData};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use rayon::iter::IntoParallelRefIterator;
@@ -28,7 +28,7 @@ const RIVER_BUCKETS: i32 = 10;
 // all possible rollouts over all possible opponent hands. But that takes way
 // too long and is overkill for our purposes, so we can sample rollouts and
 // opponent hands to arrive at a reasonable approximation of the true E[HS^2].
-const EQUITY_SAMPLES: usize = 10;
+const EQUITY_SAMPLES: usize = 1;
 
 // flop and turn map card strings such as "As4d8c9h2d" to their corresponding
 // abastract bin. Each string key is an archetypal hand, meaning that
@@ -36,9 +36,9 @@ const EQUITY_SAMPLES: usize = 10;
 // about the order of the flop cards, so we don't need separate entries for
 // every permutation.
 pub struct Abstraction {
-    flop: HashMap<u64, i32>,
-    turn: HashMap<u64, i32>,
-    river: HashMap<u64, i32>,
+    flop: HandData,
+    turn: HandData,
+    river: HandData,
 }
 
 impl Abstraction {
@@ -78,22 +78,22 @@ impl Abstraction {
         let hand_str = card_utils::cards2str(&canonical);
         let hand = card_utils::str2hand(&hand_str);
         match cards.len() {
-            5 => self.flop.get(&hand).unwrap().clone(),
-            6 => self.turn.get(&hand).unwrap().clone(),
-            7 => self.river.get(&hand).unwrap().clone(),
+            5 => self.flop.get(&hand).clone(),
+            6 => self.turn.get(&hand).clone(),
+            7 => self.river.get(&hand).clone(),
             _ => panic!("Bad number of cards"),
         }
     }
 }
 
-fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
+fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HandData {
     match File::open(path) {
         Err(_error) => make_abstraction(n_cards, n_buckets),
-        Ok(file) => read_abstraction(file),
+        Ok(file) => HandData::read_serialized(file),
     }
 }
 
-fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
+fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
     match n_cards {
         5 => println!("[INFO] Preparing the flop abstraction."),
         6 => println!("[INFO] Preparing the turn abstraction."),
@@ -111,7 +111,7 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     let bar = card_utils::pbar(canonical_hands.len() as u64);
     // Calculate all E[HS^2] values in parallel
     let mut hand_ehs2: Vec<(u64, f64)> = canonical_hands
-        .par_iter()
+        .iter()
         .map(|h| {
             bar.inc(1);
             let ehs2 = card_utils::expected_hs2(h.clone(), EQUITY_SAMPLES);
@@ -121,42 +121,19 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
 
     bar.finish();
     hand_ehs2.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let mut clusters = HashMap::new();
+    let mut clusters = HandData::new();
     for (idx, (hand, _ehs2)) in hand_ehs2.iter().enumerate() {
         // Bucket the hand according to the percentile of its E[HS^2]
         let bucket: i32 = ((n_buckets as f64) * (idx as f64) / (hand_ehs2.len() as f64)) as i32;
-        clusters.insert(hand.clone(), bucket);
+        // TODO: Write to file here instead of all at once at the end.
+        clusters.insert(hand, bucket);
     }
-    write_abstraction(&clusters);
-    clusters
-}
-
-fn write_abstraction(clusters: &HashMap<u64, i32>) {
-    let path = match card_utils::len(clusters.iter().next().unwrap().0.clone()) {
+    let path = match n_cards {
         5 => FLOP_PATH,
         6 => TURN_PATH,
         7 => RIVER_PATH,
         _ => panic!("Bad hand length"),
     };
-    let mut buffer = File::create(path).unwrap();
-    for (hand, bucket) in clusters {
-        let to_write = format!("{} {}\n", card_utils::hand2str(hand.clone()), bucket);
-        buffer.write(to_write.as_bytes()).unwrap();
-    }
+    clusters.serialize(path);
+    clusters
 }
-
-fn read_abstraction(file: File) -> HashMap<u64, i32> {
-    let mut abstraction = HashMap::new();
-    let reader = BufReader::new(file);
-    for line in reader.lines() {
-        let line_str = line.unwrap();
-        let mut data = line_str.split_whitespace();
-        let hand = data.next().unwrap();
-        let bucket = data.next().unwrap();
-        let hand = card_utils::str2hand(hand);
-        let bucket = bucket.to_string().parse().unwrap();
-        abstraction.insert(hand, bucket);
-    }
-    abstraction
-}
-

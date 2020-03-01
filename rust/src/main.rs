@@ -10,13 +10,18 @@ extern crate lazy_static;
 extern crate bio;
 extern crate emd;
 extern crate rayon;
+extern crate thincollections;
 
 mod card_abstraction;
 mod card_utils;
 // mod trainer;
 mod tests;
 
-use card_utils::Card;
+use card_utils::*;
+use std::fs::File;
+use std::io::Read;
+use std::io::Write;
+use std::collections::HashMap;
 
 fn main() {
     let cards = vec![
@@ -26,6 +31,15 @@ fn main() {
         Card::new("3c"),
         Card::new("3d"),
     ];
+
+    // let mut vector: Vec<(u64, i32)> = Vec::new();
+    // for i in 0..130_000_000 {
+    //     vector.push((i, (i as i32) / 2));
+    // }
+    // let vector2 = vector.clone();
+    // let vector3 = vector.clone();
+    // println!("{}", vector.len());
+
 
     let a = card_abstraction::Abstraction::new();
     let bin = a.abstract_id(&cards);

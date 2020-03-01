@@ -13,7 +13,7 @@ use std::io::Read;
 use std::io::Write;
 use std::io::{BufRead, BufReader};
 
-const HAND_TABLE_PATH: &str = "products/strengths.json";
+const HAND_TABLE_PATH: &str = "products/strengths7.txt";
 const FLOP_CANONICAL_PATH: &str = "products/flop_canonical.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_canonical.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_canonical.txt";
@@ -329,7 +329,7 @@ pub fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
 
 // For fast poker hand comparison, look up relative strength values in a table
 pub struct HandTable {
-    strengths: HashMap<Vec<Card>, i32>,
+    strengths: HandData,
 }
 
 impl HandTable {
@@ -340,45 +340,35 @@ impl HandTable {
     }
 
     pub fn hand_strength(&self, hand: &[Card]) -> i32 {
-        // Return the best hand out of all 5-card subsets
-        let mut max_strength = 0;
-        for five_card in hand.iter().combinations(5) {
-            let canonical = canonical_hand(&deepcopy(&five_card), false);
-            let strength = self.strengths.get(&canonical).unwrap().clone();
-            if strength > max_strength {
-                max_strength = strength;
-            }
-        }
-        max_strength
+        let canonical = canonical_hand(&hand, false);
+        let compact = cards2hand(&canonical);
+        let strength = self.strengths.get(&compact).clone();
+        println!("{}", self.strengths.len());
+        strength
     }
 
-    fn load_hand_strengths() -> HashMap<Vec<Card>, i32> {
-        let str_map: HashMap<String, i32> = match File::open(HAND_TABLE_PATH) {
+    fn load_hand_strengths() -> HandData {
+        match File::open(HAND_TABLE_PATH) {
             Err(_e) => panic!("Hand table not found"),
-            Ok(mut file) => {
-                // Load up the hand table from the JSON
-                let mut buffer = String::new();
-                file.read_to_string(&mut buffer).expect("Error");
-                serde_json::from_str(&buffer).unwrap()
-            }
-        };
-        // Translate the card strings to Vec<Card> keys
-        // TODO: If necessary for more speedup, change all lookup tables to
-        // Vec<Card> keys instead of String
-        let mut vec_map: HashMap<Vec<Card>, i32> = HashMap::new();
-        for (hand, strength) in str_map {
-            let cards = vec![
-                &hand[0..2],
-                &hand[2..4],
-                &hand[4..6],
-                &hand[6..8],
-                &hand[8..10],
-            ];
-            let cards = strvec2cards(&cards);
-            vec_map.insert(cards, strength);
+            Ok(file) => HandData::read_serialized(file),
         }
-        vec_map
     }
+}
+
+// Writes a file containing all canonical river hand strengths. This can be used
+// if you want to convert 5-card lookup table to a 7-card lookup table for a
+// lookup speed boost. I wish I had more RAM.
+fn bootstrap_river_strengths() {
+    let canonical = load_river_canonical();
+    let mut buffer = File::create("products/strengths7.txt").unwrap();
+    let bar = pbar(canonical.len() as u64);
+    for hand in canonical {
+        let strength = HAND_TABLE.hand_strength(&hand2cards(hand));
+        let to_write = format!("{} {}\n", hand2str(hand.clone()), strength);
+        buffer.write(to_write.as_bytes());
+        bar.inc(1);
+    }
+    bar.finish();
 }
 
 // Normalize a vector so that its elements sum to 1.
@@ -494,7 +484,7 @@ pub fn hand2str(hand: u64) -> String {
 
 // Converts the compact u64 hand representation to the old-fashioned vector of
 // Card instances.
-fn hand2cards(hand: u64) -> Vec<Card> {
+pub fn hand2cards(hand: u64) -> Vec<Card> {
     let mut result = Vec::new();
     for i in 0..len(hand) {
         let suit = suit(card(hand, i)) as u8;
@@ -507,7 +497,11 @@ fn hand2cards(hand: u64) -> Vec<Card> {
     result
 }
 
-// TODO: Have 2 general functions for using serde. A reading function and writing function.
+// Converts the old fashioned Vec<Card> representation into the compact u64
+// representation.
+pub fn cards2hand(cards: &[Card]) -> u64 {
+    str2hand(&cards2str(&cards))
+}
 
 pub fn load_flop_canonical() -> HashSet<u64> {
     load_canonical(5, FLOP_CANONICAL_PATH)
@@ -613,7 +607,11 @@ fn river_equity(hand: &[Card], n_samples: usize) -> f64 {
 
     let mut rng = &mut rand::thread_rng();
 
-    for opp_preflop in deck.iter().combinations(2).choose_multiple(&mut rng, n_samples) {
+    for opp_preflop in deck
+        .iter()
+        .combinations(2)
+        .choose_multiple(&mut rng, n_samples)
+    {
         n_runs += 1;
 
         // Create the poker hands by concatenating cards
@@ -632,3 +630,57 @@ fn river_equity(hand: &[Card], n_samples: usize) -> f64 {
     let equity = n_wins / (n_runs as f64);
     equity
 }
+
+
+
+// For many applications (abstraction, hand strength, equity lookup) I need to
+// be able to store and lookup an integer corresponding to each hand
+pub struct HandData {
+    data: Vec<(u64, i32)>,
+}
+
+impl HandData {
+
+    pub fn new() -> HandData {
+        HandData{ data: Vec::new()}
+    }
+
+    pub fn get(&self, hand: &u64) -> i32 {
+        unimplemented!();
+    }
+
+    pub fn insert(&self, hand: &u64, data: i32) {
+        unimplemented!();
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    // There are multiple places where I have to serialize a HashMap of cards->i32
+    // with some sort of data such as hand strength or abstraction ID. This loads
+    // that data from a file desciptor and returns the HashMap lookup table.
+    pub fn read_serialized(file: File) -> HandData {
+        let mut table = HandData::new();
+        let reader = BufReader::new(file);
+        for line in reader.lines() {
+            let line_str = line.unwrap();
+            let mut data = line_str.split_whitespace();
+            let hand = data.next().unwrap();
+            let bucket = data.next().unwrap();
+            let hand = str2hand(hand);
+            let bucket = bucket.to_string().parse().unwrap();
+            table.insert(&hand, bucket);
+        }
+        table
+    }
+
+    pub fn serialize(&self, path: &str) {
+        let mut buffer = File::create(path).unwrap();
+        for (hand, data) in &self.data {
+            let to_write = format!("{} {}\n", hand2str(hand.clone()), data);
+            buffer.write(to_write.as_bytes()).unwrap();
+        }
+    }
+}
+
