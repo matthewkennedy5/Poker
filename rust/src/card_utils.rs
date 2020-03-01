@@ -343,7 +343,6 @@ impl HandTable {
         let canonical = canonical_hand(&hand, false);
         let compact = cards2hand(&canonical);
         let strength = self.strengths.get(&compact).clone();
-        println!("{}", self.strengths.len());
         strength
     }
 
@@ -500,6 +499,7 @@ pub fn hand2cards(hand: u64) -> Vec<Card> {
 // Converts the old fashioned Vec<Card> representation into the compact u64
 // representation.
 pub fn cards2hand(cards: &[Card]) -> u64 {
+    // START HERE: Implement this directly using bit operations. Should get at least a 2x speedup
     str2hand(&cards2str(&cards))
 }
 
@@ -646,11 +646,16 @@ impl HandData {
     }
 
     pub fn get(&self, hand: &u64) -> i32 {
-        unimplemented!();
+        let index = self.data.binary_search_by_key(hand, |&(a, b)| a).unwrap();
+        self.data[index].1
     }
 
-    pub fn insert(&self, hand: &u64, data: i32) {
-        unimplemented!();
+    pub fn insert(&mut self, hand: &u64, data: i32) {
+        self.data.push((hand.clone(), data));
+    }
+
+    pub fn sort(&mut self) {
+        self.data.sort();
     }
 
     pub fn len(&self) -> usize {
@@ -672,6 +677,7 @@ impl HandData {
             let bucket = bucket.to_string().parse().unwrap();
             table.insert(&hand, bucket);
         }
+        table.sort();
         table
     }
 

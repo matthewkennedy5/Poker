@@ -23,4 +23,4 @@ thincollections = "*"
 
 # For profiling
 [profile.release]
-debug = 0
+debug = 1
