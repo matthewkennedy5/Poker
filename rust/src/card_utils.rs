@@ -14,6 +14,7 @@ use std::io::Write;
 use std::io::{BufRead, BufReader};
 
 const HAND_TABLE_PATH: &str = "products/strengths7.txt";
+const EQUITY_TABLE_PATH: &str = "products/equity_table.txt";
 const FLOP_CANONICAL_PATH: &str = "products/flop_canonical.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_canonical.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_canonical.txt";
@@ -327,7 +328,6 @@ pub fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
     canonical
 }
 
-
 // For fast poker hand comparison, look up relative strength values in a table
 pub struct HandTable {
     strengths: HandData,
@@ -584,7 +584,8 @@ pub fn expected_hs2(hand: u64, n_samples: usize) -> f64 {
     let mut rng = &mut rand::thread_rng();
 
     if hand.len() == 7 {
-        return river_equity(&hand, n_samples);
+        let equity = river_equity(&hand, n_samples);
+        return equity;
     }
 
     for rollout in deck
@@ -612,10 +613,8 @@ fn river_equity(hand: &[Card], n_samples: usize) -> f64 {
 
     let mut rng = &mut rand::thread_rng();
 
-    for opp_preflop in deck
-        .iter()
-        .combinations(2)
-        .choose_multiple(&mut rng, n_samples)
+    for opp_preflop in deck.iter().combinations(2)
+    // .choose_multiple(&mut rng, n_samples)
     {
         n_runs += 1;
 
@@ -638,7 +637,6 @@ fn river_equity(hand: &[Card], n_samples: usize) -> f64 {
 
 // START HERE: Do a new branch for use with larger-RAM machines (Intel, GCloud) and
 
-
 // For many applications (abstraction, hand strength, equity lookup) I need to
 // be able to store and lookup an integer corresponding to each hand
 pub struct HandData {
@@ -646,9 +644,10 @@ pub struct HandData {
 }
 
 impl HandData {
-
     pub fn new() -> HandData {
-        HandData{ data: HashMap::new()}
+        HandData {
+            data: HashMap::new(),
+        }
     }
 
     pub fn get(&self, hand: &u64) -> i32 {
@@ -690,3 +689,23 @@ impl HandData {
     }
 }
 
+pub fn load_equity_table() {
+    let canonical = load_river_canonical();
+    let bar = pbar(canonical.len() as u64);
+    let hand_ehs2: Vec<(u64, f64)> = canonical
+        .par_iter()
+        .map(|h| {
+            let ehs2 = expected_hs2(h.clone(), 0);
+            bar.inc(1);
+            (h.clone(), ehs2)
+        })
+        .collect();
+
+    bar.finish();
+    // Serialize the equity table
+    let mut buffer = File::create(EQUITY_TABLE_PATH).unwrap();
+    for (hand, equity) in &hand_ehs2 {
+        let to_write = format!("{} {}\n", hand2str(hand.clone()), equity);
+        buffer.write(to_write.as_bytes()).unwrap();
+    }
+}

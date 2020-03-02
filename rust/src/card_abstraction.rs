@@ -39,7 +39,7 @@ pub struct Abstraction {
 impl Abstraction {
     pub fn new() -> Abstraction {
         Abstraction {
-            flop: load_abstraction(FLOP_PATH, 5, FLOP_BUCKETS),
+            flop: load_abstraction(FLOP_PATH, 7, FLOP_BUCKETS),
             turn: load_abstraction(TURN_PATH, 6, TURN_BUCKETS),
             river: load_abstraction(RIVER_PATH, 7, RIVER_BUCKETS),
         }
@@ -108,8 +108,8 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
     let mut hand_ehs2: Vec<(u64, f64)> = canonical_hands
         .par_iter()
         .map(|h| {
-            bar.inc(1);
             let ehs2 = card_utils::expected_hs2(h.clone(), EQUITY_SAMPLES);
+            bar.inc(1);
             (h.clone(), ehs2)
         })
         .collect();

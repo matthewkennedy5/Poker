@@ -16,10 +16,10 @@ mod card_utils;
 mod tests;
 
 use card_utils::*;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
-use std::collections::HashMap;
 
 fn main() {
     let cards = vec![
@@ -38,8 +38,9 @@ fn main() {
     // let vector3 = vector.clone();
     // println!("{}", vector.len());
 
+    load_equity_table();
 
-    let mut a = card_abstraction::Abstraction::new();
-    let bin = a.abstract_id(&cards);
-    println!("Bin: {}", bin);
+    // let mut a = card_abstraction::Abstraction::new();
+    // let bin = a.abstract_id(&cards);
+    // println!("Bin: {}", bin);
 }
