@@ -24,12 +24,6 @@ const FLOP_BUCKETS: i32 = 10;
 const TURN_BUCKETS: i32 = 10;
 const RIVER_BUCKETS: i32 = 10;
 
-// To compute the E[HS^2], researchers in the past have exhaustively computed
-// all possible rollouts over all possible opponent hands. But that takes way
-// too long and is overkill for our purposes, so we can sample rollouts and
-// opponent hands to arrive at a reasonable approximation of the true E[HS^2].
-const EQUITY_SAMPLES: usize = 100;
-
 pub struct Abstraction {
     flop: HandData,
     turn: HandData,
@@ -95,7 +89,6 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
         7 => println!("[INFO] Preparing the river abstraction."),
         _ => panic!("Bad number of cards"),
     };
-    // Cluster the hands based on E[HS^2] percentile bucketing.
     let canonical_hands = match n_cards {
         5 => card_utils::load_flop_canonical(),
         6 => card_utils::load_turn_canonical(),
@@ -103,12 +96,13 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
         _ => panic!("Bad number of cards"),
     };
 
+    // Cluster the hands based on E[HS^2] percentile bucketing.
     let bar = card_utils::pbar(canonical_hands.len() as u64);
     // Calculate all E[HS^2] values in parallel
     let mut hand_ehs2: Vec<(u64, f64)> = canonical_hands
         .par_iter()
         .map(|h| {
-            let ehs2 = card_utils::expected_hs2(h.clone(), EQUITY_SAMPLES);
+            let ehs2 = card_utils::expected_hs2(h.clone());
             bar.inc(1);
             (h.clone(), ehs2)
         })

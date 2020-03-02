@@ -19,8 +19,11 @@ const FLOP_CANONICAL_PATH: &str = "products/flop_canonical.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_canonical.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_canonical.txt";
 
+// TODO: To reduce memory usage if needed, incorporate the equity information
+// and hand strength information in one big lookup table, like HashMap<u64, (f64, i32)>
 lazy_static! {
     pub static ref HAND_TABLE: HandTable = HandTable::new();
+    static ref EQUITY_TABLE: EquityTable = EquityTable::new();
 }
 
 pub const CLUBS: i32 = 0;
@@ -573,9 +576,9 @@ fn deal_canonical(n_cards: usize) -> HashSet<u64> {
 }
 
 // Returns the second moment of the hand's equity distribution.
-pub fn expected_hs2(hand: u64, n_samples: usize) -> f64 {
-    // For river hands, just return HS^2 since there is no distribution
-    // Flop and turn, deal rollouts for the EH^s value.
+pub fn expected_hs2(hand: u64) -> f64 {
+    // For river hands, this just returns HS^2 since there is no distribution
+    // Flop and turn, deals rollouts for the E[HS^2] value.
     let hand = hand2cards(hand);
     let mut sum = 0.0;
     let mut count = 0.0;
@@ -584,17 +587,16 @@ pub fn expected_hs2(hand: u64, n_samples: usize) -> f64 {
     let mut rng = &mut rand::thread_rng();
 
     if hand.len() == 7 {
-        let equity = river_equity(&hand, n_samples);
-        return equity;
+        let equity = EQUITY_TABLE.lookup(&hand);
+        return equity.powi(2);
     }
 
     for rollout in deck
         .iter()
         .combinations(7 - hand.len())
-        .choose_multiple(&mut rng, n_samples)
     {
         let full_hand = [hand.clone(), deepcopy(&rollout)].concat();
-        let equity = river_equity(&full_hand, n_samples);
+        let equity = EQUITY_TABLE.lookup(&full_hand);
         sum += equity.powi(2);
         count += 1.0;
     }
@@ -602,7 +604,7 @@ pub fn expected_hs2(hand: u64, n_samples: usize) -> f64 {
     average
 }
 
-fn river_equity(hand: &[Card], n_samples: usize) -> f64 {
+fn river_equity(hand: &[Card]) -> f64 {
     let mut deck = deck();
     // Remove the already-dealt cards from the deck
     deck.retain(|c| !hand.contains(&c));
@@ -614,7 +616,6 @@ fn river_equity(hand: &[Card], n_samples: usize) -> f64 {
     let mut rng = &mut rand::thread_rng();
 
     for opp_preflop in deck.iter().combinations(2)
-    // .choose_multiple(&mut rng, n_samples)
     {
         n_runs += 1;
 
@@ -689,23 +690,68 @@ impl HandData {
     }
 }
 
-pub fn load_equity_table() {
-    let canonical = load_river_canonical();
-    let bar = pbar(canonical.len() as u64);
-    let hand_ehs2: Vec<(u64, f64)> = canonical
-        .par_iter()
-        .map(|h| {
-            let ehs2 = expected_hs2(h.clone(), 0);
-            bar.inc(1);
-            (h.clone(), ehs2)
-        })
-        .collect();
 
-    bar.finish();
-    // Serialize the equity table
-    let mut buffer = File::create(EQUITY_TABLE_PATH).unwrap();
-    for (hand, equity) in &hand_ehs2 {
-        let to_write = format!("{} {}\n", hand2str(hand.clone()), equity);
-        buffer.write(to_write.as_bytes()).unwrap();
+struct EquityTable {
+    table: HashMap<u64, f64>,
+}
+
+impl EquityTable {
+
+    fn new() -> EquityTable {
+        match File::open(EQUITY_TABLE_PATH) {
+            Err(_e) => {
+                let table = EquityTable::create();
+                EquityTable{ table: table}
+            },
+            Ok(file) => {
+                // Read from the file
+                println!("[INFO] Loading the equity lookup table.");
+                let mut table = HashMap::new();
+                let reader = BufReader::new(file);
+                for line in reader.lines() {
+                    let line_str = line.unwrap();
+                    let mut data = line_str.split_whitespace();
+                    let hand = data.next().unwrap();
+                    let equity = data.next().unwrap();
+                    let hand = str2hand(hand);
+                    let equity: f64 = equity.to_string().parse().unwrap();
+                    table.insert(hand, equity);
+                }
+                println!("[INFO] Done loading the equity lookup table.");
+                EquityTable{ table: table}
+            }
+        }
     }
+
+    fn create() -> HashMap<u64, f64> {
+        println!("[INFO] Creating the river equity lookup table...");
+        let canonical = load_river_canonical();
+        let bar = pbar(canonical.len() as u64);
+        let equities: Vec<(u64, f64)> = canonical
+            .par_iter()
+            .map(|h| {
+                let equity = river_equity(&hand2cards(h.clone()));
+                bar.inc(1);
+                (h.clone(), equity)
+            })
+            .collect();
+
+        bar.finish();
+        let mut table = HashMap::new();
+        // Serialize the equity table and construct the HashMap to return
+        let mut buffer = File::create(EQUITY_TABLE_PATH).unwrap();
+        for (hand, equity) in &equities {
+            let to_write = format!("{} {}\n", hand2str(hand.clone()), equity);
+            buffer.write(to_write.as_bytes()).unwrap();
+            table.insert(hand.clone(), equity.clone());
+        }
+        println!("[INFO] Done creating the river equity lookup table.");
+        table
+    }
+
+    pub fn lookup(&self, hand: &[Card]) -> f64 {
+        let hand = cards2hand(&canonical_hand(hand, true));
+        self.table.get(&hand).unwrap().clone()
+    }
+
 }

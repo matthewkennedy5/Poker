@@ -38,9 +38,7 @@ fn main() {
     // let vector3 = vector.clone();
     // println!("{}", vector.len());
 
-    load_equity_table();
-
-    // let mut a = card_abstraction::Abstraction::new();
-    // let bin = a.abstract_id(&cards);
-    // println!("Bin: {}", bin);
+    let mut a = card_abstraction::Abstraction::new();
+    let bin = a.abstract_id(&cards);
+    println!("Bin: {}", bin);
 }
