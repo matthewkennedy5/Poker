@@ -13,14 +13,10 @@ itertools = "*"
 indicatif = "*"
 cute = "*"
 rand = "*"
-flame = "*"
 lazy_static = "*"
 rayon = "*"
-emd = "*"
-ndarray = "*"
 bio = "*"
-thincollections = "*"
 
 # For profiling
 [profile.release]
-debug = 1
+debug = 0

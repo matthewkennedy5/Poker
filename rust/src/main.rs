@@ -8,9 +8,7 @@ extern crate rand;
 #[macro_use]
 extern crate lazy_static;
 extern crate bio;
-extern crate emd;
 extern crate rayon;
-extern crate thincollections;
 
 mod card_abstraction;
 mod card_utils;

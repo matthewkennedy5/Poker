@@ -28,7 +28,7 @@ const RIVER_BUCKETS: i32 = 10;
 // all possible rollouts over all possible opponent hands. But that takes way
 // too long and is overkill for our purposes, so we can sample rollouts and
 // opponent hands to arrive at a reasonable approximation of the true E[HS^2].
-const EQUITY_SAMPLES: usize = 1;
+const EQUITY_SAMPLES: usize = 100;
 
 pub struct Abstraction {
     flop: HandData,
@@ -106,7 +106,7 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
     let bar = card_utils::pbar(canonical_hands.len() as u64);
     // Calculate all E[HS^2] values in parallel
     let mut hand_ehs2: Vec<(u64, f64)> = canonical_hands
-        .iter()
+        .par_iter()
         .map(|h| {
             bar.inc(1);
             let ehs2 = card_utils::expected_hs2(h.clone(), EQUITY_SAMPLES);
@@ -123,7 +123,6 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
         // TODO: Write to file here instead of all at once at the end.
         clusters.insert(hand, bucket);
     }
-    clusters.sort();
     let path = match n_cards {
         5 => FLOP_PATH,
         6 => TURN_PATH,

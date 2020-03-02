@@ -327,6 +327,7 @@ pub fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
     canonical
 }
 
+
 // For fast poker hand comparison, look up relative strength values in a table
 pub struct HandTable {
     strengths: HandData,
@@ -635,31 +636,27 @@ fn river_equity(hand: &[Card], n_samples: usize) -> f64 {
     equity
 }
 
+// START HERE: Do a new branch for use with larger-RAM machines (Intel, GCloud) and
 
 
 // For many applications (abstraction, hand strength, equity lookup) I need to
 // be able to store and lookup an integer corresponding to each hand
 pub struct HandData {
-    data: Vec<(u64, i32)>,
+    data: HashMap<u64, i32>,
 }
 
 impl HandData {
 
     pub fn new() -> HandData {
-        HandData{ data: Vec::new()}
+        HandData{ data: HashMap::new()}
     }
 
     pub fn get(&self, hand: &u64) -> i32 {
-        let index = self.data.binary_search_by_key(hand, |&(a, b)| a).unwrap();
-        self.data[index].1
+        self.data.get(hand).unwrap().clone()
     }
 
     pub fn insert(&mut self, hand: &u64, data: i32) {
-        self.data.push((hand.clone(), data));
-    }
-
-    pub fn sort(&mut self) {
-        self.data.sort();
+        self.data.insert(hand.clone(), data);
     }
 
     pub fn len(&self) -> usize {
@@ -681,7 +678,6 @@ impl HandData {
             let bucket = bucket.to_string().parse().unwrap();
             table.insert(&hand, bucket);
         }
-        table.sort();
         table
     }
 
