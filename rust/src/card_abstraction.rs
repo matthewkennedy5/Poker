@@ -6,15 +6,12 @@
 
 use crate::card_utils;
 use crate::card_utils::{Card, HandData};
-use rand::prelude::SliceRandom;
-use rand::thread_rng;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
-use std::collections::HashMap;
 use std::fs::File;
-use std::io::Read;
-use std::io::Write;
-use std::io::{BufRead, BufReader};
+// use std::io::Read;
+// use std::io::Write;
+// use std::io::{BufRead, BufReader};
 
 const FLOP_PATH: &str = "products/flop_abstraction.txt";
 const TURN_PATH: &str = "products/turn_abstraction.txt";

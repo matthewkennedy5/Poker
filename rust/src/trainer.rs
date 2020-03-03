@@ -1,5 +1,6 @@
 use crate::card_utils;
 use crate::card_utils::Card;
+use crate::card_abstraction::Abstraction;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
@@ -21,13 +22,16 @@ const RIVER: usize = 3;
 const DEALER: usize = 0;
 const OPPONENT: usize = 1;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
-enum ActionType {
-    fold,
-    call,
-    bet,
+lazy_static! {
+    static ref ABSTRACTION: Abstraction = Abstraction::new();
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
+enum ActionType {
+    Fold,
+    Call,
+    Bet,
+}
 
 // Writes out the approximate Nash equilibrium strategy to a JSON
 pub fn train(iters: i32) {
@@ -74,7 +78,7 @@ fn iterate(
     deck: &[Card],
     history: ActionHistory,
     weights: [f64; 2],
-    nodes: &mut HashMap<InfoSet, Node>
+    nodes: &mut HashMap<InfoSet, Node>,
 ) -> f64 {
     if history.hand_over() {
         return terminal_utility(&deck, history, player);
@@ -139,14 +143,17 @@ fn sample_action(node: &Node) -> Action {
     let strategy = node.current_strategy(0.0);
     let actions: Vec<&Action> = strategy.keys().collect();
     let mut rng = thread_rng();
-    let action = actions.choose_weighted(&mut rng, |a| strategy.get(&a).unwrap())
-        .unwrap().clone().clone();
+    let action = actions
+        .choose_weighted(&mut rng, |a| strategy.get(&a).unwrap())
+        .unwrap()
+        .clone()
+        .clone();
     action
 }
 
 fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64 {
     let last_player = 1 - history.whose_turn();
-    if history.last_action().unwrap().action == ActionType::fold {
+    if history.last_action().unwrap().action == ActionType::Fold {
         let util = history.stack_sizes()[last_player] - STACK_SIZE;
         return util as f64;
     }
@@ -162,14 +169,13 @@ struct Action {
 impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let a = match &self.action {
-            ActionType::fold => "fold",
-            ActionType::call => "call",
-            ActionType::bet => "bet",
+            ActionType::Fold => "fold",
+            ActionType::Call => "call",
+            ActionType::Bet => "bet",
         };
         write!(f, "{} {}", a, self.amount)
     }
 }
-
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 struct ActionHistory {
@@ -181,7 +187,6 @@ struct ActionHistory {
 }
 
 impl ActionHistory {
-
     pub fn new() -> ActionHistory {
         ActionHistory {
             history: Vec::new(),
@@ -196,9 +201,9 @@ impl ActionHistory {
     // a showdown).
     pub fn hand_over(&self) -> bool {
         match &self.last_action {
-            None => {},
+            None => {}
             Some(action) => {
-                if action.action == ActionType::fold {
+                if action.action == ActionType::Fold {
                     // The last player folded
                     return true;
                 }
@@ -262,11 +267,10 @@ struct InfoSet {
 }
 
 impl InfoSet {
-    pub fn from(deck: &[Card], history: &ActionHistory) -> InfoSet {
-        unimplemented!();
+    pub fn from(cards: &[Card], history: &ActionHistory) -> InfoSet {
         InfoSet {
             history: ActionHistory::new(),
-            card_bucket: 0,
+            card_bucket: ABSTRACTION.bin(cards),
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::itertools::Itertools;
-use crate::rand::prelude::IteratorRandom;
+// use crate::rand::prelude::IteratorRandom;
 use bio::stats::combinatorics::combinations;
-use rand::prelude::SliceRandom;
+// use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use rayon::prelude::*;
 use serde::Deserialize;
@@ -331,7 +331,6 @@ pub struct HandTable {
 }
 
 impl HandTable {
-
     pub fn new() -> HandTable {
         HandTable {
             strengths: HandTable::load_hand_strengths(),
@@ -586,10 +585,7 @@ pub fn expected_hs2(hand: u64) -> f64 {
         return equity.powi(2);
     }
 
-    for rollout in deck
-        .iter()
-        .combinations(7 - hand.len())
-    {
+    for rollout in deck.iter().combinations(7 - hand.len()) {
         let full_hand = [hand.clone(), deepcopy(&rollout)].concat();
         let equity = EQUITY_TABLE.lookup(&full_hand);
         sum += equity.powi(2);
@@ -610,8 +606,7 @@ fn river_equity(hand: &[Card]) -> f64 {
 
     let mut rng = &mut rand::thread_rng();
 
-    for opp_preflop in deck.iter().combinations(2)
-    {
+    for opp_preflop in deck.iter().combinations(2) {
         n_runs += 1;
 
         // Create the poker hands by concatenating cards
@@ -685,19 +680,17 @@ impl HandData {
     }
 }
 
-
 struct EquityTable {
     table: HashMap<u64, f64>,
 }
 
 impl EquityTable {
-
     fn new() -> EquityTable {
         match File::open(EQUITY_TABLE_PATH) {
             Err(_e) => {
                 let table = EquityTable::create();
-                EquityTable{ table: table}
-            },
+                EquityTable { table: table }
+            }
             Ok(file) => {
                 // Read from the file
                 println!("[INFO] Loading the equity lookup table.");
@@ -713,7 +706,7 @@ impl EquityTable {
                     table.insert(hand, equity);
                 }
                 println!("[INFO] Done loading the equity lookup table.");
-                EquityTable{ table: table}
+                EquityTable { table: table }
             }
         }
     }
@@ -748,5 +741,4 @@ impl EquityTable {
         let hand = cards2hand(&canonical_hand(hand, true));
         self.table.get(&hand).unwrap().clone()
     }
-
 }
