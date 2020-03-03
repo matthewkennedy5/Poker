@@ -39,7 +39,7 @@ impl Abstraction {
         }
     }
 
-    pub fn abstract_id(&self, cards: &[Card]) -> i32 {
+    pub fn bin(&self, cards: &[Card]) -> i32 {
         if cards.len() == 2 {
             self.preflop_bin(&cards)
         } else {

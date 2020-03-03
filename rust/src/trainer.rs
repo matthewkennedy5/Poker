@@ -10,11 +10,22 @@ use std::io::Write;
 // TODO: Use a parameter file
 const BLUEPRINT_STRATEGY_PATH: &str = "blueprint.json";
 
+const BIG_BLIND: i32 = 100;
+const STACK_SIZE: i32 = 200 * BIG_BLIND;
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 enum ActionType {
     fold,
     call,
     bet,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
+enum Street {
+    preflop,
+    flop,
+    turn,
+    river
 }
 
 // Writes out the approximate Nash equilibrium strategy to a JSON
@@ -25,9 +36,9 @@ pub fn train(iters: i32) {
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
     let bar = card_utils::pbar(iters as u64);
     for i in 0..iters {
-        deck.shuffle(&mut rng);
+        // deck.shuffle(&mut rng);
         iterate(0, &deck, ActionHistory::new(), [0.0, 0.0], &mut nodes);
-        deck.shuffle(&mut rng);
+        // deck.shuffle(&mut rng);
         iterate(1, &deck, ActionHistory::new(), [0.0, 0.0], &mut nodes);
         bar.inc(1);
     }
@@ -62,7 +73,7 @@ fn iterate(
     deck: &[Card],
     history: ActionHistory,
     weights: [f64; 2],
-    nodes: &mut HashMap<InfoSet, Node>,
+    nodes: &mut HashMap<InfoSet, Node>
 ) -> f64 {
     if history.hand_over() {
         return terminal_utility(&deck, history, player);
@@ -79,7 +90,7 @@ fn iterate(
     let opponent = 1 - player;
     if history.whose_turn() == opponent {
         // Process the opponent's turn
-        history.add(opponent_action(node));
+        history.add(sample_action(node));
         if history.hand_over() {
             return terminal_utility(&deck, history, player);
         }
@@ -121,16 +132,23 @@ fn iterate(
     node_utility
 }
 
-fn opponent_action(node: &Node) -> Action {
-    Action {
-        action: ActionType::fold,
-        amount: 0,
-    }
+// Randomly sample an action given the strategy at this node.
+fn sample_action(node: &Node) -> Action {
+    let strategy = node.current_strategy(0.0);
+    let actions: Vec<&Action> = strategy.keys().collect();
+    let mut rng = thread_rng();
+    let action = actions.choose_weighted(&mut rng, |a| strategy.get(&a).unwrap())
+        .unwrap().clone().clone();
+    action
 }
 
 fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64 {
-    // TODO
-    0.0
+    let last_player = 1 - history.whose_turn();
+    if history.last_action().action == ActionType::fold {
+        let util = history.stack_sizes()[last_player] - STACK_SIZE;
+        return util as f64;
+    }
+    unimplemented!();
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
@@ -150,12 +168,14 @@ impl fmt::Display for Action {
     }
 }
 
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 struct ActionHistory {
     preflop: Vec<Action>,
     flop: Vec<Action>,
     turn: Vec<Action>,
     river: Vec<Action>,
+    street: Street,
 }
 
 impl ActionHistory {
@@ -165,21 +185,44 @@ impl ActionHistory {
             flop: Vec::new(),
             turn: Vec::new(),
             river: Vec::new(),
+            street: Street::preflop,
         }
     }
 
+    // Returns true if the hand is over (either someone has folded or it's time for
+    // a showdown).
     pub fn hand_over(&self) -> bool {
-        // TODO
-        false
+        if self.last_action().action == ActionType::fold {
+            // Player folded
+            return true;
+        }
+        let stacks = self.stack_sizes();
+        if stacks == [0, 0] {
+            // All-in action has happened
+            return true;
+        }
+        if self.street == Street::river && stacks[0] == stacks[1] && self.river.len() >= 2 {
+            // Showdown
+            return true;
+        }
+        return false;
     }
 
     pub fn whose_turn(&self) -> usize {
-        // TODO
+        unimplemented!();
         return 0;
     }
 
     pub fn add(&self, action: Action) {
-        // TODO
+        unimplemented!();
+    }
+
+    pub fn last_action(&self) -> Action {
+        unimplemented!();
+    }
+
+    pub fn stack_sizes(&self) -> [i32; 2] {
+        unimplemented!();
     }
 }
 
@@ -205,7 +248,7 @@ struct InfoSet {
 
 impl InfoSet {
     pub fn from(deck: &[Card], history: &ActionHistory) -> InfoSet {
-        // TODO
+        unimplemented!();
         InfoSet {
             history: ActionHistory::new(),
             card_bucket: 0,
@@ -237,11 +280,10 @@ impl Node {
     }
 
     pub fn current_strategy(&self, prob: f64) -> HashMap<Action, f64> {
-        // TODO
-        HashMap::new()
+        unimplemented!();
     }
 
     pub fn add_regret(&self, action: &Action, regret: f64) {
-        // TODO
+        unimplemented!();
     }
 }
