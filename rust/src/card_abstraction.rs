@@ -33,7 +33,7 @@ pub struct Abstraction {
 impl Abstraction {
     pub fn new() -> Abstraction {
         Abstraction {
-            flop: load_abstraction(FLOP_PATH, 7, FLOP_BUCKETS),
+            flop: load_abstraction(FLOP_PATH, 5, FLOP_BUCKETS),
             turn: load_abstraction(TURN_PATH, 6, TURN_BUCKETS),
             river: load_abstraction(RIVER_PATH, 7, RIVER_BUCKETS),
         }
@@ -82,6 +82,9 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HandData {
     }
 }
 
+// TODO: Store the E[HS^2] values themselves instead of the abstract buckets.
+// That way I only have to ever calculate them once, and can just re-bucket
+// whenever.
 fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
     match n_cards {
         5 => println!("[INFO] Preparing the flop abstraction."),
@@ -109,12 +112,11 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
         .collect();
 
     bar.finish();
-    hand_ehs2.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    hand_ehs2.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
     let mut clusters = HandData::new();
     for (idx, (hand, _ehs2)) in hand_ehs2.iter().enumerate() {
         // Bucket the hand according to the percentile of its E[HS^2]
         let bucket: i32 = ((n_buckets as f64) * (idx as f64) / (hand_ehs2.len() as f64)) as i32;
-        // TODO: Write to file here instead of all at once at the end.
         clusters.insert(hand, bucket);
     }
     let path = match n_cards {

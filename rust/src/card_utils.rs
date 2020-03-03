@@ -322,12 +322,6 @@ pub fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
         });
     }
     canonical = sort_canonical(&canonical, streets);
-
-    // TODO: Remove once I'm convinced it's working
-    // if !is_canonical(&canonical, streets) {
-    //     panic!("Not canonical: {}\nOriginal: {}", cards2str(&canonical), cards2str(&cards_copy));
-    // }
-
     canonical
 }
 
@@ -337,6 +331,7 @@ pub struct HandTable {
 }
 
 impl HandTable {
+
     pub fn new() -> HandTable {
         HandTable {
             strengths: HandTable::load_hand_strengths(),
