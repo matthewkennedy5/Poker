@@ -144,7 +144,7 @@ fn sample_action(node: &Node) -> Action {
 
 fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64 {
     let last_player = 1 - history.whose_turn();
-    if history.last_action().action == ActionType::fold {
+    if history.last_action().unwrap().action == ActionType::fold {
         let util = history.stack_sizes()[last_player] - STACK_SIZE;
         return util as f64;
     }
@@ -176,9 +176,11 @@ struct ActionHistory {
     turn: Vec<Action>,
     river: Vec<Action>,
     street: Street,
+    last_action: Option<Action>,
 }
 
 impl ActionHistory {
+
     pub fn new() -> ActionHistory {
         ActionHistory {
             preflop: Vec::new(),
@@ -186,15 +188,21 @@ impl ActionHistory {
             turn: Vec::new(),
             river: Vec::new(),
             street: Street::preflop,
+            last_action: None,
         }
     }
 
     // Returns true if the hand is over (either someone has folded or it's time for
     // a showdown).
     pub fn hand_over(&self) -> bool {
-        if self.last_action().action == ActionType::fold {
-            // Player folded
-            return true;
+        match &self.last_action {
+            None => {},
+            Some(action) => {
+                if action.action == ActionType::fold {
+                    // The last player folded
+                    return true;
+                }
+            }
         }
         let stacks = self.stack_sizes();
         if stacks == [0, 0] {
@@ -217,8 +225,8 @@ impl ActionHistory {
         unimplemented!();
     }
 
-    pub fn last_action(&self) -> Action {
-        unimplemented!();
+    pub fn last_action(&self) -> Option<Action> {
+        self.last_action.clone()
     }
 
     pub fn stack_sizes(&self) -> [i32; 2] {
