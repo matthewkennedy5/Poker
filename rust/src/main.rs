@@ -12,7 +12,7 @@ extern crate rayon;
 
 mod card_abstraction;
 mod card_utils;
-// mod trainer;
+mod trainer;
 mod tests;
 
 use card_utils::*;
@@ -22,23 +22,5 @@ use std::io::Read;
 use std::io::Write;
 
 fn main() {
-    let cards = vec![
-        Card::new("2c"),
-        Card::new("2d"),
-        Card::new("2h"),
-        Card::new("3c"),
-        Card::new("3d"),
-    ];
-
-    // let mut vector: Vec<(u64, i32)> = Vec::new();
-    // for i in 0..130_000_000 {
-    //     vector.push((i, (i as i32) / 2));
-    // }
-    // let vector2 = vector.clone();
-    // let vector3 = vector.clone();
-    // println!("{}", vector.len());
-
-    let mut a = card_abstraction::Abstraction::new();
-    let bin = a.abstract_id(&cards);
-    println!("Bin: {}", bin);
+    trainer::train(100);
 }

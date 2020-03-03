@@ -17,8 +17,6 @@ enum ActionType {
     bet,
 }
 
-// TODO: Chance sample opponent actions or all possible opponent actions?
-
 // Writes out the approximate Nash equilibrium strategy to a JSON
 pub fn train(iters: i32) {
     println!("[INFO]: Beginning training.");
