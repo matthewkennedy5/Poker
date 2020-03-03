@@ -13,6 +13,14 @@ const BLUEPRINT_STRATEGY_PATH: &str = "blueprint.json";
 const BIG_BLIND: i32 = 100;
 const STACK_SIZE: i32 = 200 * BIG_BLIND;
 
+const PREFLOP: usize = 0;
+const FLOP: usize = 1;
+const TURN: usize = 2;
+const RIVER: usize = 3;
+
+const DEALER: usize = 0;
+const OPPONENT: usize = 1;
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 enum ActionType {
     fold,
@@ -20,13 +28,6 @@ enum ActionType {
     bet,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
-enum Street {
-    preflop,
-    flop,
-    turn,
-    river
-}
 
 // Writes out the approximate Nash equilibrium strategy to a JSON
 pub fn train(iters: i32) {
@@ -90,6 +91,7 @@ fn iterate(
     let opponent = 1 - player;
     if history.whose_turn() == opponent {
         // Process the opponent's turn
+        let mut history = history.clone();
         history.add(sample_action(node));
         if history.hand_over() {
             return terminal_utility(&deck, history, player);
@@ -171,24 +173,22 @@ impl fmt::Display for Action {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 struct ActionHistory {
-    preflop: Vec<Action>,
-    flop: Vec<Action>,
-    turn: Vec<Action>,
-    river: Vec<Action>,
-    street: Street,
+    history: Vec<Vec<Action>>,
+    street: usize,
     last_action: Option<Action>,
+    whose_turn: usize,
+    stacks: [i32; 2],
 }
 
 impl ActionHistory {
 
     pub fn new() -> ActionHistory {
         ActionHistory {
-            preflop: Vec::new(),
-            flop: Vec::new(),
-            turn: Vec::new(),
-            river: Vec::new(),
-            street: Street::preflop,
+            history: Vec::new(),
+            street: PREFLOP,
             last_action: None,
+            whose_turn: DEALER,
+            stacks: [STACK_SIZE, STACK_SIZE],
         }
     }
 
@@ -209,7 +209,7 @@ impl ActionHistory {
             // All-in action has happened
             return true;
         }
-        if self.street == Street::river && stacks[0] == stacks[1] && self.river.len() >= 2 {
+        if self.street == RIVER && stacks[0] == stacks[1] && self.history[RIVER].len() >= 2 {
             // Showdown
             return true;
         }
@@ -221,8 +221,15 @@ impl ActionHistory {
         return 0;
     }
 
-    pub fn add(&self, action: Action) {
-        unimplemented!();
+    // Add an new action to this history, and update the state
+    pub fn add(&mut self, action: Action) {
+        self.stacks[self.whose_turn] -= action.amount;
+        self.whose_turn = 1 - self.whose_turn;
+        self.last_action = Some(action.clone());
+        self.history[self.street].push(action);
+        if self.stacks[0] == self.stacks[1] && self.history[self.street].len() >= 2 {
+            self.street += 1;
+        }
     }
 
     pub fn last_action(&self) -> Option<Action> {
@@ -230,14 +237,14 @@ impl ActionHistory {
     }
 
     pub fn stack_sizes(&self) -> [i32; 2] {
-        unimplemented!();
+        self.stacks
     }
 }
 
 impl fmt::Display for ActionHistory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut result = String::new();
-        for street in &[&self.preflop, &self.flop, &self.turn, &self.river] {
+        for street in &self.history {
             for action in street.to_vec() {
                 result.push_str(&action.to_string());
                 result.push_str(",");
