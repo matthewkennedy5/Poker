@@ -39,6 +39,7 @@ pub fn train(iters: i32) {
     let mut deck = card_utils::deck();
     let mut rng = &mut rand::thread_rng();
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
+
     let bar = card_utils::pbar(iters as u64);
     for i in 0..iters {
         // deck.shuffle(&mut rng);
@@ -86,7 +87,7 @@ fn iterate(
 
     // Look up the CFR node for this information set, or make a new one if it
     // doesn't exist
-    let mut infoset = InfoSet::from(&deck, &history);
+    let mut infoset = InfoSet::from_deck(&deck, &history);
     if !nodes.contains_key(&infoset) {
         nodes.insert(infoset.clone(), Node::new(&infoset));
     }
@@ -100,7 +101,7 @@ fn iterate(
         if history.hand_over() {
             return terminal_utility(&deck, history, player);
         }
-        infoset = InfoSet::from(&deck, &history);
+        infoset = InfoSet::from_deck(&deck, &history);
         if !nodes.contains_key(&infoset) {
             nodes.insert(infoset.clone(), Node::new(&infoset));
         }
@@ -267,10 +268,27 @@ struct InfoSet {
 }
 
 impl InfoSet {
-    pub fn from(cards: &[Card], history: &ActionHistory) -> InfoSet {
+    // The dealer's cards are the first two cards in the deck, and the opponent's
+    // are the second two cards. They are followed by the 5 board cards.
+    pub fn from_deck(deck: &[Card], history: &ActionHistory) -> InfoSet {
+        let hole = match history.whose_turn {
+            DEALER => &deck[0..2],
+            OPPONENT => &deck[2..4],
+            _ => panic!("Bad player ID"),
+        };
+        let board = match history.street {
+            PREFLOP => &[],
+            FLOP => &deck[4..7],
+            TURN => &deck[4..8],
+            RIVER => &deck[4..9],
+            _ => panic!("Invalid street"),
+        };
+        let cards = [hole, board].concat();
+        let card_bucket = ABSTRACTION.bin(&cards);
+
         InfoSet {
-            history: ActionHistory::new(),
-            card_bucket: ABSTRACTION.bin(cards),
+            history: history.clone(),
+            card_bucket: card_bucket,
         }
     }
 }
