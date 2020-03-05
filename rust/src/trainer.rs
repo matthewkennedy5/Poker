@@ -90,7 +90,7 @@ fn iterate(
     // doesn't exist
     let mut infoset = InfoSet::from_deck(&deck, &history);
     if !nodes.contains_key(&infoset) {
-        let mut new_node = Node::new(&infoset);
+        let new_node = Node::new(&infoset);
         nodes.insert(infoset.clone(), new_node);
     }
     let mut node: Node = nodes.get(&infoset).unwrap().clone();
@@ -138,7 +138,8 @@ fn iterate(
         node.add_regret(&action, weights[opponent] * regret);
     }
 
-    nodes.insert(infoset, node.clone());
+    let updated = node.clone();
+    nodes.insert(infoset, updated);
     node_utility
 }
 
@@ -399,9 +400,9 @@ pub fn normalize(map: &HashMap<Action, f64>) -> HashMap<Action, f64> {
         sum += elem;
     }
     for (action, val) in map.clone() {
-        let newval: f64 = match sum {
+        let newval: f64 = match sum as i32 {
             // If all values are 0, then just return a uniform distribution
-            0.0 => 1.0 / map.len() as f64,
+            0 => 1.0 / map.len() as f64,
             _ => val / sum,
         };
         map.insert(action.clone(), newval);

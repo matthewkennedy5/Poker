@@ -2,14 +2,12 @@ use crate::itertools::Itertools;
 // use crate::rand::prelude::IteratorRandom;
 use bio::stats::combinatorics::combinations;
 // use rand::prelude::SliceRandom;
-use rand::thread_rng;
 use rayon::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs::File;
-use std::io::Read;
 use std::io::Write;
 use std::io::{BufRead, BufReader};
 
@@ -281,7 +279,6 @@ fn sort_canonical(cards: &[Card], streets: bool) -> Vec<Card> {
 // flush of diamonds. This function maps the set of all hands to the much
 // smaller set of distinct isomorphic hands.
 pub fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
-    let cards_copy = cards.clone();
     let cards = &sort_canonical(&cards, streets);
     // Separate the cards by suit
     let mut by_suits: Vec<Vec<u8>> = Vec::new();
@@ -362,7 +359,7 @@ fn bootstrap_river_strengths() {
     for hand in canonical {
         let strength = HAND_TABLE.hand_strength(&hand2cards(hand));
         let to_write = format!("{} {}\n", hand2str(hand.clone()), strength);
-        buffer.write(to_write.as_bytes());
+        buffer.write(to_write.as_bytes()).unwrap();
         bar.inc(1);
     }
     bar.finish();
@@ -565,7 +562,6 @@ pub fn expected_hs2(hand: u64) -> f64 {
     let mut count = 0.0;
     let mut deck = deck();
     deck.retain(|c| !hand.contains(&c));
-    let mut rng = &mut rand::thread_rng();
 
     if hand.len() == 7 {
         let equity = EQUITY_TABLE.lookup(&hand);
