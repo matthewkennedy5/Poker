@@ -21,10 +21,14 @@ const RIVER: usize = 3;
 
 const DEALER: usize = 0;
 const OPPONENT: usize = 1;
+const FOLD: Action = Action {action: ActionType::Fold, amount: 0};
 
 lazy_static! {
     static ref ABSTRACTION: Abstraction = Abstraction::new();
 }
+
+// Allowed bets in terms of pot fractions
+const BET_ABSTRACTION: [i32; 1] = [1];
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 enum ActionType {
@@ -38,7 +42,7 @@ pub fn train(iters: i32) {
     let deck = card_utils::deck();
     let rng = &mut rand::thread_rng();
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
-    lazy_static::initialize(&ABSTRACTION);
+    // lazy_static::initialize(&ABSTRACTION);
     println!("[INFO]: Beginning training.");
     let bar = card_utils::pbar(iters as u64);
     for i in 0..iters {
@@ -117,8 +121,8 @@ fn iterate(
         let mut next_history = history.clone();
         next_history.add(action.clone());
         let weights = match player {
-            1 => [p0 * prob, p1],
-            2 => [p0, p1 * prob],
+            0 => [p0 * prob, p1],
+            1 => [p0, p1 * prob],
             _ => panic!("Bad player value"),
         };
         let utility = iterate(player, &deck, next_history, weights, nodes);
@@ -180,7 +184,7 @@ impl fmt::Display for Action {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 struct ActionHistory {
-    history: Vec<Vec<Action>>,
+    history: Vec<Vec<Action>>,      // Each index is a street
     street: usize,
     last_action: Option<Action>,
     whose_turn: usize,
@@ -190,7 +194,7 @@ struct ActionHistory {
 impl ActionHistory {
     pub fn new() -> ActionHistory {
         ActionHistory {
-            history: Vec::new(),
+            history: vec![Vec::new(); 4],
             street: PREFLOP,
             last_action: None,
             whose_turn: DEALER,
@@ -215,7 +219,7 @@ impl ActionHistory {
             // All-in action has happened
             return true;
         }
-        if self.street == RIVER && stacks[0] == stacks[1] && self.history[RIVER].len() >= 2 {
+        if self.street > RIVER {
             // Showdown
             return true;
         }
@@ -245,8 +249,37 @@ impl ActionHistory {
         self.stacks
     }
 
+    pub fn pot(&self) -> i32 {
+        2*STACK_SIZE - self.stacks[0] - self.stacks[1]
+    }
+
+    // Returns a vector of the possible next actions after this state, that are
+    // allowed in our action abstraction.
     pub fn next_actions(&self) -> Vec<Action> {
-        unimplemented!();
+        let mut actions = Vec::new();
+        // Add possible bets
+        let min_bet = match &self.last_action {
+            Some(action) => action.amount,
+            None => BIG_BLIND,
+        };
+        let max_bet = self.stacks[self.whose_turn];
+        let pot = self.pot();
+        for fraction in BET_ABSTRACTION.iter() {
+            let bet = fraction * pot;
+            if min_bet <= bet  && bet <= max_bet {
+                actions.push( Action {action: ActionType::Bet, amount: bet});
+            }
+        }
+
+        // Add call/check action
+        let to_call = self.stacks[1 - self.whose_turn] - self.stacks[self.whose_turn];
+        actions.push( Action {action: ActionType::Call, amount: to_call});
+        // Add the fold action, unless we can just check
+        if to_call > 0 {
+            actions.push(FOLD)
+        }
+
+        actions
     }
 }
 
@@ -284,10 +317,11 @@ impl InfoSet {
             FLOP => &deck[4..7],
             TURN => &deck[4..8],
             RIVER => &deck[4..9],
-            _ => panic!("Invalid street"),
+            _ => panic!("Invalid street: {}", history.street),
         };
         let cards = [hole, board].concat();
-        let card_bucket = ABSTRACTION.bin(&cards);
+        // let card_bucket = ABSTRACTION.bin(&cards);
+        let card_bucket = 0;
 
         InfoSet {
             history: history.clone(),
@@ -296,7 +330,7 @@ impl InfoSet {
     }
 
     pub fn next_actions(&self) -> Vec<Action> {
-        unimplemented!();
+        self.history.next_actions()
     }
 }
 
@@ -317,14 +351,16 @@ struct Node {
 
 impl Node {
     pub fn new(infoset: &InfoSet) -> Node {
-        let mut regrets = HashMap::new();
+        // Create a HashMap of action -> 0.0 to initialize the regrets and
+        // cumulative strategy sum
+        let mut zeros = HashMap::new();
         for action in infoset.next_actions() {
-            regrets.insert(action, 0.0);
+            zeros.insert(action, 0.0);
         }
         Node {
             infoset: infoset.clone(),
-            regrets: regrets,
-            strategy_sum: HashMap::new(),
+            regrets: zeros.clone(),
+            strategy_sum: zeros,
             t: 0,
         }
     }
@@ -363,7 +399,11 @@ pub fn normalize(map: &HashMap<Action, f64>) -> HashMap<Action, f64> {
         sum += elem;
     }
     for (action, val) in map.clone() {
-        let newval = val / sum;
+        let newval: f64 = match sum {
+            // If all values are 0, then just return a uniform distribution
+            0.0 => 1.0 / map.len() as f64,
+            _ => val / sum,
+        };
         map.insert(action.clone(), newval);
     }
     map
