@@ -368,19 +368,6 @@ fn bootstrap_river_strengths() {
     bar.finish();
 }
 
-// Normalize a vector so that its elements sum to 1.
-pub fn normalize(vector: &Vec<f64>) -> Vec<f64> {
-    let mut sum = 0.0;
-    for elem in vector {
-        sum += elem;
-    }
-    let mut noramlized = Vec::new();
-    for elem in vector {
-        noramlized.push(elem / sum);
-    }
-    noramlized
-}
-
 // u64 hand representation
 // Each card is a single u8 byte, where
 //
@@ -604,7 +591,7 @@ fn river_equity(hand: &[Card]) -> f64 {
     let mut n_wins = 0.0;
     let mut n_runs = 0;
 
-    let mut rng = &mut rand::thread_rng();
+    let rng = &mut rand::thread_rng();
 
     for opp_preflop in deck.iter().combinations(2) {
         n_runs += 1;

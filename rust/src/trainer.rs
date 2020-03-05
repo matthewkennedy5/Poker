@@ -1,6 +1,6 @@
+use crate::card_abstraction::Abstraction;
 use crate::card_utils;
 use crate::card_utils::Card;
-use crate::card_abstraction::Abstraction;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
@@ -35,11 +35,11 @@ enum ActionType {
 
 // Writes out the approximate Nash equilibrium strategy to a JSON
 pub fn train(iters: i32) {
-    println!("[INFO]: Beginning training.");
-    let mut deck = card_utils::deck();
-    let mut rng = &mut rand::thread_rng();
+    let deck = card_utils::deck();
+    let rng = &mut rand::thread_rng();
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
-
+    lazy_static::initialize(&ABSTRACTION);
+    println!("[INFO]: Beginning training.");
     let bar = card_utils::pbar(iters as u64);
     for i in 0..iters {
         // deck.shuffle(&mut rng);
@@ -53,7 +53,7 @@ pub fn train(iters: i32) {
     // Convert nodes to have string keys for JSON serialization
     let mut str_nodes: HashMap<String, Node> = HashMap::new();
     for (infoset, node) in nodes {
-        str_nodes.insert(infoset.to_string(), node);
+        str_nodes.insert(infoset.to_string(), node.clone());
     }
 
     let json = serde_json::to_string_pretty(&str_nodes).unwrap();
@@ -71,9 +71,6 @@ fn str2infoset(str: String) -> InfoSet {
     }
 }
 
-// START HERE: Implement the helper functions to get this thing churning out strategies!
-// Incorporate the abstractions.
-
 fn iterate(
     player: usize,
     deck: &[Card],
@@ -89,15 +86,16 @@ fn iterate(
     // doesn't exist
     let mut infoset = InfoSet::from_deck(&deck, &history);
     if !nodes.contains_key(&infoset) {
-        nodes.insert(infoset.clone(), Node::new(&infoset));
+        let mut new_node = Node::new(&infoset);
+        nodes.insert(infoset.clone(), new_node);
     }
-    let mut node = nodes.get(&infoset).unwrap();
+    let mut node: Node = nodes.get(&infoset).unwrap().clone();
 
     let opponent = 1 - player;
     if history.whose_turn() == opponent {
         // Process the opponent's turn
         let mut history = history.clone();
-        history.add(sample_action(node));
+        history.add(sample_action(&node));
         if history.hand_over() {
             return terminal_utility(&deck, history, player);
         }
@@ -105,7 +103,7 @@ fn iterate(
         if !nodes.contains_key(&infoset) {
             nodes.insert(infoset.clone(), Node::new(&infoset));
         }
-        node = nodes.get(&infoset).unwrap();
+        node = nodes.get(&infoset).unwrap().clone();
     }
 
     // Grab the current strategy at this node
@@ -136,11 +134,13 @@ fn iterate(
         node.add_regret(&action, weights[opponent] * regret);
     }
 
+    nodes.insert(infoset, node.clone());
     node_utility
 }
 
 // Randomly sample an action given the strategy at this node.
 fn sample_action(node: &Node) -> Action {
+    let node = &mut node.clone();
     let strategy = node.current_strategy(0.0);
     let actions: Vec<&Action> = strategy.keys().collect();
     let mut rng = thread_rng();
@@ -162,7 +162,7 @@ fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
-struct Action {
+pub struct Action {
     action: ActionType,
     amount: i32,
 }
@@ -223,8 +223,7 @@ impl ActionHistory {
     }
 
     pub fn whose_turn(&self) -> usize {
-        unimplemented!();
-        return 0;
+        self.whose_turn
     }
 
     // Add an new action to this history, and update the state
@@ -244,6 +243,10 @@ impl ActionHistory {
 
     pub fn stack_sizes(&self) -> [i32; 2] {
         self.stacks
+    }
+
+    pub fn next_actions(&self) -> Vec<Action> {
+        unimplemented!();
     }
 }
 
@@ -291,6 +294,10 @@ impl InfoSet {
             card_bucket: card_bucket,
         }
     }
+
+    pub fn next_actions(&self) -> Vec<Action> {
+        unimplemented!();
+    }
 }
 
 impl fmt::Display for InfoSet {
@@ -299,28 +306,65 @@ impl fmt::Display for InfoSet {
     }
 }
 
-#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 struct Node {
     // TODO: Does a Node really have to store its corresponding InfoSet?
     infoset: InfoSet,
     regrets: HashMap<Action, f64>,
+    strategy_sum: HashMap<Action, f64>,
     t: i32,
 }
 
 impl Node {
     pub fn new(infoset: &InfoSet) -> Node {
+        let mut regrets = HashMap::new();
+        for action in infoset.next_actions() {
+            regrets.insert(action, 0.0);
+        }
         Node {
             infoset: infoset.clone(),
-            regrets: HashMap::new(),
+            regrets: regrets,
+            strategy_sum: HashMap::new(),
             t: 0,
         }
     }
 
-    pub fn current_strategy(&self, prob: f64) -> HashMap<Action, f64> {
-        unimplemented!();
+    pub fn current_strategy(&mut self, prob: f64) -> HashMap<Action, f64> {
+        let mut strat: HashMap<Action, f64> = HashMap::new();
+        for (action, regret) in self.regrets.clone() {
+            if regret > 0.0 {
+                strat.insert(action, regret);
+            } else {
+                strat.insert(action, 0.0);
+            }
+        }
+        strat = normalize(&strat);
+        for action in strat.keys() {
+            // Add this action's probability to the cumulative strategy sum
+            let cumulative_strategy = self.strategy_sum.get(action).unwrap().clone();
+            self.strategy_sum.insert(
+                action.clone(),
+                cumulative_strategy + strat.get(action).unwrap() * prob,
+            );
+        }
+        strat
     }
 
     pub fn add_regret(&self, action: &Action, regret: f64) {
         unimplemented!();
     }
+}
+
+// Normalizes the values of a HashMap so that its elements sum to 1.
+pub fn normalize(map: &HashMap<Action, f64>) -> HashMap<Action, f64> {
+    let mut map = map.clone();
+    let mut sum = 0.0;
+    for elem in map.values() {
+        sum += elem;
+    }
+    for (action, val) in map.clone() {
+        let newval = val / sum;
+        map.insert(action.clone(), newval);
+    }
+    map
 }
