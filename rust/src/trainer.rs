@@ -21,7 +21,10 @@ const RIVER: usize = 3;
 
 const DEALER: usize = 0;
 const OPPONENT: usize = 1;
-const FOLD: Action = Action {action: ActionType::Fold, amount: 0};
+const FOLD: Action = Action {
+    action: ActionType::Fold,
+    amount: 0,
+};
 
 lazy_static! {
     static ref ABSTRACTION: Abstraction = Abstraction::new();
@@ -185,7 +188,7 @@ impl fmt::Display for Action {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 struct ActionHistory {
-    history: Vec<Vec<Action>>,      // Each index is a street
+    history: Vec<Vec<Action>>, // Each index is a street
     street: usize,
     last_action: Option<Action>,
     whose_turn: usize,
@@ -251,7 +254,7 @@ impl ActionHistory {
     }
 
     pub fn pot(&self) -> i32 {
-        2*STACK_SIZE - self.stacks[0] - self.stacks[1]
+        2 * STACK_SIZE - self.stacks[0] - self.stacks[1]
     }
 
     // Returns a vector of the possible next actions after this state, that are
@@ -267,14 +270,20 @@ impl ActionHistory {
         let pot = self.pot();
         for fraction in BET_ABSTRACTION.iter() {
             let bet = fraction * pot;
-            if min_bet <= bet  && bet <= max_bet {
-                actions.push( Action {action: ActionType::Bet, amount: bet});
+            if min_bet <= bet && bet <= max_bet {
+                actions.push(Action {
+                    action: ActionType::Bet,
+                    amount: bet,
+                });
             }
         }
 
         // Add call/check action
         let to_call = self.stacks[1 - self.whose_turn] - self.stacks[self.whose_turn];
-        actions.push( Action {action: ActionType::Call, amount: to_call});
+        actions.push(Action {
+            action: ActionType::Call,
+            amount: to_call,
+        });
         // Add the fold action, unless we can just check
         if to_call > 0 {
             actions.push(FOLD)
