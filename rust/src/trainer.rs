@@ -42,39 +42,40 @@ enum ActionType {
 }
 
 // Writes out the approximate Nash equilibrium strategy to a JSON
-pub fn train(iters: i32) {
+pub fn train(iters: u64) {
     let deck = card_utils::deck();
     let rng = &mut rand::thread_rng();
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
-    // UNCOMMENT ME
-    // lazy_static::initialize(&ABSTRACTION);
-    // lazy_static::initialize(&HAND_TABLE);
+    lazy_static::initialize(&ABSTRACTION);
+    lazy_static::initialize(&HAND_TABLE);
+
     println!("[INFO]: Beginning training.");
-    let bar = card_utils::pbar(iters as u64);
+    let bar = card_utils::pbar(iters);
     for i in 0..iters {
         // deck.shuffle(&mut rng);
-        iterate(DEALER, &deck, ActionHistory::new(), [0.0, 0.0], &mut nodes);
+        iterate(DEALER, &deck, ActionHistory::new(), [1.0, 1.0], &mut nodes);
         // deck.shuffle(&mut rng);
-        iterate(
-            OPPONENT,
-            &deck,
-            ActionHistory::new(),
-            [0.0, 0.0],
-            &mut nodes,
-        );
+        iterate(OPPONENT, &deck, ActionHistory::new(), [1.0, 1.0], &mut nodes);
         bar.inc(1);
     }
     bar.finish();
 
-    // Convert nodes to have string keys for JSON serialization
-    let mut str_nodes: HashMap<String, Node> = HashMap::new();
     for (infoset, node) in nodes {
-        str_nodes.insert(infoset.to_string(), node.clone());
+        if node.t > 1 {
+            println!("{}: {:#?}t: {}\n", infoset, node.cumulative_strategy(), node.t);
+        }
     }
 
-    let json = serde_json::to_string_pretty(&str_nodes).unwrap();
-    let mut file = File::create(BLUEPRINT_STRATEGY_PATH).unwrap();
-    file.write_all(json.as_bytes()).unwrap();
+
+    // Convert nodes to have string keys for JSON serialization
+    // let mut str_nodes: HashMap<String, Node> = HashMap::new();
+    // for (infoset, node) in nodes {
+    //     str_nodes.insert(infoset.to_string(), node.clone());
+    // }
+
+    // let json = serde_json::to_string_pretty(&str_nodes).unwrap();
+    // let mut file = File::create(BLUEPRINT_STRATEGY_PATH).unwrap();
+    // file.write_all(json.as_bytes()).unwrap();
 }
 
 // Parser for the string format I'm using to store infoset keys in the JSON.
@@ -94,7 +95,6 @@ fn iterate(
     weights: [f64; 2],
     nodes: &mut HashMap<InfoSet, Node>,
 ) -> f64 {
-    println!("{:#?}", history);
     if history.hand_over() {
         return terminal_utility(&deck, history, player);
     }
@@ -113,7 +113,6 @@ fn iterate(
     if history.player == opponent {
         // Process the opponent's turn
         history.add(sample_action(&node));
-        println!("{:#?}", history);
 
         if history.hand_over() {
             return terminal_utility(&deck, history, player);
@@ -186,11 +185,8 @@ fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64
     let opponent = 1 - player;
     let player_hand = get_hand(&deck, player, RIVER);
     let opponent_hand = get_hand(&deck, opponent, RIVER);
-    // let player_strength = HAND_TABLE.hand_strength(&player_hand);
-    // let opponent_strength = HAND_TABLE.hand_strength(&opponent_hand);
-    // UNCOMMENT ME
-    let player_strength = 0;
-    let opponent_strength = 0;
+    let player_strength = HAND_TABLE.hand_strength(&player_hand);
+    let opponent_strength = HAND_TABLE.hand_strength(&opponent_hand);
 
     if player_strength > opponent_strength {
         return (pot / 2) as f64;
@@ -381,9 +377,7 @@ impl InfoSet {
     // are the second two cards. They are followed by the 5 board cards.
     pub fn from_deck(deck: &[Card], history: &ActionHistory) -> InfoSet {
         let cards = get_hand(&deck, history.player, history.street);
-        // let card_bucket = ABSTRACTION.bin(&cards);
-        // UNCOMMENT ME
-        let card_bucket = 0;
+        let card_bucket = ABSTRACTION.bin(&cards);
         InfoSet {
             history: history.clone(),
             card_bucket: card_bucket,
@@ -444,7 +438,15 @@ impl Node {
                 cumulative_strategy + strat.get(action).unwrap() * prob,
             );
         }
+        if prob > 0.0 {
+            self.t += 1;
+        }
         strat
+    }
+
+    pub fn cumulative_strategy(&self) -> HashMap<Action, f64> {
+        // TODO: DCFR
+        normalize(&self.strategy_sum)
     }
 
     pub fn add_regret(&mut self, action: &Action, regret: f64) {

@@ -16,5 +16,5 @@ mod tests;
 mod trainer;
 
 fn main() {
-    trainer::train(100);
+    trainer::train(1000000);
 }
