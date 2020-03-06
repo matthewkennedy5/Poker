@@ -43,28 +43,35 @@ enum ActionType {
 
 // Writes out the approximate Nash equilibrium strategy to a JSON
 pub fn train(iters: u64) {
-    let deck = card_utils::deck();
-    let rng = &mut rand::thread_rng();
+    let mut deck = card_utils::deck();
+    let mut rng = &mut rand::thread_rng();
+    // deck.shuffle(&mut rng);
+    // let player_hand = get_hand(&deck, 0, RIVER);
+    // let opponent_hand = get_hand(&deck, 1, RIVER);
+
+    // println!("{:?}\n{:?}", player_hand, opponent_hand);
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
     lazy_static::initialize(&ABSTRACTION);
     lazy_static::initialize(&HAND_TABLE);
+    // println!("{} ?= {}", HAND_TABLE.hand_strength(&player_hand), HAND_TABLE.hand_strength(&opponent_hand));
 
     println!("[INFO]: Beginning training.");
     let bar = card_utils::pbar(iters);
     for i in 0..iters {
-        // deck.shuffle(&mut rng);
+        deck.shuffle(&mut rng);
         iterate(DEALER, &deck, ActionHistory::new(), [1.0, 1.0], &mut nodes);
-        // deck.shuffle(&mut rng);
+        deck.shuffle(&mut rng);
         iterate(OPPONENT, &deck, ActionHistory::new(), [1.0, 1.0], &mut nodes);
         bar.inc(1);
     }
     bar.finish();
 
-    for (infoset, node) in nodes {
+    for (infoset, node) in &nodes {
         if node.t > 1 {
             println!("{}: {:#?}t: {}\n", infoset, node.cumulative_strategy(), node.t);
         }
     }
+    println!("{} nodes reached.", nodes.len());
 
 
     // Convert nodes to have string keys for JSON serialization
@@ -81,7 +88,7 @@ pub fn train(iters: u64) {
 // Parser for the string format I'm using to store infoset keys in the JSON.
 // Format example: "312|bet 500, call 500; fold"
 fn str2infoset(str: String) -> InfoSet {
-    // TODO
+    unimplemented!();
     InfoSet {
         history: ActionHistory::new(),
         card_bucket: 0,
@@ -103,6 +110,7 @@ fn iterate(
     // doesn't exist
     let mut infoset = InfoSet::from_deck(&deck, &history);
     if !nodes.contains_key(&infoset) {
+        println!("new");
         let new_node = Node::new(&infoset);
         nodes.insert(infoset.clone(), new_node);
     }
@@ -119,6 +127,7 @@ fn iterate(
         }
         infoset = InfoSet::from_deck(&deck, &history);
         if !nodes.contains_key(&infoset) {
+            println!("new");
             nodes.insert(infoset.clone(), Node::new(&infoset));
         }
         node = nodes.get(&infoset).unwrap().clone();
@@ -134,17 +143,15 @@ fn iterate(
     for (action, prob) in strategy {
         let mut next_history = history.clone();
         next_history.add(action.clone());
-        let weights = match player {
+        let new_weights = match player {
             0 => [p0 * prob, p1],
             1 => [p0, p1 * prob],
             _ => panic!("Bad player value"),
         };
-        let utility = iterate(player, &deck, next_history, weights, nodes);
+        let utility = iterate(player, &deck, next_history, new_weights, nodes);
         utilities.insert(action, utility);
         node_utility += prob * utility;
     }
-
-    let mut node = nodes.get(&infoset).unwrap().clone();
 
     // Update regrets
     for (action, utility) in &utilities {
@@ -171,22 +178,30 @@ fn sample_action(node: &Node) -> Action {
     action
 }
 
+// Assuming history represents a terminal state (someone folded, or it's a showdown),
+// return the utility, in chips, that the given player gets.
 fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64 {
-    let last_player = 1 - history.player();
+    let opponent = 1 - player;
     if history.last_action().unwrap().action == ActionType::Fold {
-        // You folded -- you lose what you put in the pot
-        let util = history.stack_sizes()[last_player] - STACK_SIZE;
+        // Someone folded -- assign the chips to the winner.
+        let winner = history.player;
+        let winnings = STACK_SIZE - history.stack_sizes()[1-winner];
+        let util = match winner {
+            player => winnings,
+            opponent => -winnings,
+            _ => panic!("Bad player number"),
+        };
         return util as f64;
-        // TODO: If the big blind folds, he loses a big blind
     }
 
     // Showdown time -- both players have contributed equally to the pot
     let pot = history.pot();
-    let opponent = 1 - player;
     let player_hand = get_hand(&deck, player, RIVER);
     let opponent_hand = get_hand(&deck, opponent, RIVER);
     let player_strength = HAND_TABLE.hand_strength(&player_hand);
     let opponent_strength = HAND_TABLE.hand_strength(&opponent_hand);
+    // let player_strength = 0;
+    // let opponent_strength = 0;
 
     if player_strength > opponent_strength {
         return (pot / 2) as f64;
@@ -377,7 +392,9 @@ impl InfoSet {
     // are the second two cards. They are followed by the 5 board cards.
     pub fn from_deck(deck: &[Card], history: &ActionHistory) -> InfoSet {
         let cards = get_hand(&deck, history.player, history.street);
-        let card_bucket = ABSTRACTION.bin(&cards);
+        // let card_bucket = ABSTRACTION.bin(&cards);
+        let card_bucket = 0;
+
         InfoSet {
             history: history.clone(),
             card_bucket: card_bucket,
