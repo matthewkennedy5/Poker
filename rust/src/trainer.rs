@@ -28,6 +28,7 @@ const FOLD: Action = Action {
 
 lazy_static! {
     static ref ABSTRACTION: Abstraction = Abstraction::new();
+    static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
 }
 
 // Allowed bets in terms of pot fractions
@@ -45,14 +46,22 @@ pub fn train(iters: i32) {
     let deck = card_utils::deck();
     let rng = &mut rand::thread_rng();
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
+    // UNCOMMENT ME
     // lazy_static::initialize(&ABSTRACTION);
+    // lazy_static::initialize(&HAND_TABLE);
     println!("[INFO]: Beginning training.");
     let bar = card_utils::pbar(iters as u64);
     for i in 0..iters {
         // deck.shuffle(&mut rng);
-        iterate(0, &deck, ActionHistory::new(), [0.0, 0.0], &mut nodes);
+        iterate(DEALER, &deck, ActionHistory::new(), [0.0, 0.0], &mut nodes);
         // deck.shuffle(&mut rng);
-        iterate(1, &deck, ActionHistory::new(), [0.0, 0.0], &mut nodes);
+        iterate(
+            OPPONENT,
+            &deck,
+            ActionHistory::new(),
+            [0.0, 0.0],
+            &mut nodes,
+        );
         bar.inc(1);
     }
     bar.finish();
@@ -85,6 +94,7 @@ fn iterate(
     weights: [f64; 2],
     nodes: &mut HashMap<InfoSet, Node>,
 ) -> f64 {
+    println!("{:#?}", history);
     if history.hand_over() {
         return terminal_utility(&deck, history, player);
     }
@@ -97,12 +107,14 @@ fn iterate(
         nodes.insert(infoset.clone(), new_node);
     }
     let mut node: Node = nodes.get(&infoset).unwrap().clone();
+    let mut history = history.clone();
 
     let opponent = 1 - player;
-    if history.whose_turn() == opponent {
+    if history.player == opponent {
         // Process the opponent's turn
-        let mut history = history.clone();
         history.add(sample_action(&node));
+        println!("{:#?}", history);
+
         if history.hand_over() {
             return terminal_utility(&deck, history, player);
         }
@@ -133,7 +145,7 @@ fn iterate(
         node_utility += prob * utility;
     }
 
-    let node = nodes.get(&infoset).unwrap();
+    let mut node = nodes.get(&infoset).unwrap().clone();
 
     // Update regrets
     for (action, utility) in &utilities {
@@ -161,12 +173,33 @@ fn sample_action(node: &Node) -> Action {
 }
 
 fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64 {
-    let last_player = 1 - history.whose_turn();
+    let last_player = 1 - history.player();
     if history.last_action().unwrap().action == ActionType::Fold {
+        // You folded -- you lose what you put in the pot
         let util = history.stack_sizes()[last_player] - STACK_SIZE;
         return util as f64;
+        // TODO: If the big blind folds, he loses a big blind
     }
-    unimplemented!();
+
+    // Showdown time -- both players have contributed equally to the pot
+    let pot = history.pot();
+    let opponent = 1 - player;
+    let player_hand = get_hand(&deck, player, RIVER);
+    let opponent_hand = get_hand(&deck, opponent, RIVER);
+    // let player_strength = HAND_TABLE.hand_strength(&player_hand);
+    // let opponent_strength = HAND_TABLE.hand_strength(&opponent_hand);
+    // UNCOMMENT ME
+    let player_strength = 0;
+    let opponent_strength = 0;
+
+    if player_strength > opponent_strength {
+        return (pot / 2) as f64;
+    } else if player_strength < opponent_strength {
+        return (-pot / 2) as f64;
+    } else {
+        // It's a tie: player_strength == opponent_strength
+        return 0.0;
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
@@ -191,7 +224,7 @@ struct ActionHistory {
     history: Vec<Vec<Action>>, // Each index is a street
     street: usize,
     last_action: Option<Action>,
-    whose_turn: usize,
+    player: usize,
     stacks: [i32; 2],
 }
 
@@ -201,7 +234,7 @@ impl ActionHistory {
             history: vec![Vec::new(); 4],
             street: PREFLOP,
             last_action: None,
-            whose_turn: DEALER,
+            player: DEALER,
             stacks: [STACK_SIZE, STACK_SIZE],
         }
     }
@@ -230,18 +263,19 @@ impl ActionHistory {
         return false;
     }
 
-    pub fn whose_turn(&self) -> usize {
-        self.whose_turn
+    pub fn player(&self) -> usize {
+        self.player
     }
 
     // Add an new action to this history, and update the state
     pub fn add(&mut self, action: Action) {
-        self.stacks[self.whose_turn] -= action.amount;
-        self.whose_turn = 1 - self.whose_turn;
+        self.stacks[self.player] -= action.amount;
+        self.player = 1 - self.player;
         self.last_action = Some(action.clone());
         self.history[self.street].push(action);
         if self.stacks[0] == self.stacks[1] && self.history[self.street].len() >= 2 {
             self.street += 1;
+            self.player = OPPONENT;
         }
     }
 
@@ -263,10 +297,10 @@ impl ActionHistory {
         let mut actions = Vec::new();
         // Add possible bets
         let min_bet = match &self.last_action {
-            Some(action) => action.amount,
+            Some(action) => 2 * action.amount,
             None => BIG_BLIND,
         };
-        let max_bet = self.stacks[self.whose_turn];
+        let max_bet = self.stacks[self.player];
         let pot = self.pot();
         for fraction in BET_ABSTRACTION.iter() {
             let bet = fraction * pot;
@@ -278,8 +312,19 @@ impl ActionHistory {
             }
         }
 
-        // Add call/check action
-        let to_call = self.stacks[1 - self.whose_turn] - self.stacks[self.whose_turn];
+        // TODO: Add the all-in action if allowed in the bet abstraction
+
+        // Add call/check action. If the pot is 0 because it's the first action
+        // on the preflop, then the minimum bet is a big blind.
+        let to_call = match pot {
+            0 => BIG_BLIND,
+            _ => self.stacks[self.player] - self.stacks[1 - self.player],
+        };
+
+        if to_call < 0 {
+            panic!("to_call < 0");
+        }
+
         actions.push(Action {
             action: ActionType::Call,
             amount: to_call,
@@ -293,6 +338,7 @@ impl ActionHistory {
     }
 }
 
+// TODO: Figure out a good serialization strategy
 impl fmt::Display for ActionHistory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut result = String::new();
@@ -307,6 +353,23 @@ impl fmt::Display for ActionHistory {
     }
 }
 
+fn get_hand(deck: &[Card], player: usize, street: usize) -> Vec<Card> {
+    let hole = match player {
+        DEALER => &deck[0..2],
+        OPPONENT => &deck[2..4],
+        _ => panic!("Bad player ID"),
+    };
+    let board = match street {
+        PREFLOP => &[],
+        FLOP => &deck[4..7],
+        TURN => &deck[4..8],
+        RIVER => &deck[4..9],
+        _ => panic!("Invalid street"),
+    };
+    let cards = [hole, board].concat();
+    cards
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 struct InfoSet {
     history: ActionHistory,
@@ -317,22 +380,10 @@ impl InfoSet {
     // The dealer's cards are the first two cards in the deck, and the opponent's
     // are the second two cards. They are followed by the 5 board cards.
     pub fn from_deck(deck: &[Card], history: &ActionHistory) -> InfoSet {
-        let hole = match history.whose_turn {
-            DEALER => &deck[0..2],
-            OPPONENT => &deck[2..4],
-            _ => panic!("Bad player ID"),
-        };
-        let board = match history.street {
-            PREFLOP => &[],
-            FLOP => &deck[4..7],
-            TURN => &deck[4..8],
-            RIVER => &deck[4..9],
-            _ => panic!("Invalid street: {}", history.street),
-        };
-        let cards = [hole, board].concat();
+        let cards = get_hand(&deck, history.player, history.street);
         // let card_bucket = ABSTRACTION.bin(&cards);
+        // UNCOMMENT ME
         let card_bucket = 0;
-
         InfoSet {
             history: history.clone(),
             card_bucket: card_bucket,
@@ -396,8 +447,10 @@ impl Node {
         strat
     }
 
-    pub fn add_regret(&self, action: &Action, regret: f64) {
-        unimplemented!();
+    pub fn add_regret(&mut self, action: &Action, regret: f64) {
+        // TODO: DCFR
+        let old_regret = self.regrets.get(action).unwrap();
+        self.regrets.insert(action.clone(), old_regret + regret);
     }
 }
 
