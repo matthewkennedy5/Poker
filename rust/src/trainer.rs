@@ -8,9 +8,11 @@ use std::fmt;
 use std::fs::File;
 use std::io::Write;
 
+
 // TODO: Use a parameter file
 const BLUEPRINT_STRATEGY_PATH: &str = "blueprint.json";
 
+const SMALL_BLIND: i32 = 50;
 const BIG_BLIND: i32 = 100;
 const STACK_SIZE: i32 = 200 * BIG_BLIND;
 
@@ -45,33 +47,36 @@ enum ActionType {
 pub fn train(iters: u64) {
     let mut deck = card_utils::deck();
     let mut rng = &mut rand::thread_rng();
-    // deck.shuffle(&mut rng);
-    // let player_hand = get_hand(&deck, 0, RIVER);
-    // let opponent_hand = get_hand(&deck, 1, RIVER);
+    deck.shuffle(&mut rng);
+    let player_hand = get_hand(&deck, 0, RIVER);
+    let opponent_hand = get_hand(&deck, 1, RIVER);
 
-    // println!("{:?}\n{:?}", player_hand, opponent_hand);
+    println!("{:?}\n{:?}", player_hand, opponent_hand);
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
     lazy_static::initialize(&ABSTRACTION);
     lazy_static::initialize(&HAND_TABLE);
-    // println!("{} ?= {}", HAND_TABLE.hand_strength(&player_hand), HAND_TABLE.hand_strength(&opponent_hand));
+    println!("{} ?= {}", HAND_TABLE.hand_strength(&player_hand), HAND_TABLE.hand_strength(&opponent_hand));
 
     println!("[INFO]: Beginning training.");
+    let mut p0_util = 0.0;
+    let mut p1_util = 0.0;
     let bar = card_utils::pbar(iters);
     for i in 0..iters {
-        deck.shuffle(&mut rng);
-        iterate(DEALER, &deck, ActionHistory::new(), [1.0, 1.0], &mut nodes);
-        deck.shuffle(&mut rng);
-        iterate(OPPONENT, &deck, ActionHistory::new(), [1.0, 1.0], &mut nodes);
+        // deck.shuffle(&mut rng);
+        p0_util += iterate(DEALER, &deck, ActionHistory::new(), [1.0, 1.0], &mut nodes);
+        // deck.shuffle(&mut rng);
+        p1_util += iterate(OPPONENT, &deck, ActionHistory::new(), [1.0, 1.0], &mut nodes);
         bar.inc(1);
     }
     bar.finish();
 
     for (infoset, node) in &nodes {
-        if node.t > 1 {
+        if infoset.history.street == PREFLOP {
             println!("{}: {:#?}t: {}\n", infoset, node.cumulative_strategy(), node.t);
         }
     }
     println!("{} nodes reached.", nodes.len());
+    println!("Utilities: {}, {}", p0_util, p1_util);
 
 
     // Convert nodes to have string keys for JSON serialization
@@ -110,7 +115,6 @@ fn iterate(
     // doesn't exist
     let mut infoset = InfoSet::from_deck(&deck, &history);
     if !nodes.contains_key(&infoset) {
-        println!("new");
         let new_node = Node::new(&infoset);
         nodes.insert(infoset.clone(), new_node);
     }
@@ -127,7 +131,6 @@ fn iterate(
         }
         infoset = InfoSet::from_deck(&deck, &history);
         if !nodes.contains_key(&infoset) {
-            println!("new");
             nodes.insert(infoset.clone(), Node::new(&infoset));
         }
         node = nodes.get(&infoset).unwrap().clone();
@@ -185,23 +188,40 @@ fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64
     if history.last_action().unwrap().action == ActionType::Fold {
         // Someone folded -- assign the chips to the winner.
         let winner = history.player;
-        let winnings = STACK_SIZE - history.stack_sizes()[1-winner];
-        let util = match winner {
-            player => winnings,
-            opponent => -winnings,
-            _ => panic!("Bad player number"),
+        let folder = 1 - winner;
+        let mut winnings: f64 = (STACK_SIZE - history.stack_sizes()[folder]) as f64;
+
+        // If someone folded on the first preflop round, they lose their blind
+        if winnings == 0.0 {
+            winnings += match folder {
+                DEALER => SMALL_BLIND as f64,
+                OPPONENT => BIG_BLIND as f64,
+                _ => panic!("Bad player number"),
+            };
+        }
+
+        let util = if (winner == player) {
+            winnings
+        } else {
+            -winnings
         };
-        return util as f64;
+
+        return util;
     }
 
     // Showdown time -- both players have contributed equally to the pot
     let pot = history.pot();
     let player_hand = get_hand(&deck, player, RIVER);
     let opponent_hand = get_hand(&deck, opponent, RIVER);
+
+    // So player 0 always wins the showdown
+    // let player_strength = 1 - player;
+    // let opponent_strength = player;
+
     let player_strength = HAND_TABLE.hand_strength(&player_hand);
     let opponent_strength = HAND_TABLE.hand_strength(&opponent_hand);
-    // let player_strength = 0;
-    // let opponent_strength = 0;
+    let player_strength = 0;
+    let opponent_strength = 0;
 
     if player_strength > opponent_strength {
         return (pot / 2) as f64;
@@ -392,8 +412,8 @@ impl InfoSet {
     // are the second two cards. They are followed by the 5 board cards.
     pub fn from_deck(deck: &[Card], history: &ActionHistory) -> InfoSet {
         let cards = get_hand(&deck, history.player, history.street);
-        // let card_bucket = ABSTRACTION.bin(&cards);
-        let card_bucket = 0;
+        let card_bucket = ABSTRACTION.bin(&cards);
+        // let card_bucket = 0;
 
         InfoSet {
             history: history.clone(),
