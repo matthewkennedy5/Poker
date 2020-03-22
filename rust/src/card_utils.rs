@@ -8,10 +8,10 @@ use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs::File;
-use std::io::Write;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read, Write};
 
 const HAND_TABLE_PATH: &str = "products/strengths7.txt";
+const LIGHT_HAND_TABLE_PATH: &str = "products/strengths.json";
 const EQUITY_TABLE_PATH: &str = "products/equity_table.txt";
 const FLOP_CANONICAL_PATH: &str = "products/flop_canonical.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_canonical.txt";
@@ -51,7 +51,7 @@ impl Card {
             "Q" => 12,
             "K" => 13,
             "A" => 14,
-            _ => panic!("bad card string"),
+            _ => panic!("bad card string '{}'", card),
         };
         let suit = match &card[1..2] {
             "c" => CLUBS,
@@ -346,6 +346,60 @@ impl HandTable {
             Err(_e) => panic!("Hand table not found"),
             Ok(file) => HandData::read_serialized(file),
         }
+    }
+}
+
+// Slower 5-card lookup table which uses a lot less memory than the normal fast
+// HandTable. This has the benefit of reducing startup time.
+pub struct LightHandTable {
+    strengths: HashMap<Vec<Card>, i32>,
+}
+
+impl LightHandTable {
+    pub fn new() -> LightHandTable {
+        LightHandTable {
+            strengths: LightHandTable::load_hand_strengths(),
+        }
+    }
+
+    pub fn hand_strength(&self, hand: &[Card]) -> i32 {
+        // Return the best hand out of all 5-card subsets
+        let mut max_strength = 0;
+        for five_card in hand.iter().combinations(5) {
+            let canonical = canonical_hand(&deepcopy(&five_card), false);
+            let strength = self.strengths.get(&canonical).unwrap().clone();
+            if strength > max_strength {
+                max_strength = strength;
+            }
+        }
+        max_strength
+    }
+
+    fn load_hand_strengths() -> HashMap<Vec<Card>, i32> {
+        let str_map: HashMap<String, i32> = match File::open(LIGHT_HAND_TABLE_PATH) {
+            Err(e) => panic!("Hand table not found"),
+            Ok(mut file) => {
+                // Load up the hand table from the JSON
+                let mut buffer = String::new();
+                file.read_to_string(&mut buffer).expect("Error");
+                serde_json::from_str(&buffer).unwrap()
+            }
+        };
+        // Translate the card strings to Vec<Card> keys
+        let mut vec_map: HashMap<Vec<Card>, i32> = HashMap::new();
+        for (hand, strength) in str_map {
+            let cards = vec![
+                &hand[0..2],
+                &hand[2..4],
+                &hand[4..6],
+                &hand[6..8],
+                &hand[8..10],
+            ];
+            println!("{:?}", cards);
+            let cards = strvec2cards(&cards);
+            vec_map.insert(cards, strength);
+        }
+        vec_map
     }
 }
 

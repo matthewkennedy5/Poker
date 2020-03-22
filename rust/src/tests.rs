@@ -27,10 +27,10 @@ fn uint_hands() {
 
 #[test]
 fn hand_comparisons() {
-    let table = HandTable::new();
+    let table = LightHandTable::new();
 
     // define the hands we'll be using
-    let royal_flush = vec!["jd", "as", "js", "ks", "qs", "ts", "2c"];
+    let royal_flush = vec!["Jd", "As", "Js", "Ks", "Qs", "Ts", "2c"];
     let royal_flush2 = vec!["Jd", "Ac", "Jc", "Kc", "Qc", "Tc", "2c"];
     let straight_flush = vec!["7d", "2c", "8d", "Jd", "9d", "3d", "Td"];
     let four = vec!["2h", "2c", "3d", "5c", "7d", "2d", "2s"];

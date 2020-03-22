@@ -8,7 +8,6 @@ use std::fmt;
 use std::fs::File;
 use std::io::Write;
 
-
 // TODO: Use a parameter file
 const BLUEPRINT_STRATEGY_PATH: &str = "blueprint.json";
 
@@ -30,7 +29,7 @@ const FOLD: Action = Action {
 
 lazy_static! {
     static ref ABSTRACTION: Abstraction = Abstraction::new();
-    static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
+    static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
 }
 
 // Allowed bets in terms of pot fractions
@@ -47,25 +46,26 @@ enum ActionType {
 pub fn train(iters: u64) {
     let mut deck = card_utils::deck();
     let mut rng = &mut rand::thread_rng();
-    deck.shuffle(&mut rng);
-    let player_hand = get_hand(&deck, 0, RIVER);
-    let opponent_hand = get_hand(&deck, 1, RIVER);
 
-    println!("{:?}\n{:?}", player_hand, opponent_hand);
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
     lazy_static::initialize(&ABSTRACTION);
     lazy_static::initialize(&HAND_TABLE);
-    println!("{} ?= {}", HAND_TABLE.hand_strength(&player_hand), HAND_TABLE.hand_strength(&opponent_hand));
 
     println!("[INFO]: Beginning training.");
     let mut p0_util = 0.0;
     let mut p1_util = 0.0;
     let bar = card_utils::pbar(iters);
     for i in 0..iters {
-        // deck.shuffle(&mut rng);
+        deck.shuffle(&mut rng);
         p0_util += iterate(DEALER, &deck, ActionHistory::new(), [1.0, 1.0], &mut nodes);
-        // deck.shuffle(&mut rng);
-        p1_util += iterate(OPPONENT, &deck, ActionHistory::new(), [1.0, 1.0], &mut nodes);
+        deck.shuffle(&mut rng);
+        p1_util += iterate(
+            OPPONENT,
+            &deck,
+            ActionHistory::new(),
+            [1.0, 1.0],
+            &mut nodes,
+        );
         bar.inc(1);
     }
     bar.finish();
@@ -73,12 +73,20 @@ pub fn train(iters: u64) {
     for (infoset, node) in &nodes {
         // if infoset.history.street == PREFLOP {
         if node.t > 1 {
-            println!("{}: {:#?}t: {}\n", infoset, node.cumulative_strategy(), node.t);
+            println!(
+                "{}: {:#?}t: {}\n",
+                infoset,
+                node.cumulative_strategy(),
+                node.t
+            );
         }
     }
     println!("{} nodes reached.", nodes.len());
-    println!("Utilities: {}, {}", p0_util / (iters as f64), p1_util / (iters as f64));
-
+    println!(
+        "Utilities: {}, {}",
+        p0_util / (iters as f64),
+        p1_util / (iters as f64)
+    );
 
     // Convert nodes to have string keys for JSON serialization
     // let mut str_nodes: HashMap<String, Node> = HashMap::new();
@@ -108,7 +116,6 @@ fn iterate(
     weights: [f64; 2],
     nodes: &mut HashMap<InfoSet, Node>,
 ) -> f64 {
-
     // println!("{:#?}", history);
 
     if history.hand_over() {
