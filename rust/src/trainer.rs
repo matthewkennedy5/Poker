@@ -71,12 +71,13 @@ pub fn train(iters: u64) {
     bar.finish();
 
     for (infoset, node) in &nodes {
-        if infoset.history.street == PREFLOP {
+        // if infoset.history.street == PREFLOP {
+        if node.t > 1 {
             println!("{}: {:#?}t: {}\n", infoset, node.cumulative_strategy(), node.t);
         }
     }
     println!("{} nodes reached.", nodes.len());
-    println!("Utilities: {}, {}", p0_util, p1_util);
+    println!("Utilities: {}, {}", p0_util / (iters as f64), p1_util / (iters as f64));
 
 
     // Convert nodes to have string keys for JSON serialization
@@ -107,6 +108,9 @@ fn iterate(
     weights: [f64; 2],
     nodes: &mut HashMap<InfoSet, Node>,
 ) -> f64 {
+
+    // println!("{:#?}", history);
+
     if history.hand_over() {
         return terminal_utility(&deck, history, player);
     }
@@ -220,8 +224,8 @@ fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64
 
     let player_strength = HAND_TABLE.hand_strength(&player_hand);
     let opponent_strength = HAND_TABLE.hand_strength(&opponent_hand);
-    let player_strength = 0;
-    let opponent_strength = 0;
+    // let player_strength = 0;
+    // let opponent_strength = 0;
 
     if player_strength > opponent_strength {
         return (pot / 2) as f64;
