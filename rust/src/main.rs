@@ -9,11 +9,13 @@ extern crate rand;
 extern crate lazy_static;
 extern crate bio;
 extern crate rayon;
+extern crate bincode;
 
 mod card_abstraction;
 mod card_utils;
 mod tests;
 mod trainer;
+mod exploiter;
 
 fn main() {
     trainer::train(10000);

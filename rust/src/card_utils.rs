@@ -395,7 +395,6 @@ impl LightHandTable {
                 &hand[6..8],
                 &hand[8..10],
             ];
-            println!("{:?}", cards);
             let cards = strvec2cards(&cards);
             vec_map.insert(cards, strength);
         }

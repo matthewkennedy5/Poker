@@ -1,6 +1,7 @@
 use crate::card_abstraction::Abstraction;
 use crate::card_utils;
 use crate::card_utils::Card;
+use crate::exploiter::exploitability;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
@@ -9,7 +10,7 @@ use std::fs::File;
 use std::io::Write;
 
 // TODO: Use a parameter file
-const BLUEPRINT_STRATEGY_PATH: &str = "blueprint.json";
+const BLUEPRINT_STRATEGY_PATH: &str = "blueprint.bin";
 
 const SMALL_BLIND: i32 = 50;
 const BIG_BLIND: i32 = 100;
@@ -42,7 +43,6 @@ enum ActionType {
     Bet,
 }
 
-// Writes out the approximate Nash equilibrium strategy to a JSON
 pub fn train(iters: u64) {
     let mut deck = card_utils::deck();
     let mut rng = &mut rand::thread_rng();
@@ -71,8 +71,8 @@ pub fn train(iters: u64) {
     bar.finish();
 
     for (infoset, node) in &nodes {
-        // if infoset.history.street == PREFLOP {
-        if node.t > 1 {
+        if infoset.history.street == PREFLOP {
+        // if node.t > 1 {
             println!(
                 "{}: {:#?}t: {}\n",
                 infoset,
@@ -88,15 +88,14 @@ pub fn train(iters: u64) {
         p1_util / (iters as f64)
     );
 
-    // Convert nodes to have string keys for JSON serialization
-    // let mut str_nodes: HashMap<String, Node> = HashMap::new();
-    // for (infoset, node) in nodes {
-    //     str_nodes.insert(infoset.to_string(), node.clone());
-    // }
+    println!("Exploitability: {}", exploitability(&nodes));
+    serialize_strategy(&nodes);
+}
 
-    // let json = serde_json::to_string_pretty(&str_nodes).unwrap();
-    // let mut file = File::create(BLUEPRINT_STRATEGY_PATH).unwrap();
-    // file.write_all(json.as_bytes()).unwrap();
+fn serialize_strategy(nodes: &HashMap<InfoSet, Node>) {
+    let bincode: Vec<u8> = bincode::serialize(nodes).unwrap();
+    let mut file = File::create(BLUEPRINT_STRATEGY_PATH).unwrap();
+    file.write_all(&bincode).unwrap();
 }
 
 // Parser for the string format I'm using to store infoset keys in the JSON.
@@ -116,7 +115,6 @@ fn iterate(
     weights: [f64; 2],
     nodes: &mut HashMap<InfoSet, Node>,
 ) -> f64 {
-    // println!("{:#?}", history);
 
     if history.hand_over() {
         return terminal_utility(&deck, history, player);
