@@ -7,16 +7,17 @@ extern crate cute;
 extern crate rand;
 #[macro_use]
 extern crate lazy_static;
+extern crate bincode;
 extern crate bio;
 extern crate rayon;
-extern crate bincode;
 
 mod card_abstraction;
 mod card_utils;
+mod exploiter;
 mod tests;
 mod trainer;
-mod exploiter;
+mod trainer_utils;
 
 fn main() {
-    trainer::train(10000);
+    exploiter::exploitability(&std::collections::HashMap::new());
 }

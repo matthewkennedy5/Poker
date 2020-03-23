@@ -17,6 +17,7 @@ lazy_static = "*"
 rayon = "*"
 bio = "*"
 bincode = "*"
+statistical = "*"
 
 # For profiling
 [profile.release]
