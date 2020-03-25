@@ -3,6 +3,8 @@ use crate::card_utils;
 use crate::card_utils::Card;
 use std::collections::HashMap;
 use std::fmt;
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
 
 pub const SMALL_BLIND: i32 = 50;
 pub const BIG_BLIND: i32 = 100;
@@ -25,6 +27,7 @@ const BET_ABSTRACTION: [i32; 1] = [1];
 
 lazy_static! {
     static ref ABSTRACTION: Abstraction = Abstraction::new();
+    static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
@@ -96,7 +99,8 @@ impl ActionHistory {
     }
 
     // Add an new action to this history, and update the state
-    pub fn add(&mut self, action: Action) {
+    pub fn add(&mut self, action: &Action) {
+        let action = action.clone();
         self.stacks[self.player] -= action.amount;
         self.player = 1 - self.player;
         self.last_action = Some(action.clone());
@@ -117,6 +121,14 @@ impl ActionHistory {
 
     pub fn pot(&self) -> i32 {
         2 * STACK_SIZE - self.stacks[0] - self.stacks[1]
+    }
+
+    // Returns the amount needed to call, so 0 for checking
+    pub fn to_call(&self) -> i32 {
+        match self.pot() {
+            0 => BIG_BLIND,
+            _ => self.stacks[self.player] - self.stacks[1 - self.player],
+        }
     }
 
     // Returns a vector of the possible next actions after this state, that are
@@ -144,14 +156,7 @@ impl ActionHistory {
 
         // Add call/check action. If the pot is 0 because it's the first action
         // on the preflop, then the minimum bet is a big blind.
-        let to_call = match pot {
-            0 => BIG_BLIND,
-            _ => self.stacks[self.player] - self.stacks[1 - self.player],
-        };
-
-        if to_call < 0 {
-            panic!("to_call < 0");
-        }
+        let to_call = self.to_call();
 
         actions.push(Action {
             action: ActionType::Call,
@@ -306,4 +311,63 @@ pub fn normalize(map: &HashMap<Action, f64>) -> HashMap<Action, f64> {
         map.insert(action.clone(), newval);
     }
     map
+}
+
+// Randomly sample an action given the strategy at this node.
+pub fn sample_action(node: &Node) -> Action {
+    let node = &mut node.clone();
+    let strategy = node.current_strategy(0.0);
+    let actions: Vec<&Action> = strategy.keys().collect();
+    let mut rng = thread_rng();
+    let action = actions
+        .choose_weighted(&mut rng, |a| strategy.get(&a).unwrap())
+        .unwrap()
+        .clone()
+        .clone();
+    action
+}
+
+// Assuming history represents a terminal state (someone folded, or it's a showdown),
+// return the utility, in chips, that the given player gets.
+pub fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64 {
+    let opponent = 1 - player;
+    if history.last_action().unwrap().action == ActionType::Fold {
+        // Someone folded -- assign the chips to the winner.
+        let winner = history.player;
+        let folder = 1 - winner;
+        let mut winnings: f64 = (STACK_SIZE - history.stack_sizes()[folder]) as f64;
+
+        // If someone folded on the first preflop round, they lose their blind
+        if winnings == 0.0 {
+            winnings += match folder {
+                DEALER => SMALL_BLIND as f64,
+                OPPONENT => BIG_BLIND as f64,
+                _ => panic!("Bad player number"),
+            };
+        }
+
+        let util = if winner == player {
+            winnings
+        } else {
+            -winnings
+        };
+
+        return util;
+    }
+
+    // Showdown time -- both players have contributed equally to the pot
+    let pot = history.pot();
+    let player_hand = get_hand(&deck, player, RIVER);
+    let opponent_hand = get_hand(&deck, opponent, RIVER);
+    let player_strength = HAND_TABLE.hand_strength(&player_hand);
+    let opponent_strength = HAND_TABLE.hand_strength(&opponent_hand);
+
+    if player_strength > opponent_strength {
+        return (pot / 2) as f64;
+    } else if player_strength < opponent_strength {
+        return (-pot / 2) as f64;
+    } else {
+        // It's a tie: player_strength == opponent_strength
+        return 0.0;
+    }
 }
