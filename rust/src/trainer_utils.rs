@@ -5,6 +5,8 @@ use std::collections::HashMap;
 use std::fmt;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
+use std::cmp::Eq;
+use std::hash::Hash;
 
 pub const SMALL_BLIND: i32 = 50;
 pub const BIG_BLIND: i32 = 100;
@@ -296,7 +298,7 @@ impl Node {
 }
 
 // Normalizes the values of a HashMap so that its elements sum to 1.
-pub fn normalize(map: &HashMap<Action, f64>) -> HashMap<Action, f64> {
+pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64> {
     let mut map = map.clone();
     let mut sum = 0.0;
     for elem in map.values() {
@@ -306,6 +308,7 @@ pub fn normalize(map: &HashMap<Action, f64>) -> HashMap<Action, f64> {
         let newval: f64 = match sum as i32 {
             // If all values are 0, then just return a uniform distribution
             0 => 1.0 / map.len() as f64,
+            // Otherwise normalize based on the sum.
             _ => val / sum,
         };
         map.insert(action.clone(), newval);
