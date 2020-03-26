@@ -13,7 +13,6 @@ use std::io::Write;
 // TODO: Use a parameter file
 const BLUEPRINT_STRATEGY_PATH: &str = "blueprint.bin";
 
-
 pub fn train(iters: u64) {
     let mut deck = card_utils::deck();
     let mut rng = &mut rand::thread_rng();
@@ -132,5 +131,3 @@ fn iterate(
     nodes.insert(infoset, updated);
     node_utility
 }
-
-

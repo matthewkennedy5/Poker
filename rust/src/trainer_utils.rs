@@ -1,11 +1,11 @@
 use crate::card_abstraction::Abstraction;
 use crate::card_utils;
 use crate::card_utils::Card;
-use std::collections::HashMap;
-use std::fmt;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use std::cmp::Eq;
+use std::collections::HashMap;
+use std::fmt;
 use std::hash::Hash;
 
 pub const SMALL_BLIND: i32 = 50;
