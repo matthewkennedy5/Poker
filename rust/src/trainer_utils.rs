@@ -24,8 +24,9 @@ pub const FOLD: Action = Action {
     amount: 0,
 };
 
-// Allowed bets in terms of pot fractions
-const BET_ABSTRACTION: [i32; 1] = [1];
+// Allowed bets in terms of pot fractions. We mark the all-in action as -1.
+pub const ALL_IN: i32 = -1;
+const BET_ABSTRACTION: [i32; 2] = [1, ALL_IN];
 
 lazy_static! {
     static ref ABSTRACTION: Abstraction = Abstraction::new();
@@ -135,7 +136,7 @@ impl ActionHistory {
 
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
-    pub fn next_actions(&self) -> Vec<Action> {
+    pub fn next_actions(&self, bet_abstraction: Vec<i32>) -> Vec<Action> {
         let mut actions = Vec::new();
         // Add possible bets
         let min_bet = match &self.last_action {
@@ -144,7 +145,7 @@ impl ActionHistory {
         };
         let max_bet = self.stacks[self.player];
         let pot = self.pot();
-        for fraction in BET_ABSTRACTION.iter() {
+        for fraction in bet_abstraction.iter() {
             let bet = fraction * pot;
             if min_bet <= bet && bet <= max_bet {
                 actions.push(Action {
@@ -226,7 +227,7 @@ impl InfoSet {
     }
 
     pub fn next_actions(&self) -> Vec<Action> {
-        self.history.next_actions()
+        self.history.next_actions(BET_ABSTRACTION.to_vec())
     }
 }
 
