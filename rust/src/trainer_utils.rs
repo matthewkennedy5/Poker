@@ -30,7 +30,7 @@ const BET_ABSTRACTION: [i32; 2] = [1, ALL_IN];
 
 lazy_static! {
     static ref ABSTRACTION: Abstraction = Abstraction::new();
-    static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
+    pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
@@ -190,6 +190,8 @@ impl fmt::Display for ActionHistory {
 }
 
 pub fn get_hand(deck: &[Card], player: usize, street: usize) -> Vec<Card> {
+    // In this implementation, the deck cards are defined as follows:
+    // dealer1 dealer2 opponent1 opponent2 flop1 flop2 flop3 turn river
     let hole = match player {
         DEALER => &deck[0..2],
         OPPONENT => &deck[2..4],
