@@ -19,6 +19,6 @@ bio = "*"
 bincode = "*"
 statistical = "*"
 
-# For profiling
 [profile.release]
 debug = 1
+

@@ -30,6 +30,7 @@ const BET_ABSTRACTION: [i32; 2] = [1, ALL_IN];
 
 lazy_static! {
     static ref ABSTRACTION: Abstraction = Abstraction::new();
+    // pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
     pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
 }
 
@@ -146,7 +147,10 @@ impl ActionHistory {
         let max_bet = self.stacks[self.player];
         let pot = self.pot();
         for fraction in bet_abstraction.iter() {
-            let bet = fraction * pot;
+            let bet = match fraction {
+                &ALL_IN => self.stacks[self.player],
+                _ => fraction * pot,
+            };
             if min_bet <= bet && bet <= max_bet {
                 actions.push(Action {
                     action: ActionType::Bet,
@@ -154,8 +158,6 @@ impl ActionHistory {
                 });
             }
         }
-
-        // TODO: Add the all-in action if allowed in the bet abstraction
 
         // Add call/check action. If the pot is 0 because it's the first action
         // on the preflop, then the minimum bet is a big blind.
