@@ -30,8 +30,8 @@ const BET_ABSTRACTION: [i32; 2] = [1, ALL_IN];
 
 lazy_static! {
     static ref ABSTRACTION: Abstraction = Abstraction::new();
-    // pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
-    pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
+    pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
+    // pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
