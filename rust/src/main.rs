@@ -19,5 +19,8 @@ mod trainer;
 mod trainer_utils;
 
 fn main() {
+    // trainer::train(10_000_000);
+    // let nodes = trainer::load_strategy();
+    // exploiter::exploitability(&nodes);
     exploiter::exploitability(&std::collections::HashMap::new());
 }

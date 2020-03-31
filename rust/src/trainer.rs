@@ -8,16 +8,17 @@ use rand::thread_rng;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
-use std::io::Write;
+use std::io::{BufReader, Write};
 
 // TODO: Use a parameter file
-const BLUEPRINT_STRATEGY_PATH: &str = "blueprint.bin";
+const BLUEPRINT_STRATEGY_PATH: &str = "products/blueprint.bin";
 
 pub fn train(iters: u64) {
     let mut deck = card_utils::deck();
     let mut rng = &mut rand::thread_rng();
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
 
+    lazy_static::initialize(&HAND_TABLE);
     println!("[INFO]: Beginning training.");
     let mut p0_util = 0.0;
     let mut p1_util = 0.0;
@@ -34,20 +35,23 @@ pub fn train(iters: u64) {
             &mut nodes,
         );
         bar.inc(1);
+        if i % 1_000_000 == 0 {
+            println!("Exploitability: {}", exploitability(&nodes));
+        }
     }
     bar.finish();
 
-    for (infoset, node) in &nodes {
-        if infoset.history.street == PREFLOP {
-            // if node.t > 1 {
-            println!(
-                "{}: {:#?}t: {}\n",
-                infoset,
-                node.cumulative_strategy(),
-                node.t
-            );
-        }
-    }
+    // for (infoset, node) in &nodes {
+    //     if infoset.history.street == PREFLOP {
+    //         // if node.t > 1 {
+    //         println!(
+    //             "{}: {:#?}t: {}\n",
+    //             infoset,
+    //             node.cumulative_strategy(),
+    //             node.t
+    //         );
+    //     }
+    // }
     println!("{} nodes reached.", nodes.len());
     println!(
         "Utilities: {}, {}",
@@ -57,6 +61,13 @@ pub fn train(iters: u64) {
 
     println!("Exploitability: {}", exploitability(&nodes));
     serialize_strategy(&nodes);
+}
+
+pub fn load_strategy() -> HashMap<InfoSet, Node> {
+    let file = File::open(BLUEPRINT_STRATEGY_PATH).expect("Blueprint strategy file not found");
+    let mut reader = BufReader::new(file);
+    let nodes = bincode::deserialize_from(reader).unwrap();
+    nodes
 }
 
 fn serialize_strategy(nodes: &HashMap<InfoSet, Node>) {
@@ -89,7 +100,7 @@ fn iterate(
     let opponent = 1 - player;
     if history.player == opponent {
         // Process the opponent's turn
-        history.add(&sample_action(&node));
+        history.add(&sample_action_from_node(&node));
 
         if history.hand_over() {
             return terminal_utility(&deck, history, player);

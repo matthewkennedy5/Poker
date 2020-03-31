@@ -1,4 +1,4 @@
-use crate::card_abstraction::Abstraction;
+use crate::card_abstraction;
 use crate::card_utils;
 use crate::card_utils::Card;
 use rand::prelude::SliceRandom;
@@ -25,11 +25,14 @@ pub const FOLD: Action = Action {
 };
 
 // Allowed bets in terms of pot fractions. We mark the all-in action as -1.
-pub const ALL_IN: i32 = -1;
-const BET_ABSTRACTION: [i32; 2] = [1, ALL_IN];
+pub const ALL_IN: f64 = -1.0;
+// const BET_ABSTRACTION: [f64; 10] = [0.25, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, ALL_IN];
+const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
 
 lazy_static! {
-    static ref ABSTRACTION: Abstraction = Abstraction::new();
+    // TODO: Also make a light version of ABSTRACTION, maybe by computing E[HS^2] on the fly
+    // and thinking of some way to know where the percentile bucket cutoffs are
+    pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
     pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
     // pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
 }
@@ -137,7 +140,7 @@ impl ActionHistory {
 
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
-    pub fn next_actions(&self, bet_abstraction: Vec<i32>) -> Vec<Action> {
+    pub fn next_actions(&self, bet_abstraction: Vec<f64>) -> Vec<Action> {
         let mut actions = Vec::new();
         // Add possible bets
         let min_bet = match &self.last_action {
@@ -149,7 +152,7 @@ impl ActionHistory {
         for fraction in bet_abstraction.iter() {
             let bet = match fraction {
                 &ALL_IN => self.stacks[self.player],
-                _ => fraction * pot,
+                _ => (fraction.clone() * (pot as f64)) as i32,
             };
             if min_bet <= bet && bet <= max_bet {
                 actions.push(Action {
@@ -222,11 +225,19 @@ impl InfoSet {
     pub fn from_deck(deck: &[Card], history: &ActionHistory) -> InfoSet {
         let cards = get_hand(&deck, history.player, history.street);
         let card_bucket = ABSTRACTION.bin(&cards);
-        // let card_bucket = 0;
-
         InfoSet {
             history: history.clone(),
             card_bucket: card_bucket,
+        }
+    }
+
+    pub fn from_hand(hand: &[Card], history: &ActionHistory) -> InfoSet {
+        // hand should contain the exact right number of cards for the current
+        // street of the history. Maybe do error checking for this in the future.
+        InfoSet {
+            history: history.clone(),
+            card_bucket: ABSTRACTION.bin(hand),
+            // card_bucket: 1,
         }
     }
 
@@ -322,9 +333,13 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64>
 }
 
 // Randomly sample an action given the strategy at this node.
-pub fn sample_action(node: &Node) -> Action {
+pub fn sample_action_from_node(node: &Node) -> Action {
     let node = &mut node.clone();
     let strategy = node.current_strategy(0.0);
+    sample_action_from_strategy(&strategy)
+}
+
+pub fn sample_action_from_strategy(strategy: &HashMap<Action, f64>) -> Action {
     let actions: Vec<&Action> = strategy.keys().collect();
     let mut rng = thread_rng();
     let action = actions

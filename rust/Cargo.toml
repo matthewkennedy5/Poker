@@ -20,5 +20,5 @@ bincode = "*"
 statistical = "*"
 
 [profile.release]
-debug = 1
+debug = 2
 
