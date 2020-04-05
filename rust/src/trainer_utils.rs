@@ -321,9 +321,9 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64>
         sum += elem;
     }
     for (action, val) in map.clone() {
-        let newval: f64 = match sum as i32 {
+        let newval: f64 = match sum {
             // If all values are 0, then just return a uniform distribution
-            0 => 1.0 / map.len() as f64,
+            0.0 => 1.0 / map.len() as f64,
             // Otherwise normalize based on the sum.
             _ => val / sum,
         };
