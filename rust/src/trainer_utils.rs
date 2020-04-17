@@ -26,8 +26,8 @@ pub const FOLD: Action = Action {
 
 // Allowed bets in terms of pot fractions. We mark the all-in action as -1.
 pub const ALL_IN: f64 = -1.0;
-// const BET_ABSTRACTION: [f64; 10] = [0.25, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, ALL_IN];
-const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
+const BET_ABSTRACTION: [f64; 10] = [0.25, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, ALL_IN];
+// const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
 
 lazy_static! {
     // TODO: Also make a light version of ABSTRACTION, maybe by computing E[HS^2] on the fly
@@ -38,7 +38,7 @@ lazy_static! {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
-pub enum ActionType {
+pub enum ActionType{
     Fold,
     Call,
     Bet,
@@ -138,11 +138,22 @@ impl ActionHistory {
         }
     }
 
+    pub fn min_bet(&self) -> i32 {
+        match &self.last_action {
+            Some(action) => 2 * action.amount,
+            None => BIG_BLIND,
+        }
+    }
+
+    pub fn is_bet_legal(&self, bet: i32) -> bool {
+        let max_bet = self.stacks[self.player];
+        return self.min_bet() <= bet && bet <= max_bet;
+    }
+
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
     pub fn next_actions(&self, bet_abstraction: Vec<f64>) -> Vec<Action> {
         let mut actions = Vec::new();
-        // Add possible bets
         let min_bet = match &self.last_action {
             Some(action) => 2 * action.amount,
             None => BIG_BLIND,
@@ -321,11 +332,12 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64>
         sum += elem;
     }
     for (action, val) in map.clone() {
-        let newval: f64 = match sum {
+        let newval = if sum == 0.0 {
             // If all values are 0, then just return a uniform distribution
-            0.0 => 1.0 / map.len() as f64,
+            1.0 / map.len() as f64
+        } else {
             // Otherwise normalize based on the sum.
-            _ => val / sum,
+            val / sum
         };
         map.insert(action.clone(), newval);
     }

@@ -100,3 +100,8 @@ fn hand_comparisons() {
     assert_eq!(other_high_card, high_card);
     assert_eq!(same_flush, flush);
 }
+
+#[test]
+fn test_ranges() {
+    // TODO: Write a test for this maybe
+}

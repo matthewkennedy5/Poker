@@ -19,6 +19,7 @@ pub fn train(iters: u64) {
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
 
     lazy_static::initialize(&HAND_TABLE);
+    lazy_static::initialize(&ABSTRACTION);
     println!("[INFO]: Beginning training.");
     let mut p0_util = 0.0;
     let mut p1_util = 0.0;
@@ -35,8 +36,8 @@ pub fn train(iters: u64) {
             &mut nodes,
         );
         bar.inc(1);
-        if i % 1_000_000 == 0 {
-            println!("Exploitability: {}", exploitability(&nodes));
+        if i % 100_000 == 0 {
+            exploitability(&nodes);
         }
     }
     bar.finish();
