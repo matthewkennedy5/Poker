@@ -30,8 +30,6 @@ const BET_ABSTRACTION: [f64; 10] = [0.25, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0
 // const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
 
 lazy_static! {
-    // TODO: Also make a light version of ABSTRACTION, maybe by computing E[HS^2] on the fly
-    // and thinking of some way to know where the percentile bucket cutoffs are
     pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
     pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
     // pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
