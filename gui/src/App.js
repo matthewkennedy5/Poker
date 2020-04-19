@@ -105,10 +105,10 @@ class App extends Component {
       return response;
   }
 
-  getCPUAction = async(history) => {
+  getCPUAction = async(cpuCards, history) => {
       const response = await axios.get('http://127.0.0.1:8000/bot', {
           params: {
-              cpuCards: this.state.humanCards.join(),
+              cpuCards: cpuCards.join(),
               board: this.state.board.join(),
               history: history
           }

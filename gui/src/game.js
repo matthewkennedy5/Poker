@@ -173,7 +173,7 @@ class Game extends Component {
         // } else {
         //     action = {action: "call", amount: this.stacks["cpu"] - this.stacks["human"]};
         // }
-        const result = await this.props.getCPUAction(this.history);
+        const result = await this.props.getCPUAction(this.cpuCards, this.history);
         const action = result.data;
         this.stacks["cpu"] -= action["amount"];
         this.updateLog("cpu", action);
