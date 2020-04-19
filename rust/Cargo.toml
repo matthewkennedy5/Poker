@@ -18,6 +18,9 @@ rayon = "*"
 bio = "*"
 bincode = "*"
 statistical = "*"
+actix-web = "2"
+actix-rt = "1"
+qstring = "*"
 
 [profile.release]
 debug = 2
