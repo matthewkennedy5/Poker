@@ -281,12 +281,10 @@ class Game extends Component {
         this.props.dealTurn(this.board[3]);
         this.props.dealRiver(this.board[4]);
 
-        // const winner = "human"; // TODO: Replace with API call
         const humanHand = this.humanCards.concat(this.board);
         const cpuHand = this.cpuCards.concat(this.board);
         const result = await this.props.evaluateHands(humanHand, cpuHand);
         const winner = result.data
-        // TODO: Allow for split pots
 
         const pot = this.props.getPot();
         if (winner === "human") {
@@ -296,7 +294,8 @@ class Game extends Component {
             this.props.addToScore(-pot);
             this.props.logMessage("CPU wins a pot of $" + pot);
         } else {
-            alert(winner)
+            alert("Unknown player: " + winner)
+            // TODO: Handle split pots. Maybe just use the terminal_utility() from trainer_utils?
         }
         this.props.incrementHands();
         this.props.setEnabledButtons(["nextHand"]);
