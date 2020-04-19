@@ -165,14 +165,6 @@ class Game extends Component {
     };
 
     async cpuAction() {
-        // let action;
-        // if (this.street === "preflop" && this.history["preflop"].length === 0) {
-        //     action = {action: "bet", amount: 3*BIG_BLIND};
-        // } else if (this.stacks["cpu"] === this.stacks["human"]) {
-        //     action = {action: "check", amount: 0};
-        // } else {
-        //     action = {action: "call", amount: this.stacks["cpu"] - this.stacks["human"]};
-        // }
         const result = await this.props.getCPUAction(this.cpuCards, this.history);
         const action = result.data;
         this.stacks["cpu"] -= action["amount"];

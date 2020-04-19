@@ -1,7 +1,8 @@
 use crate::bot::bot_action;
 use crate::card_utils::{strvec2cards, Card};
 use crate::trainer_utils::{Action, ActionHistory};
-use actix_web::{web, App, HttpRequest, HttpServer, Responder};
+use actix_web::{http, web, App, HttpRequest, HttpServer, Responder};
+use actix_cors::Cors;
 use std::collections::HashMap;
 
 const SERVER: &str = "127.0.0.1:8000";
@@ -27,14 +28,12 @@ async fn get_cpu_action(req: HttpRequest) -> impl Responder {
     let history = parse_history(history_json);
     println!("history: {:?}", history);
     let action = bot_action(&cpu_cards, &board, &history);
-    let action_json = action2json(&action);
+    let action_json = serde_json::to_string(&action).unwrap();
+    let action_json = action_json.replace("Bet", "bet")
+                                 .replace("Call", "call")
+                                 .replace("Fold", "fold");
     println!("action_json: {}", action_json);
-
     action_json
-}
-
-fn action2json(action: &Action) -> String {
-    unimplemented!();
 }
 
 fn parse_history(history_json: &str) -> ActionHistory {
@@ -68,6 +67,10 @@ pub async fn main() -> std::io::Result<()> {
     println!("[INFO] Launching server at {}", SERVER);
     HttpServer::new(|| {
         App::new()
+            .wrap(
+                Cors::new()
+                  .allowed_origin("http://localhost:3000")
+                  .finish())
             .route("/compare", web::get().to(compare_hands))
             .route("/bot", web::get().to(get_cpu_action))
     })

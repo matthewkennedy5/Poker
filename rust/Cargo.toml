@@ -20,6 +20,7 @@ bincode = "*"
 statistical = "*"
 actix-web = "2"
 actix-rt = "1"
+actix-cors = "*"
 qstring = "*"
 
 [profile.release]
