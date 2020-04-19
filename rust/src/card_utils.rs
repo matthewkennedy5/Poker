@@ -662,8 +662,6 @@ fn river_equity(hand: &[Card]) -> f64 {
     equity
 }
 
-// START HERE: Do a new branch for use with larger-RAM machines (Intel, GCloud) and
-
 // For many applications (abstraction, hand strength, equity lookup) I need to
 // be able to store and lookup an integer corresponding to each hand
 pub struct HandData {

@@ -9,16 +9,17 @@ extern crate rand;
 extern crate lazy_static;
 extern crate bincode;
 extern crate bio;
-extern crate rayon;
 extern crate qstring;
+extern crate rayon;
 
+mod backend;
+mod bot;
 mod card_abstraction;
 mod card_utils;
 mod exploiter;
 mod tests;
 mod trainer;
 mod trainer_utils;
-mod backend;
 
 fn main() {
     backend::main();

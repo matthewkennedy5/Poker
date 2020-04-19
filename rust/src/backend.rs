@@ -1,4 +1,8 @@
+use crate::bot::bot_action;
+use crate::card_utils::{strvec2cards, Card};
+use crate::trainer_utils::{Action, ActionHistory};
 use actix_web::{web, App, HttpRequest, HttpServer, Responder};
+use std::collections::HashMap;
 
 const SERVER: &str = "127.0.0.1:8000";
 
@@ -14,11 +18,49 @@ async fn get_cpu_action(req: HttpRequest) -> impl Responder {
     let query = qstring::QString::from(query);
     let cpu_cards = query.get("cpuCards").unwrap();
     let board = query.get("board").unwrap();
-    let history = query.get("history").unwrap();
-    println!("cpu_cards: {}", cpu_cards);
-    println!("board: {}", board);
-    println!("history: {}", history);
-    format!("unimplemented")
+    let history_json = query.get("history").unwrap();
+
+    let cpu_cards = parse_cards(cpu_cards);
+    println!("cpu_cards: {:?}", cpu_cards);
+    let board = parse_cards(board);
+    println!("board: {:?}", board);
+    let history = parse_history(history_json);
+    println!("history: {:?}", history);
+    let action = bot_action(&cpu_cards, &board, &history);
+    let action_json = action2json(&action);
+    println!("action_json: {}", action_json);
+
+    action_json
+}
+
+fn action2json(action: &Action) -> String {
+    unimplemented!();
+}
+
+fn parse_history(history_json: &str) -> ActionHistory {
+    let history_json = String::from(history_json);
+    // The Javascript code uses "bet", "call", "check" for action types,
+    // but we need "Bet", "Call", "Fold" (capitalized). So we have to replace those words in
+    // the JSON, and replace "check" with "Call".
+    let history_json = history_json.replace("bet", "Bet")
+                                   .replace("call", "Call")
+                                   .replace("check", "Call")
+                                   .replace("fold", "Fold");
+    let streets: HashMap<String, Vec<Action>> = serde_json::from_str(&history_json).unwrap();
+    let mut history = ActionHistory::new();
+    for street in &["preflop", "flop", "turn", "river"] {
+        for action in streets.get(street.clone()).unwrap() {
+            history.add(action);
+        }
+    }
+    history
+}
+
+fn parse_cards(cards: &str) -> Vec<Card> {
+    let mut cards: Vec<&str> = cards.split(",").collect();
+    cards.retain(|&c| c != "back");
+    let cards = strvec2cards(&cards);
+    cards
 }
 
 #[actix_rt::main]

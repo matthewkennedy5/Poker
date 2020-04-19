@@ -36,7 +36,7 @@ lazy_static! {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
-pub enum ActionType{
+pub enum ActionType {
     Fold,
     Call,
     Bet,
