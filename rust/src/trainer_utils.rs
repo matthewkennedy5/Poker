@@ -26,7 +26,7 @@ pub const FOLD: Action = Action {
 
 // Allowed bets in terms of pot fractions. We mark the all-in action as -1.
 pub const ALL_IN: f64 = -1.0;
-const BET_ABSTRACTION: [f64; 10] = [0.25, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, ALL_IN];
+pub const BET_ABSTRACTION: [f64; 10] = [0.25, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, ALL_IN];
 // const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
 
 lazy_static! {
@@ -125,7 +125,8 @@ impl ActionHistory {
     }
 
     pub fn pot(&self) -> i32 {
-        2 * STACK_SIZE - self.stacks[0] - self.stacks[1]
+        let pot = 2 * STACK_SIZE - self.stacks[0] - self.stacks[1];
+        pot
     }
 
     // Returns the amount needed to call, so 0 for checking
@@ -150,14 +151,21 @@ impl ActionHistory {
 
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
-    pub fn next_actions(&self, bet_abstraction: Vec<f64>) -> Vec<Action> {
+    pub fn next_actions(&self, bet_abstraction: &Vec<f64>) -> Vec<Action> {
         let mut actions = Vec::new();
         let min_bet = match &self.last_action {
             Some(action) => 2 * action.amount,
             None => BIG_BLIND,
         };
         let max_bet = self.stacks[self.player];
-        let pot = self.pot();
+        let pot = if self.pot() > 0 {
+            self.pot()
+        } else {
+            // On the first action (dealer's preflop bet) let's treat the pot
+            // as already having a big blind in it, for the purposes of the pot
+            // fractions in the bet abstraction.
+            BIG_BLIND
+        };
         for fraction in bet_abstraction.iter() {
             let bet = match fraction {
                 &ALL_IN => self.stacks[self.player],
@@ -171,8 +179,7 @@ impl ActionHistory {
             }
         }
 
-        // Add call/check action. If the pot is 0 because it's the first action
-        // on the preflop, then the minimum bet is a big blind.
+        // Add call/check action.
         let to_call = self.to_call();
 
         actions.push(Action {
@@ -186,9 +193,39 @@ impl ActionHistory {
 
         actions
     }
+
+    // Performs action translation and returns a translated version of the
+    // current history, with actions mapped to those of the given bet abstraction.
+    // This assumes that folding and calling are always going to be implicitly
+    // allowed in the abstraction.
+    pub fn translate(&self, bet_abstraction: &Vec<f64>) -> ActionHistory {
+        let mut translated = ActionHistory::new();
+        for street in self.history.clone() {
+            for action in street {
+                let next = translated.next_actions(bet_abstraction);
+                if next.contains(&action) {
+                    translated.add(&action);
+                } else {
+                    // The action is not in the abstraction--time to perform
+                    // action translation by finding the closest pot fraction.
+                    let fraction = (action.amount as f64) / (translated.pot() as f64);
+                    let mut closest = bet_abstraction[0];
+                    for frac in bet_abstraction.clone() {
+                        if (frac - fraction).abs() < (closest - fraction).abs() {
+                            closest = frac;
+                        }
+                    }
+                    let amount = closest * (translated.pot() as f64);
+                    let action = Action {action: ActionType::Bet, amount: amount as i32};
+                    assert!(next.contains(&action));
+                    translated.add(&action);
+                }
+            }
+        }
+        translated
+    }
 }
 
-// TODO: Figure out a good serialization strategy
 impl fmt::Display for ActionHistory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut result = String::new();
@@ -245,13 +282,13 @@ impl InfoSet {
         // street of the history. Maybe do error checking for this in the future.
         InfoSet {
             history: history.clone(),
-            card_bucket: ABSTRACTION.bin(hand),
-            // card_bucket: 1,
+            // card_bucket: ABSTRACTION.bin(hand),
+            card_bucket: 1,
         }
     }
 
     pub fn next_actions(&self) -> Vec<Action> {
-        self.history.next_actions(BET_ABSTRACTION.to_vec())
+        self.history.next_actions(&BET_ABSTRACTION.to_vec())
     }
 }
 

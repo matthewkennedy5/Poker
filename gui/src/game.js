@@ -71,20 +71,29 @@ class Game extends Component {
         this.playStreet();
     };
 
-    fold = () => {
-        // update score with losings from this hand
-        let losings = STACK_SIZE - this.stacks["human"];
+    player_fold(player) {
+        // Update score with losings from this hand
+        let losings = STACK_SIZE - this.stacks[player];
         if (losings === 0) {
-            if (this.dealer === "human") {
+            if (this.dealer === player) {
                 losings = SMALL_BLIND;
             } else {
                 losings = BIG_BLIND;
             }
         }
-        this.props.addToScore(-losings);
+        if (player === "human") {
+            this.props.logMessage("HUMAN folds.");
+            this.props.addToScore(-losings);
+        } else {
+            this.props.addToScore(losings);
+        }
         this.props.incrementHands();
-        this.props.logMessage("HUMAN folds.");
         this.props.setEnabledButtons(["nextHand"]);
+    }
+
+    // TODO: for AIVAT, I may need to incorporate terminal_utility() into this.
+    fold = () => {
+        this.player_fold("human");
     };
 
     registerAction(action) {
@@ -168,6 +177,9 @@ class Game extends Component {
         const result = await this.props.getCPUAction(this.cpuCards, this.history);
         const action = result.data;
         this.stacks["cpu"] -= action["amount"];
+        if (action["action"] === "fold") {
+            this.player_fold("cpu");
+        }
         this.updateLog("cpu", action);
         this.props.addToPot(action["amount"]);
         this.history[this.street].push(action);
@@ -186,9 +198,10 @@ class Game extends Component {
             message += "calls $" + action["amount"];
         } else if (action["action"] === "check") {
             message += "checks"
-        }
-        else {
-            alert("Action not understood");
+        } else if (action["action"] === "fold") {
+            message += "folds"
+        } else {
+            alert("Action not understood: " + action["action"]);
         }
         this.props.logMessage(message);
     };
@@ -293,9 +306,8 @@ class Game extends Component {
         } else if (winner === "cpu") {
             this.props.addToScore(-pot);
             this.props.logMessage("CPU wins a pot of $" + pot);
-        } else {
-            alert("Unknown player: " + winner)
-            // TODO: Handle split pots. Maybe just use the terminal_utility() from trainer_utils?
+        } else if (winner === "tie") {
+            this.props.logMessage("Split pot");
         }
         this.props.incrementHands();
         this.props.setEnabledButtons(["nextHand"]);
