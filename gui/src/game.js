@@ -177,10 +177,11 @@ class Game extends Component {
         const result = await this.props.getCPUAction(this.cpuCards, this.history);
         const action = result.data;
         this.stacks["cpu"] -= action["amount"];
+        this.updateLog("cpu", action);
         if (action["action"] === "fold") {
             this.player_fold("cpu");
+            return;
         }
-        this.updateLog("cpu", action);
         this.props.addToPot(action["amount"]);
         this.history[this.street].push(action);
         this.enableHumanButtons();

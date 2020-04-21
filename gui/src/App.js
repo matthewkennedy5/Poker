@@ -83,6 +83,9 @@ class App extends Component {
   }
 
   getPot = () => {
+      if (this.state.pot === 0) {
+        return this.state.game.BIG_BLIND + this.state.game.SMALL_BLIND;
+      }
       return this.state.pot;
   }
 
