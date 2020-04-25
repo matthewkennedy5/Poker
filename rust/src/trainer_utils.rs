@@ -26,7 +26,7 @@ pub const FOLD: Action = Action {
 
 // Allowed bets in terms of pot fractions. We mark the all-in action as -1.
 pub const ALL_IN: f64 = -1.0;
-pub const BET_ABSTRACTION: [f64; 10] = [0.25, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, ALL_IN];
+pub const BET_ABSTRACTION: [f64; 4] = [0.5, 1.0, 2.0, ALL_IN];
 // const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
 
 lazy_static! {
@@ -126,14 +126,20 @@ impl ActionHistory {
 
     pub fn pot(&self) -> i32 {
         let pot = 2 * STACK_SIZE - self.stacks[0] - self.stacks[1];
-        pot
+        if pot == 0 {
+            BIG_BLIND
+        } else {
+            pot
+        }
     }
 
     // Returns the amount needed to call, so 0 for checking
     pub fn to_call(&self) -> i32 {
-        match self.pot() {
-            0 => BIG_BLIND,
-            _ => self.stacks[self.player] - self.stacks[1 - self.player],
+        if self.street == PREFLOP && self.history[PREFLOP].len() == 0 {
+            println!("only has to call big blind");
+            BIG_BLIND
+        } else {
+            self.stacks[self.player] - self.stacks[1 - self.player]
         }
     }
 
@@ -158,14 +164,7 @@ impl ActionHistory {
             None => BIG_BLIND,
         };
         let max_bet = self.stacks[self.player];
-        let pot = if self.pot() > 0 {
-            self.pot()
-        } else {
-            // On the first action (dealer's preflop bet) let's treat the pot
-            // as already having a big blind in it, for the purposes of the pot
-            // fractions in the bet abstraction.
-            BIG_BLIND
-        };
+        let pot = self.pot();
         for fraction in bet_abstraction.iter() {
             let bet = match fraction {
                 &ALL_IN => self.stacks[self.player],
@@ -207,18 +206,14 @@ impl ActionHistory {
                     translated.add(&action);
                 } else {
                     // The action is not in the abstraction--time to perform
-                    // action translation by finding the closest pot fraction.
-                    let fraction = (action.amount as f64) / (translated.pot() as f64);
-                    let mut closest = bet_abstraction[0];
-                    for frac in bet_abstraction.clone() {
-                        if (frac - fraction).abs() < (closest - fraction).abs() {
-                            closest = frac;
+                    // action translation by finding the closest action.
+                    let mut closest_action = next[0].clone();
+                    for candidate_action in next {
+                        if (candidate_action.amount - action.amount).abs() < (closest_action.amount - action.amount).abs() {
+                            closest_action = candidate_action;
                         }
                     }
-                    let amount = closest * (translated.pot() as f64);
-                    let action = Action {action: ActionType::Bet, amount: amount as i32};
-                    assert!(next.contains(&action));
-                    translated.add(&action);
+                    translated.add(&closest_action);
                 }
             }
         }

@@ -23,7 +23,7 @@ mod trainer_utils;
 
 fn main() {
     backend::main();
-    // trainer::train(10_000_000);
+    // trainer::train(100_000);
     // let nodes = trainer::load_strategy();
     // exploiter::exploitability(&nodes);
     // exploiter::exploitability(&std::collections::HashMap::new());

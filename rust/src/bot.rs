@@ -13,6 +13,14 @@ pub fn bot_action(hand: &[Card], board: &[Card], history: &ActionHistory) -> Act
     let hand = [hand, board].concat();
     let infoset = InfoSet::from_hand(&hand, &translated);
     let node = NODES.get(&infoset).unwrap();
-    let action = sample_action_from_node(&node);
+    let mut action = sample_action_from_node(&node);
+    // The translated action is based off a misunderstanding off the true bet
+    // sizes, so we may have to adjust our call amount to line up with what's
+    // actually in the pot as opposed to our approximation.
+    if action.action == ActionType::Call {
+        // TODO: Are there other spots where the altered history brings illegal moves?
+        // Hopefully not with a large enough bet abstraction, but still.
+        action.amount = history.to_call();
+    }
     action
 }
