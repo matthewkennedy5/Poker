@@ -30,9 +30,12 @@ pub const BET_ABSTRACTION: [f64; 4] = [0.5, 1.0, 2.0, ALL_IN];
 // const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
 
 lazy_static! {
-    pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
-    pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
-    // pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
+    // pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
+    // pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
+
+    pub static ref ABSTRACTION: card_abstraction::LightAbstraction = card_abstraction::LightAbstraction::new();
+    pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
+
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
@@ -136,7 +139,6 @@ impl ActionHistory {
     // Returns the amount needed to call, so 0 for checking
     pub fn to_call(&self) -> i32 {
         if self.street == PREFLOP && self.history[PREFLOP].len() == 0 {
-            println!("only has to call big blind");
             BIG_BLIND
         } else {
             self.stacks[self.player] - self.stacks[1 - self.player]
@@ -209,7 +211,9 @@ impl ActionHistory {
                     // action translation by finding the closest action.
                     let mut closest_action = next[0].clone();
                     for candidate_action in next {
-                        if (candidate_action.amount - action.amount).abs() < (closest_action.amount - action.amount).abs() {
+                        if (candidate_action.amount - action.amount).abs()
+                            < (closest_action.amount - action.amount).abs()
+                        {
                             closest_action = candidate_action;
                         }
                     }
@@ -277,8 +281,7 @@ impl InfoSet {
         // street of the history. Maybe do error checking for this in the future.
         InfoSet {
             history: history.clone(),
-            // card_bucket: ABSTRACTION.bin(hand),
-            card_bucket: 1,
+            card_bucket: ABSTRACTION.bin(hand),
         }
     }
 

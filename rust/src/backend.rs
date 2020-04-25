@@ -1,8 +1,8 @@
 use crate::bot::bot_action;
 use crate::card_utils::{strvec2cards, Card, LightHandTable};
-use crate::trainer_utils::{Action, ActionType, ActionHistory};
-use actix_web::{http, web, App, HttpRequest, HttpServer, Responder};
+use crate::trainer_utils::{Action, ActionHistory, ActionType};
 use actix_cors::Cors;
+use actix_web::{http, web, App, HttpRequest, HttpServer, Responder};
 use std::collections::HashMap;
 
 const SERVER: &str = "127.0.0.1:8000";
@@ -41,7 +41,11 @@ async fn get_cpu_action(req: HttpRequest) -> impl Responder {
     let board = parse_cards(board);
     let history = parse_history(history_json);
     let action = bot_action(&cpu_cards, &board, &history);
-    let is_check = action == Action {action: ActionType::Call, amount: 0};
+    let is_check = action
+        == Action {
+            action: ActionType::Call,
+            amount: 0,
+        };
     let action_json = serde_json::to_string(&action).unwrap();
 
     // Need to translate from what serde outputs (Rust action representation)
@@ -49,9 +53,10 @@ async fn get_cpu_action(req: HttpRequest) -> impl Responder {
     // capitalization, and "check" vs. just "call" with amount 0. The Rust
     // representation is more streamlined, and ideally both would be the same,
     // but for now it's easier to just convert between them.
-    let mut action_json = action_json.replace("Bet", "bet")
-                                 .replace("Call", "call")
-                                 .replace("Fold", "fold");
+    let mut action_json = action_json
+        .replace("Bet", "bet")
+        .replace("Call", "call")
+        .replace("Fold", "fold");
     if is_check {
         action_json = action_json.replace("call", "check");
     }
@@ -63,10 +68,11 @@ fn parse_history(history_json: &str) -> ActionHistory {
     // The Javascript code uses "bet", "call", "check" for action types,
     // but we need "Bet", "Call", "Fold" (capitalized). So we have to replace those words in
     // the JSON, and replace "check" with "Call".
-    let history_json = history_json.replace("bet", "Bet")
-                                   .replace("call", "Call")
-                                   .replace("check", "Call")
-                                   .replace("fold", "Fold");
+    let history_json = history_json
+        .replace("bet", "Bet")
+        .replace("call", "Call")
+        .replace("check", "Call")
+        .replace("fold", "Fold");
     let streets: HashMap<String, Vec<Action>> = serde_json::from_str(&history_json).unwrap();
     let mut history = ActionHistory::new();
     for street in &["preflop", "flop", "turn", "river"] {
@@ -89,10 +95,7 @@ pub async fn main() -> std::io::Result<()> {
     println!("[INFO] Launching server at {}", SERVER);
     HttpServer::new(|| {
         App::new()
-            .wrap(
-                Cors::new()
-                  .allowed_origin("http://localhost:3000")
-                  .finish())
+            .wrap(Cors::new().allowed_origin("http://localhost:3000").finish())
             .route("/compare", web::get().to(compare_hands))
             .route("/bot", web::get().to(get_cpu_action))
     })

@@ -22,7 +22,8 @@ mod trainer;
 mod trainer_utils;
 
 fn main() {
-    backend::main();
+    card_abstraction::write_sorted_hands();
+    // backend::main();
     // trainer::train(100_000);
     // let nodes = trainer::load_strategy();
     // exploiter::exploitability(&nodes);

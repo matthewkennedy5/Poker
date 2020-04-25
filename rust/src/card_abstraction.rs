@@ -9,10 +9,15 @@ use crate::card_utils::{Card, HandData};
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use std::fs::File;
+use std::io::Write;
 
 const FLOP_PATH: &str = "products/flop_abstraction.txt";
 const TURN_PATH: &str = "products/turn_abstraction.txt";
 const RIVER_PATH: &str = "products/river_abstraction.txt";
+
+const FLOP_SORTED_PATH: &str = "products/flop_sorted_ehs2.txt";
+const TURN_SORTED_PATH: &str = "products/turn_sorted_ehs2.txt";
+const RIVER_SORTED_PATH: &str = "products/river_sorted_ehs2.txt";
 
 const FLOP_BUCKETS: i32 = 10;
 const TURN_BUCKETS: i32 = 10;
@@ -76,16 +81,9 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HandData {
     }
 }
 
-// TODO: Store the E[HS^2] values themselves instead of the abstract buckets.
-// That way I only have to ever calculate them once, and can just re-bucket
-// whenever.
-fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
-    match n_cards {
-        5 => println!("[INFO] Preparing the flop abstraction."),
-        6 => println!("[INFO] Preparing the turn abstraction."),
-        7 => println!("[INFO] Preparing the river abstraction."),
-        _ => panic!("Bad number of cards"),
-    };
+// Returns all canonical hands paired with their E[HS^2] values, in sorted order
+// by E[HS^2].
+fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<(u64, f64)> {
     let canonical_hands = match n_cards {
         5 => card_utils::load_flop_canonical(),
         6 => card_utils::load_turn_canonical(),
@@ -107,6 +105,20 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
 
     bar.finish();
     hand_ehs2.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    hand_ehs2
+}
+
+// TODO: Store the E[HS^2] values themselves instead of the abstract buckets.
+// That way I only have to ever calculate them once, and can just re-bucket
+// whenever.
+fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
+    match n_cards {
+        5 => println!("[INFO] Preparing the flop abstraction."),
+        6 => println!("[INFO] Preparing the turn abstraction."),
+        7 => println!("[INFO] Preparing the river abstraction."),
+        _ => panic!("Bad number of cards"),
+    };
+    let hand_ehs2 = get_sorted_hand_ehs2(n_cards);
     let mut clusters = HandData::new();
     for (idx, (hand, _ehs2)) in hand_ehs2.iter().enumerate() {
         // Bucket the hand according to the percentile of its E[HS^2]
@@ -121,4 +133,38 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
     };
     clusters.serialize(path);
     clusters
+}
+
+// Writes text files of canonical hands sorted by E[HS^2] from low to high.
+pub fn write_sorted_hands() {
+    for n_cards in 5..8 {
+        let fname = match n_cards {
+            5 => FLOP_SORTED_PATH,
+            6 => TURN_SORTED_PATH,
+            7 => RIVER_SORTED_PATH,
+            _ => panic!("Bad number of cards"),
+        };
+        let hands = get_sorted_hand_ehs2(n_cards);
+        let mut buffer = File::create(fname).unwrap();
+        for (hand, ehs2) in hands {
+            let to_write = format!("{}\n", card_utils::hand2str(hand.clone()));
+            buffer.write(to_write.as_bytes()).unwrap();
+        }
+    }
+}
+
+pub struct LightAbstraction {
+    flop_cutoffs: Vec<f64>,
+    turn_cutoffs: Vec<f64>,
+    river_cutoffs: Vec<f64>,
+}
+
+impl LightAbstraction {
+    pub fn new() -> LightAbstraction {
+        unimplemented!();
+    }
+
+    pub fn bin(&self, cards: &[Card]) -> i32 {
+        unimplemented!();
+    }
 }
