@@ -20,7 +20,8 @@ const RIVER_CANONICAL_PATH: &str = "products/river_canonical.txt";
 // TODO: To reduce memory usage if needed, incorporate the equity information
 // and hand strength information in one big lookup table, like HashMap<u64, (f64, i32)>
 lazy_static! {
-    pub static ref HAND_TABLE: HandTable = HandTable::new();
+    // pub static ref HAND_TABLE: HandTable = HandTable::new();
+    pub static ref HAND_TABLE: LightHandTable = LightHandTable::new();
     static ref EQUITY_TABLE: EquityTable = EquityTable::new();
 }
 

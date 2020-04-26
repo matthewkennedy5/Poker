@@ -1,4 +1,5 @@
 use crate::card_utils::*;
+use crate::card_abstraction::{Abstraction, LightAbstraction};
 
 #[test]
 fn uint_hands() {
@@ -105,3 +106,32 @@ fn hand_comparisons() {
 fn test_ranges() {
     // TODO: Write a test for this maybe
 }
+
+// Makes sure that LightAbstraction and Abstraction return the same bins for
+// all cards.
+#[test]
+fn test_light_abstraction() {
+    let abs = Abstraction::new();
+    let light_abs = LightAbstraction::new();
+    println!("my test");
+    let hand = str2hand("Qc2d2c7c8h");
+    let cards = hand2cards(hand);
+    assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
+    println!("Testing flop");
+    for hand in load_flop_canonical() {
+        let cards = hand2cards(hand);
+        assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
+    }
+    println!("Testing turn");
+    for hand in load_turn_canonical() {
+        let cards = hand2cards(hand);
+        assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
+    }
+    println!("Testing river");
+    for hand in load_river_canonical() {
+        let cards = hand2cards(hand);
+        assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
+    }
+}
+
+
