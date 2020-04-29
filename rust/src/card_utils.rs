@@ -1,7 +1,7 @@
 use crate::itertools::Itertools;
 // use crate::rand::prelude::IteratorRandom;
 use bio::stats::combinatorics::combinations;
-// use rand::prelude::SliceRandom;
+use rand::prelude::SliceRandom;
 use rayon::prelude::*;
 use serde::Deserialize;
 use serde::Serialize;
@@ -20,8 +20,8 @@ const RIVER_CANONICAL_PATH: &str = "products/river_canonical.txt";
 // TODO: To reduce memory usage if needed, incorporate the equity information
 // and hand strength information in one big lookup table, like HashMap<u64, (f64, i32)>
 lazy_static! {
-    // pub static ref HAND_TABLE: HandTable = HandTable::new();
-    pub static ref HAND_TABLE: LightHandTable = LightHandTable::new();
+    pub static ref HAND_TABLE: HandTable = HandTable::new();
+    // pub static ref HAND_TABLE: LightHandTable = LightHandTable::new();
     static ref EQUITY_TABLE: EquityTable = EquityTable::new();
 }
 
@@ -776,4 +776,26 @@ impl EquityTable {
         let hand = cards2hand(&canonical_hand(hand, true));
         self.table.get(&hand).unwrap().clone()
     }
+}
+
+
+fn benchmark_hand_evaluator() {
+    let n = 1_000_000;
+    let mut deck = deck();
+    let mut rng = &mut rand::thread_rng();
+    deck.shuffle(&mut rng);
+    lazy_static::initialize(&HAND_TABLE);
+    let bar = pbar(n as u64);
+    let now = std::time::Instant::now();
+    for i in 0..n {
+        let index = i % (52 - 7);
+        let hand = &deck[index..index+7];
+        let strength = HAND_TABLE.hand_strength(hand);
+        bar.inc(1);
+    }
+    bar.finish();
+    let secs = now.elapsed().as_secs();
+    let rate = (n as f64) / (secs as f64);
+    println!("{} hands evaluated per second.", rate);
+
 }
