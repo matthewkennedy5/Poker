@@ -26,7 +26,7 @@ fn main() {
     // let abs = card_abstraction::LightAbstraction::new();
     // println!("bin: {}", abs.bin(&hand));
 
-    // backend::main();
+    backend::main().expect("Could not launch server");
     trainer::train(100_000);
     // let nodes = trainer::load_strategy();
     // exploiter::exploitability(&nodes);

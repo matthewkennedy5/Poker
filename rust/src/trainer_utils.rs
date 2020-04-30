@@ -168,9 +168,10 @@ impl ActionHistory {
         let max_bet = self.stacks[self.player];
         let pot = self.pot();
         for fraction in bet_abstraction.iter() {
-            let bet = match fraction {
-                &ALL_IN => self.stacks[self.player],
-                _ => (fraction.clone() * (pot as f64)) as i32,
+            let bet = if fraction == &ALL_IN {
+                self.stacks[self.player]
+            } else {
+                (fraction.clone() * (pot as f64)) as i32
             };
             if min_bet <= bet && bet <= max_bet {
                 actions.push(Action {
@@ -349,8 +350,7 @@ impl Node {
 
     pub fn add_regret(&mut self, action: &Action, regret: f64) {
         // TODO: DCFR
-        let old_regret = self.regrets.get(action).unwrap();
-        self.regrets.insert(action.clone(), old_regret + regret);
+        self.regrets.insert(action.clone(), self.regrets[action] + regret);
     }
 }
 

@@ -67,7 +67,7 @@ pub fn train(iters: u64) {
 pub fn load_strategy() -> HashMap<InfoSet, Node> {
     println!("[INFO] Loading strategy...");
     let file = File::open(BLUEPRINT_STRATEGY_PATH).expect("Blueprint strategy file not found");
-    let mut reader = BufReader::new(file);
+    let reader = BufReader::new(file);
     let nodes = bincode::deserialize_from(reader).unwrap();
     println!("[INFO] Done loading strategy");
     nodes
