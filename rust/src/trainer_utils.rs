@@ -298,8 +298,6 @@ impl fmt::Display for InfoSet {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
-    // TODO: Does a Node really have to store its corresponding InfoSet?
-    infoset: InfoSet,
     regrets: HashMap<Action, f64>,
     strategy_sum: HashMap<Action, f64>,
     pub t: i32,
@@ -314,7 +312,6 @@ impl Node {
             zeros.insert(action, 0.0);
         }
         Node {
-            infoset: infoset.clone(),
             regrets: zeros.clone(),
             strategy_sum: zeros,
             t: 0,
