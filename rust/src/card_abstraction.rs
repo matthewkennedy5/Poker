@@ -12,6 +12,7 @@ use std::fs;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::collections::HashMap;
+use std::io::ErrorKind;
 
 const FLOP_PATH: &str = "products/flop_abstraction.txt";
 const TURN_PATH: &str = "products/turn_abstraction.txt";
@@ -70,8 +71,7 @@ impl Abstraction {
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
         let canonical = card_utils::canonical_hand(cards, true);
-        let hand_str = card_utils::cards2str(&canonical);
-        let hand = card_utils::str2hand(&hand_str);
+        let hand = card_utils::cards2hand(&canonical);
         match cards.len() {
             5 => self.flop.get(&hand).clone(),
             6 => self.turn.get(&hand).clone(),
@@ -161,49 +161,6 @@ pub fn write_sorted_hands() {
 }
 
 pub fn write_hand_data() {
-    match File::open(RIVER_SORTED_PATH) {
-        Err(_e) => {
-            write_sorted_hands();
-            panic!("Run again");
-        },
-        Ok(river_file) => {
-            let reader = BufReader::new(river_file);
-            let time = std::time::Instant::now();
-            for (i, line) in reader.lines().enumerate() {
-                let line = line.unwrap();
-                let hand = card_utils::str2hand(&line);
-                if hand == card_utils::str2hand("AcTsTcQc7dTd3h") {
-                    println!("found it: {}", time.elapsed().as_secs());
-                }
-
-                // let dir = format!("products/hands/{}/{}/{}/{}/{}",
-                //                          &line[0..2],
-                //                          &line[2..4],
-                //                          &line[4..6],
-                //                          &line[6..8],
-                //                          &line[8..10]);
-                //                          // &line[10..12]);
-                // fs::create_dir_all(&dir).expect("Error making directory");
-
-                // let table_path = format!("{}/hands.bin", dir);
-                // let mut map: HashMap<u64, i32> = match File::open(&table_path) {
-                //     Err(_e) => {
-                //         HashMap::new()
-                //     },
-                //     Ok(map_file) => {
-                //         let mut map_reader = BufReader::new(map_file);
-                //         bincode::deserialize_from(map_reader).expect(&table_path)
-                //     }
-                // };
-                // map.insert(hand, i as i32);
-
-                // let bincode: Vec<u8> = bincode::serialize(&map).unwrap();
-                // let mut file = File::create(table_path).unwrap();
-                // file.write_all(&bincode).unwrap();
-            }
-            println!("Done: {}", time.elapsed().as_secs());
-        }
-    }
 }
 
 // The LightAbstraction is a slower verison of Abstraction that uses way less
@@ -232,27 +189,41 @@ impl LightAbstraction {
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
         let canonical = card_utils::canonical_hand(cards, true);
+        let hand = card_utils::cards2hand(&canonical);
         // look up hand number from 1 to 125 million or whatever, bucket it based on that
-        let index = hand_lookup(&canonical);
-        let n_hands = match cards.len() {
-            5 => N_FLOP_CANONICAL,
-            6 => N_TURN_CANONICAL,
-            7 => N_RIVER_CANONICAL,
+        match cards.len() {
+            5 => self.flop.get(&hand).clone(),
+            6 => self.turn.get(&hand).clone(),
+            7 => {
+                let index = hand_lookup(&canonical).expect("hand not found");
+                let bin = ((index as f64) / (N_RIVER_CANONICAL as f64) * RIVER_BUCKETS as f64) as i32;
+                bin
+            },
             _ => panic!("Bad number of cards"),
-        };
-        let n_bins = match cards.len() {
-            5 => FLOP_BUCKETS,
-            6 => TURN_BUCKETS,
-            7 => RIVER_BUCKETS,
-            _ => panic!("Bad number of cards"),
-        };
-        let bin = ((index as f64) / (n_hands as f64) * n_bins as f64) as i32;
-        bin
+        }
     }
 }
 
-fn hand_lookup(cards: &[Card]) -> i32 {
-    unimplemented!();
+fn hand_lookup(cards: &[Card]) -> Result<i32, ErrorKind> {
+    let target_hand = card_utils::cards2hand(cards);
+    match File::open(RIVER_SORTED_PATH) {
+        Err(_e) => {
+            write_sorted_hands();
+            panic!("Run again");
+        },
+        Ok(river_file) => {
+            let reader = BufReader::new(river_file);
+            let time = std::time::Instant::now();
+            for (i, line) in reader.lines().enumerate() {
+                let line = line.unwrap();
+                let hand = card_utils::str2hand(&line);
+                if hand == target_hand {
+                    return Ok(i as i32);
+                }
+            }
+        }
+    }
+    Err(ErrorKind::NotFound)
 }
 
 // TODO: Should I consider multiplicity of canonical hands for percentile bucketing?

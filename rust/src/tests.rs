@@ -1,5 +1,6 @@
 use crate::card_utils::*;
 use crate::card_abstraction::{Abstraction, LightAbstraction};
+use rand::prelude::SliceRandom;
 
 #[test]
 fn uint_hands() {
@@ -128,10 +129,18 @@ fn test_light_abstraction() {
         assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
     }
     println!("Testing river");
-    for hand in load_river_canonical() {
-        let cards = hand2cards(hand);
+    let river_hands = load_river_canonical();
+    let mut river_hands: Vec<&u64> = river_hands.iter().collect();
+    let mut rng = &mut rand::thread_rng();
+    river_hands.shuffle(&mut rng);
+
+    let bar = pbar(river_hands.len() as u64);
+    for hand in river_hands {
+        let cards = hand2cards(hand.clone());
         assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
+        bar.inc(1);
     }
+    bar.finish();
 }
 
 

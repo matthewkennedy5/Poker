@@ -22,13 +22,12 @@ mod trainer;
 mod trainer_utils;
 
 fn main() {
-    card_abstraction::write_hand_data();
     // let hand = card_utils::strvec2cards(&vec!["Ac", "Ad", "As", "Ah", "Qh"]);
     // let abs = card_abstraction::LightAbstraction::new();
     // println!("bin: {}", abs.bin(&hand));
 
     // backend::main();
-    // trainer::train(100_000);
+    trainer::train(100_000);
     // let nodes = trainer::load_strategy();
     // exploiter::exploitability(&nodes);
     // exploiter::exploitability(&std::collections::HashMap::new());
