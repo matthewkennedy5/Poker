@@ -29,12 +29,17 @@ pub const ALL_IN: f64 = -1.0;
 pub const BET_ABSTRACTION: [f64; 4] = [0.5, 1.0, 2.0, ALL_IN];
 // const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
 
-lazy_static! {
-    // pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
-    // pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
+// Discounted Regret Minimization parameters
+const ALPHA: f64 = 1.5;
+const BETA: f64 = 0.0;
+const GAMMA: f64 = 2.0;
 
-    pub static ref ABSTRACTION: card_abstraction::LightAbstraction = card_abstraction::LightAbstraction::new();
-    pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
+lazy_static! {
+    pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
+    pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
+
+    // pub static ref ABSTRACTION: card_abstraction::LightAbstraction = card_abstraction::LightAbstraction::new();
+    // pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
 
 }
 
@@ -293,7 +298,21 @@ impl InfoSet {
 
 impl fmt::Display for InfoSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}|{}", self.card_bucket, self.history.to_string())
+        let card_display = hand_with_bucket(self.card_bucket, self.history.street);
+        write!(f, "{}|{}", card_display, self.history.to_string())
+    }
+}
+
+// Returns a representative hand which is in the given abstraction bucket.
+fn hand_with_bucket(bucket: i32, street: usize) -> String {
+    let mut deck = card_utils::deck();
+    let mut rng = thread_rng();
+    loop {
+        deck.shuffle(&mut rng);
+        let hand = get_hand(&deck, 0, street);
+        if ABSTRACTION.bin(&hand) == bucket {
+            return card_utils::cards2str(&hand);
+        }
     }
 }
 
@@ -301,7 +320,7 @@ impl fmt::Display for InfoSet {
 pub struct Node {
     regrets: HashMap<Action, f64>,
     strategy_sum: HashMap<Action, f64>,
-    pub t: i32,
+    pub t: f64,
 }
 
 impl Node {
@@ -315,7 +334,7 @@ impl Node {
         Node {
             regrets: zeros.clone(),
             strategy_sum: zeros,
-            t: 0,
+            t: 0.0,
         }
     }
 
@@ -331,14 +350,19 @@ impl Node {
         strat = normalize(&strat);
         for action in strat.keys() {
             // Add this action's probability to the cumulative strategy sum
-            let cumulative_strategy = self.strategy_sum.get(action).unwrap().clone();
+            let sum_prob = self.strategy_sum.get(action).unwrap().clone();
+            let new_prob = strat.get(action).unwrap() * prob;
+            let mut cumulative_strategy = sum_prob + new_prob;
+            // Multiply the cumulative strategy sum according to Discounted
+            // Counterfactual Regret Minimization
+            cumulative_strategy *= (self.t / (self.t + 1.0)).powf(GAMMA);
             self.strategy_sum.insert(
                 action.clone(),
-                cumulative_strategy + strat.get(action).unwrap() * prob,
+                cumulative_strategy,
             );
         }
         if prob > 0.0 {
-            self.t += 1;
+            self.t += 1.0;
         }
         strat
     }
@@ -349,8 +373,16 @@ impl Node {
     }
 
     pub fn add_regret(&mut self, action: &Action, regret: f64) {
-        // TODO: DCFR
-        self.regrets.insert(action.clone(), self.regrets[action] + regret);
+        let mut accumulated_regret = self.regrets[action] + regret;
+        // Update the accumulated regret according to Discounted Counterfactual
+        // Regret Minimization rules
+        if accumulated_regret >= 0.0 {
+            accumulated_regret *= self.t.powf(ALPHA) / (self.t.powf(ALPHA) + 1.0);
+        } else {
+            accumulated_regret *= self.t.powf(BETA) / (self.t.powf(BETA) + 1.0);
+        }
+        self.regrets
+            .insert(action.clone(), accumulated_regret);
     }
 }
 

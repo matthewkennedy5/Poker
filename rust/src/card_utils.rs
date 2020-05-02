@@ -778,7 +778,6 @@ impl EquityTable {
     }
 }
 
-
 fn benchmark_hand_evaluator() {
     let n = 1_000_000;
     let mut deck = deck();
@@ -789,7 +788,7 @@ fn benchmark_hand_evaluator() {
     let now = std::time::Instant::now();
     for i in 0..n {
         let index = i % (52 - 7);
-        let hand = &deck[index..index+7];
+        let hand = &deck[index..index + 7];
         let strength = HAND_TABLE.hand_strength(hand);
         bar.inc(1);
     }
@@ -797,5 +796,4 @@ fn benchmark_hand_evaluator() {
     let secs = now.elapsed().as_secs();
     let rate = (n as f64) / (secs as f64);
     println!("{} hands evaluated per second.", rate);
-
 }

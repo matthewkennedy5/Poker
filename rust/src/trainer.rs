@@ -36,39 +36,49 @@ pub fn train(iters: u64) {
             &mut nodes,
         );
         bar.inc(1);
-        if i % 100_000 == 0 {
-            exploitability(&nodes);
-        }
+        // if i % 100_000 == 0 {
+        //     exploitability(&nodes);
+        // }
     }
     bar.finish();
+    exploitability(&nodes);
 
-    // for (infoset, node) in &nodes {
-    //     if infoset.history.street == PREFLOP {
-    //         // if node.t > 1 {
-    //         println!(
-    //             "{}: {:#?}t: {}\n",
-    //             infoset,
-    //             node.cumulative_strategy(),
-    //             node.t
-    //         );
-    //     }
-    // }
+    view_preflop(&nodes);
+
     println!("{} nodes reached.", nodes.len());
     println!(
-        "Utilities: {}, {}",
-        p0_util / (iters as f64),
-        p1_util / (iters as f64)
+        "Utilities:
+            Dealer:   {} BB/h,
+            Opponent: {} BB/h",
+        p0_util / (iters as f64) / (BIG_BLIND as f64),
+        p1_util / (iters as f64) / (BIG_BLIND as f64),
     );
 
-    println!("Exploitability: {}", exploitability(&nodes));
     serialize_strategy(&nodes);
+    // println!("Exploitability: {}", exploitability(&nodes));
+}
+
+fn view_preflop(nodes: &HashMap<InfoSet, Node>) {
+    // Print the preflop strategy
+    for (infoset, node) in nodes {
+        if infoset.history.street == PREFLOP {
+            if node.t > 10.0 {
+                println!(
+                    "{}: {:#?}t: {}\n",
+                    infoset,
+                    node.cumulative_strategy(),
+                    node.t
+                );
+            }
+        }
+    }
 }
 
 pub fn load_strategy() -> HashMap<InfoSet, Node> {
     println!("[INFO] Loading strategy...");
     let file = File::open(BLUEPRINT_STRATEGY_PATH).expect("Blueprint strategy file not found");
     let reader = BufReader::new(file);
-    let nodes = bincode::deserialize_from(reader).unwrap();
+    let nodes = bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
     println!("[INFO] Done loading strategy");
     nodes
 }
@@ -77,6 +87,7 @@ fn serialize_strategy(nodes: &HashMap<InfoSet, Node>) {
     let bincode: Vec<u8> = bincode::serialize(nodes).unwrap();
     let mut file = File::create(BLUEPRINT_STRATEGY_PATH).unwrap();
     file.write_all(&bincode).unwrap();
+    println!("[INFO] Saved strategy to disk.");
 }
 
 fn iterate(

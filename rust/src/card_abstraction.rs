@@ -8,11 +8,11 @@ use crate::card_utils;
 use crate::card_utils::{Card, HandData};
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
+use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Write};
-use std::collections::HashMap;
 use std::io::ErrorKind;
+use std::io::{BufRead, BufReader, Read, Write};
 
 const FLOP_PATH: &str = "products/flop_abstraction.txt";
 const TURN_PATH: &str = "products/turn_abstraction.txt";
@@ -23,8 +23,8 @@ const TURN_SORTED_PATH: &str = "products/turn_sorted_ehs2.txt";
 const RIVER_SORTED_PATH: &str = "products/river_sorted_ehs2.txt";
 
 const EHS2_CUTOFF_PATH: &str = "products/ehs2_cutoffs.json";
-const N_FLOP_CANONICAL: i32 =    1_342_562;
-const N_TURN_CANONICAL: i32 =   14_403_610;
+const N_FLOP_CANONICAL: i32 = 1_342_562;
+const N_TURN_CANONICAL: i32 = 14_403_610;
 const N_RIVER_CANONICAL: i32 = 125_756_657;
 
 const FLOP_BUCKETS: i32 = 10;
@@ -160,8 +160,7 @@ pub fn write_sorted_hands() {
     }
 }
 
-pub fn write_hand_data() {
-}
+pub fn write_hand_data() {}
 
 // The LightAbstraction is a slower verison of Abstraction that uses way less
 // memory because it reads the river abstraction from disk rather than keeping
@@ -196,9 +195,10 @@ impl LightAbstraction {
             6 => self.turn.get(&hand).clone(),
             7 => {
                 let index = hand_lookup(&canonical).expect("hand not found");
-                let bin = ((index as f64) / (N_RIVER_CANONICAL as f64) * RIVER_BUCKETS as f64) as i32;
+                let bin =
+                    ((index as f64) / (N_RIVER_CANONICAL as f64) * RIVER_BUCKETS as f64) as i32;
                 bin
-            },
+            }
             _ => panic!("Bad number of cards"),
         }
     }
@@ -210,7 +210,7 @@ fn hand_lookup(cards: &[Card]) -> Result<i32, ErrorKind> {
         Err(_e) => {
             write_sorted_hands();
             panic!("Run again");
-        },
+        }
         Ok(river_file) => {
             let reader = BufReader::new(river_file);
             let time = std::time::Instant::now();

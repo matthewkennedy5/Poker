@@ -1,5 +1,5 @@
-use crate::card_utils::*;
 use crate::card_abstraction::{Abstraction, LightAbstraction};
+use crate::card_utils::*;
 use rand::prelude::SliceRandom;
 
 #[test]
@@ -142,5 +142,3 @@ fn test_light_abstraction() {
     }
     bar.finish();
 }
-
-
