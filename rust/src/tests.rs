@@ -1,7 +1,7 @@
 use crate::card_abstraction::{Abstraction, LightAbstraction};
 use crate::card_utils::*;
 use crate::trainer_utils::*;
-use crate::trainer::load_strategy;
+use crate::trainer::load_blueprint;
 use rand::prelude::SliceRandom;
 
 #[test]
@@ -107,8 +107,7 @@ fn hand_comparisons() {
 
 #[test]
 fn test_compact_infoset() {
-    let nodes = load_strategy();
-    let nodes = compress_strategy(&nodes);
+    let blueprint = load_blueprint();
     for (infoset1, action1) in &nodes {
         let mut n = 0;
         // Make sure that all infosets in nodes are distinct, so infoset1 is

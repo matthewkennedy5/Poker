@@ -7,6 +7,8 @@ use std::cmp::Eq;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
+use std::fs::File;
+use std::io::Write;
 
 pub const SMALL_BLIND: i32 = 50;
 pub const BIG_BLIND: i32 = 100;
@@ -35,12 +37,14 @@ const ALPHA: f64 = 1.5;
 const BETA: f64 = 0.0;
 const GAMMA: f64 = 2.0;
 
-lazy_static! {
-    pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
-    pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
+pub const BLUEPRINT_STRATEGY_PATH: &str = "products/compact_blueprint.bin";
 
-    // pub static ref ABSTRACTION: card_abstraction::LightAbstraction = card_abstraction::LightAbstraction::new();
-    // pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
+lazy_static! {
+    // pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
+    // pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
+
+    pub static ref ABSTRACTION: card_abstraction::LightAbstraction = card_abstraction::LightAbstraction::new();
+    pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
 
 }
 
@@ -499,7 +503,7 @@ pub fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) ->
 
 // Presamples actions and represents the blueprint strategy in a much more
 // compact format.
-pub fn compress_strategy(nodes: &HashMap<InfoSet, Node>) -> HashMap<CompactInfoSet, Action> {
+pub fn write_compact_blueprint(nodes: &HashMap<InfoSet, Node>) {
     let mut compressed = HashMap::new();
     println!("[INFO] Compressing the blueprint strategy");
     let bar = card_utils::pbar(nodes.len() as u64);
@@ -509,5 +513,8 @@ pub fn compress_strategy(nodes: &HashMap<InfoSet, Node>) -> HashMap<CompactInfoS
         bar.inc(1);
     }
     bar.finish();
-    compressed
+    let bincode: Vec<u8> = bincode::serialize(&compressed).unwrap();
+    let mut file = File::create(BLUEPRINT_STRATEGY_PATH).unwrap();
+    file.write_all(&bincode).unwrap();
+    println!("[INFO] Wrote compressed blueprint strategy to disk");
 }

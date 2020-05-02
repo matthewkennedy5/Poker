@@ -12,7 +12,7 @@ use std::io::{BufReader, Write};
 use rayon::prelude::*;
 
 // TODO: Use a parameter file
-const BLUEPRINT_STRATEGY_PATH: &str = "products/blueprint.bin";
+const NODES_PATH: &str = "products/nodes.bin";
 
 pub fn train(iters: u64) {
     let mut rng = thread_rng();
@@ -36,7 +36,7 @@ pub fn train(iters: u64) {
             &mut nodes,
         );
         if i % 1_000_000 == 0 {
-            serialize_strategy(&nodes);
+            serialize_nodes(&nodes);
         }
         bar.inc(1);
     }
@@ -54,7 +54,7 @@ pub fn train(iters: u64) {
         p1_util / (iters as f64) / (BIG_BLIND as f64),
     );
 
-    serialize_strategy(&nodes);
+    serialize_nodes(&nodes);
     // println!("Exploitability: {}", exploitability(&nodes));
 }
 
@@ -74,22 +74,28 @@ pub fn view_preflop(nodes: &HashMap<InfoSet, Node>) {
     }
 }
 
-pub fn load_strategy() -> HashMap<InfoSet, Node> {
+pub fn load_nodes() -> HashMap<InfoSet, Node> {
     println!("[INFO] Loading strategy...");
-    let file = File::open(BLUEPRINT_STRATEGY_PATH).expect("Blueprint strategy file not found");
+    let file = File::open(NODES_PATH).expect("Nodes file not found");
     let reader = BufReader::new(file);
     let nodes = bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
     println!("[INFO] Done loading strategy");
     nodes
 }
 
-fn serialize_strategy(nodes: &HashMap<InfoSet, Node>) {
+fn serialize_nodes(nodes: &HashMap<InfoSet, Node>) {
     let bincode: Vec<u8> = bincode::serialize(nodes).unwrap();
-    let mut file = File::create(BLUEPRINT_STRATEGY_PATH).unwrap();
+    let mut file = File::create(NODES_PATH).unwrap();
     file.write_all(&bincode).unwrap();
     println!("[INFO] Saved strategy to disk.");
 }
 
+pub fn load_blueprint() -> HashMap<CompactInfoSet, Action> {
+    let file = File::open(BLUEPRINT_STRATEGY_PATH).expect("Blueprint strategy file not found");
+    let reader = BufReader::new(file);
+    let blueprint = bincode::deserialize_from(reader).expect("Failed to deserialize blueprint");
+    blueprint
+}
 
 fn iterate(
     player: usize,

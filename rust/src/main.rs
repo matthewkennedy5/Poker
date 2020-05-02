@@ -30,15 +30,12 @@ fn main() {
 
     // crate::validation::preflop_matrix();
 
-    // backend::main().expect("Could not launch server");
+    backend::main().expect("Could not launch server");
 
     // trainer::train(100_000);
     // trainer::train(100_000_000);
-    let nodes = trainer::load_strategy();
-    let compressed = trainer_utils::compress_strategy(&nodes);
-    let bincode: Vec<u8> = bincode::serialize(&compressed).unwrap();
-    let mut file = File::create("products/compressed.bin").unwrap();
-    file.write_all(&bincode).unwrap();
+    // let nodes = trainer::load_nodes();
+    // crate::trainer_utils::write_compact_blueprint(&nodes);
 
     // view_preflop(&nodes);
 
