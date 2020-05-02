@@ -22,14 +22,13 @@ const FLOP_SORTED_PATH: &str = "products/flop_sorted_ehs2.txt";
 const TURN_SORTED_PATH: &str = "products/turn_sorted_ehs2.txt";
 const RIVER_SORTED_PATH: &str = "products/river_sorted_ehs2.txt";
 
-const EHS2_CUTOFF_PATH: &str = "products/ehs2_cutoffs.json";
 const N_FLOP_CANONICAL: i32 = 1_342_562;
 const N_TURN_CANONICAL: i32 = 14_403_610;
 const N_RIVER_CANONICAL: i32 = 125_756_657;
 
-const FLOP_BUCKETS: i32 = 10;
-const TURN_BUCKETS: i32 = 10;
-const RIVER_BUCKETS: i32 = 10;
+const FLOP_BUCKETS: i32 = 100;
+const TURN_BUCKETS: i32 = 100;
+const RIVER_BUCKETS: i32 = 100;
 
 pub struct Abstraction {
     flop: HandData,

@@ -12,7 +12,7 @@ pub fn bot_action(hand: &[Card], board: &[Card], history: &ActionHistory) -> Act
     let translated = history.translate(&BET_ABSTRACTION.to_vec());
     let hand = [hand, board].concat();
     let infoset = InfoSet::from_hand(&hand, &translated);
-    let node = NODES.get(&infoset).unwrap();
+    let node = NODES.get(&infoset).expect("Infoset not found in the strategy");
     let mut action = sample_action_from_node(&node);
     // The translated action is based off a misunderstanding off the true bet
     // sizes, so we may have to adjust our call amount to line up with what's

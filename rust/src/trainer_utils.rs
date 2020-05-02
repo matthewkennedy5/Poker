@@ -26,8 +26,9 @@ pub const FOLD: Action = Action {
 
 // Allowed bets in terms of pot fractions. We mark the all-in action as -1.
 pub const ALL_IN: f64 = -1.0;
-pub const BET_ABSTRACTION: [f64; 4] = [0.5, 1.0, 2.0, ALL_IN];
-// const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
+pub const BET_ABSTRACTION: [f64; 5] = [0.33, 0.67, 1.0, 2.5, ALL_IN];
+// pub const BET_ABSTRACTION: [f64; 4] = [0.5, 1.0, 2.0, ALL_IN];
+// pub const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
 
 // Discounted Regret Minimization parameters
 const ALPHA: f64 = 1.5;
@@ -229,6 +230,23 @@ impl ActionHistory {
         }
         translated
     }
+
+    pub fn compress(&self, bet_abstraction: &Vec<f64>) -> Vec<u8> {
+        let mut compressed = Vec::new();
+        let mut builder = ActionHistory::new();
+        for street in self.history.clone() {
+            for action in street {
+                for (i, candidate) in builder.next_actions(bet_abstraction).iter().enumerate() {
+                    if action == candidate.clone() {
+                        compressed.push(i as u8);
+                        break
+                    }
+                }
+                builder.add(&action);
+            }
+        }
+        compressed
+    }
 }
 
 impl fmt::Display for ActionHistory {
@@ -270,6 +288,12 @@ pub struct InfoSet {
     card_bucket: i32,
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CompactInfoSet {
+    history: Vec<u8>,
+    card_bucket: i32,
+}
+
 impl InfoSet {
     // The dealer's cards are the first two cards in the deck, and the opponent's
     // are the second two cards. They are followed by the 5 board cards.
@@ -293,6 +317,13 @@ impl InfoSet {
 
     pub fn next_actions(&self) -> Vec<Action> {
         self.history.next_actions(&BET_ABSTRACTION.to_vec())
+    }
+
+    pub fn compress(&self) -> CompactInfoSet {
+        CompactInfoSet {
+            history: self.history.compress(&BET_ABSTRACTION.to_vec()),
+            card_bucket: self.card_bucket,
+        }
     }
 }
 
@@ -356,10 +387,8 @@ impl Node {
             // Multiply the cumulative strategy sum according to Discounted
             // Counterfactual Regret Minimization
             cumulative_strategy *= (self.t / (self.t + 1.0)).powf(GAMMA);
-            self.strategy_sum.insert(
-                action.clone(),
-                cumulative_strategy,
-            );
+            self.strategy_sum
+                .insert(action.clone(), cumulative_strategy);
         }
         if prob > 0.0 {
             self.t += 1.0;
@@ -381,8 +410,7 @@ impl Node {
         } else {
             accumulated_regret *= self.t.powf(BETA) / (self.t.powf(BETA) + 1.0);
         }
-        self.regrets
-            .insert(action.clone(), accumulated_regret);
+        self.regrets.insert(action.clone(), accumulated_regret);
     }
 }
 
@@ -467,4 +495,19 @@ pub fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) ->
         // It's a tie: player_strength == opponent_strength
         return 0.0;
     }
+}
+
+// Presamples actions and represents the blueprint strategy in a much more
+// compact format.
+pub fn compress_strategy(nodes: &HashMap<InfoSet, Node>) -> HashMap<CompactInfoSet, Action> {
+    let mut compressed = HashMap::new();
+    println!("[INFO] Compressing the blueprint strategy");
+    let bar = card_utils::pbar(nodes.len() as u64);
+    for (infoset, node) in nodes {
+        let action = sample_action_from_node(&node);
+        compressed.insert(infoset.compress(), action);
+        bar.inc(1);
+    }
+    bar.finish();
+    compressed
 }

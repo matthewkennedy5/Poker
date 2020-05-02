@@ -1,5 +1,7 @@
 use crate::card_abstraction::{Abstraction, LightAbstraction};
 use crate::card_utils::*;
+use crate::trainer_utils::*;
+use crate::trainer::load_strategy;
 use rand::prelude::SliceRandom;
 
 #[test]
@@ -104,6 +106,23 @@ fn hand_comparisons() {
 }
 
 #[test]
+fn test_compact_infoset() {
+    let nodes = load_strategy();
+    let nodes = compress_strategy(&nodes);
+    for (infoset1, action1) in &nodes {
+        let mut n = 0;
+        // Make sure that all infosets in nodes are distinct, so infoset1 is
+        // only equal to itself and no other infosets.
+        for (infoset2, action2) in &nodes {
+            if infoset1 == infoset2 {
+                n += 1;
+            }
+        }
+        assert_eq!(n, 1);
+    }
+}
+
+#[test]
 fn test_ranges() {
     // TODO: Write a test for this maybe
 }
@@ -142,3 +161,14 @@ fn test_light_abstraction() {
     }
     bar.finish();
 }
+
+
+
+
+
+
+
+
+
+
+

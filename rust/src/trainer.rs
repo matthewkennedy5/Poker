@@ -9,18 +9,18 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufReader, Write};
+use rayon::prelude::*;
 
 // TODO: Use a parameter file
 const BLUEPRINT_STRATEGY_PATH: &str = "products/blueprint.bin";
 
 pub fn train(iters: u64) {
+    let mut rng = thread_rng();
     let mut deck = card_utils::deck();
-    let mut rng = &mut rand::thread_rng();
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
-
     lazy_static::initialize(&HAND_TABLE);
     lazy_static::initialize(&ABSTRACTION);
-    println!("[INFO]: Beginning training.");
+    println!("[INFO] Beginning training.");
     let mut p0_util = 0.0;
     let mut p1_util = 0.0;
     let bar = card_utils::pbar(iters);
@@ -35,15 +35,15 @@ pub fn train(iters: u64) {
             [1.0, 1.0],
             &mut nodes,
         );
+        if i % 1_000_000 == 0 {
+            serialize_strategy(&nodes);
+        }
         bar.inc(1);
-        // if i % 100_000 == 0 {
-        //     exploitability(&nodes);
-        // }
     }
     bar.finish();
     exploitability(&nodes);
 
-    view_preflop(&nodes);
+    // view_preflop(&nodes);
 
     println!("{} nodes reached.", nodes.len());
     println!(
@@ -58,11 +58,11 @@ pub fn train(iters: u64) {
     // println!("Exploitability: {}", exploitability(&nodes));
 }
 
-fn view_preflop(nodes: &HashMap<InfoSet, Node>) {
+pub fn view_preflop(nodes: &HashMap<InfoSet, Node>) {
     // Print the preflop strategy
     for (infoset, node) in nodes {
         if infoset.history.street == PREFLOP {
-            if node.t > 10.0 {
+            if node.t > 100.0 {
                 println!(
                     "{}: {:#?}t: {}\n",
                     infoset,
@@ -89,6 +89,7 @@ fn serialize_strategy(nodes: &HashMap<InfoSet, Node>) {
     file.write_all(&bincode).unwrap();
     println!("[INFO] Saved strategy to disk.");
 }
+
 
 fn iterate(
     player: usize,
