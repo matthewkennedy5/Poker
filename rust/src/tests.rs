@@ -108,11 +108,11 @@ fn hand_comparisons() {
 #[test]
 fn test_compact_infoset() {
     let blueprint = load_blueprint();
-    for (infoset1, action1) in &nodes {
+    for (infoset1, action1) in &blueprint {
         let mut n = 0;
         // Make sure that all infosets in nodes are distinct, so infoset1 is
         // only equal to itself and no other infosets.
-        for (infoset2, action2) in &nodes {
+        for (infoset2, action2) in &blueprint {
             if infoset1 == infoset2 {
                 n += 1;
             }
@@ -133,7 +133,7 @@ fn test_light_abstraction() {
     let abs = Abstraction::new();
     let light_abs = LightAbstraction::new();
     println!("my test");
-    let hand = str2hand("Qc2d2c7c8h");
+    let hand = str2hand("Qc2d2c7c8h2h8c");
     let cards = hand2cards(hand);
     assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
     println!("Testing flop");

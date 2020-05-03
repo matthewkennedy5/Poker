@@ -20,6 +20,8 @@ pub fn bot_action(hand: &[Card], board: &[Card], history: &ActionHistory) -> Act
         // TODO: Are there other spots where the altered history brings illegal moves?
         // Hopefully not with a large enough bet abstraction, but still.
         action.amount = history.to_call();
+    } else if action.action == ActionType::Bet && action.amount < history.min_bet() {
+        action.amount = history.min_bet();
     }
     action
 }

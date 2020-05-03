@@ -10,17 +10,14 @@ use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
 use std::fs;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::ErrorKind;
 use std::io::{BufRead, BufReader, Read, Write};
 
 const FLOP_PATH: &str = "products/flop_abstraction.txt";
 const TURN_PATH: &str = "products/turn_abstraction.txt";
 const RIVER_PATH: &str = "products/river_abstraction.txt";
-
-const FLOP_SORTED_PATH: &str = "products/flop_sorted_ehs2.txt";
-const TURN_SORTED_PATH: &str = "products/turn_sorted_ehs2.txt";
-const RIVER_SORTED_PATH: &str = "products/river_sorted_ehs2.txt";
+const RIVER_SORTED_DIR: &str = "products/river_sorted_ehs2";
 
 const N_FLOP_CANONICAL: i32 = 1_342_562;
 const N_TURN_CANONICAL: i32 = 14_403_610;
@@ -141,25 +138,37 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
     clusters
 }
 
-// Writes text files of canonical hands sorted by E[HS^2] from low to high.
+// Writes text files of canonical hands sorted by E[HS^2] from low to high, split
+// into different files depending on the first card in the canonical hand.
 pub fn write_sorted_hands() {
-    for n_cards in 5..8 {
-        let fname = match n_cards {
-            5 => FLOP_SORTED_PATH,
-            6 => TURN_SORTED_PATH,
-            7 => RIVER_SORTED_PATH,
-            _ => panic!("Bad number of cards"),
+    let hands = get_sorted_hand_ehs2(7);
+    println!("[INFO] Writing sorted river hands for the LightAbstraction");
+    fs::create_dir(RIVER_SORTED_DIR);
+    let bar = card_utils::pbar(hands.len() as u64);
+    for card in card_utils::deck() {
+        // We find every canonical river hand that starts with card, and add it
+        // to this text file in order of E[HS^2].
+        let fname = format!("{}/{}.txt", RIVER_SORTED_DIR, card);
+        let mut buffer = match OpenOptions::new().append(true).open(&fname) {
+            Err(_e) => File::create(fname).expect("Could not create file"),
+            Ok(f) => f,
         };
-        let hands = get_sorted_hand_ehs2(n_cards);
-        let mut buffer = File::create(fname).unwrap();
-        for (hand, ehs2) in hands {
-            let to_write = format!("{}\n", card_utils::hand2str(hand.clone()));
-            buffer.write(to_write.as_bytes()).unwrap();
+        let mut index = 0;
+        for (hand, ehs2) in &hands {
+            // let first_card = card_utils::card(hand.clone(), 0);
+            // if card_utils::suit(first_card) as u8 == card.suit && card_utils::rank(first_card) as u8 == card.rank {
+            let hand_str = card_utils::hand2str(hand.clone());
+            let first_card = &hand_str[0..2];
+            if first_card == card.to_string() {
+                let to_write = format!("{} {}\n", hand_str, index);
+                buffer.write(to_write.as_bytes()).unwrap();
+                bar.inc(1);
+            }
+            index += 1;
         }
     }
+    bar.finish();
 }
-
-pub fn write_hand_data() {}
 
 // The LightAbstraction is a slower verison of Abstraction that uses way less
 // memory because it reads the river abstraction from disk rather than keeping
@@ -205,19 +214,23 @@ impl LightAbstraction {
 
 fn hand_lookup(cards: &[Card]) -> Result<i32, ErrorKind> {
     let target_hand = card_utils::cards2hand(cards);
-    match File::open(RIVER_SORTED_PATH) {
+    let first_card_str = cards[0].to_string();
+    let path = format!("{}/{}.txt", RIVER_SORTED_DIR, first_card_str);
+    match File::open(path) {
         Err(_e) => {
             write_sorted_hands();
             panic!("Run again");
         }
-        Ok(river_file) => {
-            let reader = BufReader::new(river_file);
-            let time = std::time::Instant::now();
-            for (i, line) in reader.lines().enumerate() {
-                let line = line.unwrap();
-                let hand = card_utils::str2hand(&line);
+        Ok(f) => {
+            let reader = BufReader::new(f);
+            for line in reader.lines() {
+                let line_str = line.unwrap();
+                let mut data = line_str.split_whitespace();
+                let hand = data.next().unwrap();
+                let index: i32 = data.next().unwrap().to_string().parse().unwrap();
+                let hand = card_utils::str2hand(&hand);
                 if hand == target_hand {
-                    return Ok(i as i32);
+                    return Ok(index);
                 }
             }
         }

@@ -40,11 +40,11 @@ const GAMMA: f64 = 2.0;
 pub const BLUEPRINT_STRATEGY_PATH: &str = "products/compact_blueprint.bin";
 
 lazy_static! {
-    // pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
-    // pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
+    pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
+    pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
 
-    pub static ref ABSTRACTION: card_abstraction::LightAbstraction = card_abstraction::LightAbstraction::new();
-    pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
+    // pub static ref ABSTRACTION: card_abstraction::LightAbstraction = card_abstraction::LightAbstraction::new();
+    // pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
 
 }
 
@@ -183,7 +183,9 @@ impl ActionHistory {
             } else {
                 (fraction.clone() * (pot as f64)) as i32
             };
-            if min_bet <= bet && bet <= max_bet {
+            // Add the bet if the amount is legal and it's distinct from the
+            // call amount.
+            if min_bet <= bet && bet <= max_bet && bet != self.to_call() {
                 actions.push(Action {
                     action: ActionType::Bet,
                     amount: bet,
@@ -193,7 +195,6 @@ impl ActionHistory {
 
         // Add call/check action.
         let to_call = self.to_call();
-
         actions.push(Action {
             action: ActionType::Call,
             amount: to_call,

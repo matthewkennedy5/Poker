@@ -91,7 +91,13 @@ fn serialize_nodes(nodes: &HashMap<InfoSet, Node>) {
 }
 
 pub fn load_blueprint() -> HashMap<CompactInfoSet, Action> {
-    let file = File::open(BLUEPRINT_STRATEGY_PATH).expect("Blueprint strategy file not found");
+    let file = match File::open(BLUEPRINT_STRATEGY_PATH) {
+        Err(_e) => {
+            write_compact_blueprint(&load_nodes());
+            File::open(BLUEPRINT_STRATEGY_PATH).unwrap()
+        },
+        Ok(f) => f,
+    };
     let reader = BufReader::new(file);
     let blueprint = bincode::deserialize_from(reader).expect("Failed to deserialize blueprint");
     blueprint
