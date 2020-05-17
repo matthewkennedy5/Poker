@@ -5,11 +5,11 @@ use crate::exploiter::exploitability;
 use crate::trainer_utils::*;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufReader, Write};
-use rayon::prelude::*;
 
 // TODO: Use a parameter file
 const NODES_PATH: &str = "products/nodes.bin";
@@ -41,7 +41,7 @@ pub fn train(iters: u64) {
         bar.inc(1);
     }
     bar.finish();
-    exploitability(&nodes);
+    // exploitability(&nodes);
 
     // view_preflop(&nodes);
 
@@ -55,6 +55,7 @@ pub fn train(iters: u64) {
     );
 
     serialize_nodes(&nodes);
+    write_compact_blueprint(&nodes);
     // println!("Exploitability: {}", exploitability(&nodes));
 }
 
@@ -62,7 +63,7 @@ pub fn view_preflop(nodes: &HashMap<InfoSet, Node>) {
     // Print the preflop strategy
     for (infoset, node) in nodes {
         if infoset.history.street == PREFLOP {
-            if node.t > 100.0 {
+            if node.t > 500.0 {
                 println!(
                     "{}: {:#?}t: {}\n",
                     infoset,
@@ -95,7 +96,7 @@ pub fn load_blueprint() -> HashMap<CompactInfoSet, Action> {
         Err(_e) => {
             write_compact_blueprint(&load_nodes());
             File::open(BLUEPRINT_STRATEGY_PATH).unwrap()
-        },
+        }
         Ok(f) => f,
     };
     let reader = BufReader::new(file);
@@ -114,7 +115,7 @@ fn iterate(
         return terminal_utility(&deck, history, player);
     }
 
-    // Look up the CFR node for this information set, or make a new one if it
+    // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
     let mut infoset = InfoSet::from_deck(&deck, &history);
     if !nodes.contains_key(&infoset) {
@@ -158,6 +159,7 @@ fn iterate(
         utilities.insert(action, utility);
         node_utility += prob * utility;
     }
+    // TODO: multithread here -- maybe just on the flop. Return a Vec<Node> of updated nodes
 
     // Update regrets
     for (action, utility) in &utilities {

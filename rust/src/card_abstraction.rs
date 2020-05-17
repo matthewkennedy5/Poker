@@ -23,9 +23,9 @@ const N_FLOP_CANONICAL: i32 = 1_342_562;
 const N_TURN_CANONICAL: i32 = 14_403_610;
 const N_RIVER_CANONICAL: i32 = 125_756_657;
 
-const FLOP_BUCKETS: i32 = 100;
-const TURN_BUCKETS: i32 = 100;
-const RIVER_BUCKETS: i32 = 100;
+const FLOP_BUCKETS: i32 = 1000;
+const TURN_BUCKETS: i32 = 1000;
+const RIVER_BUCKETS: i32 = 1000;
 
 pub struct Abstraction {
     flop: HandData,

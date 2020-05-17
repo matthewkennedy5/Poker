@@ -1,7 +1,7 @@
 use crate::card_abstraction::{Abstraction, LightAbstraction};
 use crate::card_utils::*;
-use crate::trainer_utils::*;
 use crate::trainer::load_blueprint;
+use crate::trainer_utils::*;
 use rand::prelude::SliceRandom;
 
 #[test]
@@ -160,14 +160,3 @@ fn test_light_abstraction() {
     }
     bar.finish();
 }
-
-
-
-
-
-
-
-
-
-
-

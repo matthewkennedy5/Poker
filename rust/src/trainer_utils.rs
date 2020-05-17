@@ -6,8 +6,8 @@ use rand::thread_rng;
 use std::cmp::Eq;
 use std::collections::HashMap;
 use std::fmt;
-use std::hash::Hash;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::Write;
 
 pub const SMALL_BLIND: i32 = 50;
@@ -28,7 +28,7 @@ pub const FOLD: Action = Action {
 
 // Allowed bets in terms of pot fractions. We mark the all-in action as -1.
 pub const ALL_IN: f64 = -1.0;
-pub const BET_ABSTRACTION: [f64; 5] = [0.33, 0.67, 1.0, 2.5, ALL_IN];
+// pub const BET_ABSTRACTION: [[f64; 5], 4] = [[0.33, 0.67, 1.0, 2.5, ALL_IN];
 // pub const BET_ABSTRACTION: [f64; 4] = [0.5, 1.0, 2.0, ALL_IN];
 // pub const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
 
@@ -45,6 +45,11 @@ lazy_static! {
 
     // pub static ref ABSTRACTION: card_abstraction::LightAbstraction = card_abstraction::LightAbstraction::new();
     // pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
+
+    pub static ref BET_ABSTRACTION: Vec<Vec<f64>> = vec![vec![1.0, 2.0, 2.5, 3.0, 5.0, ALL_IN],   // preflop
+                                                         vec![0.33, 0.67, 1.0, 2.0, ALL_IN],  // flop
+                                                         vec![0.25, 0.5, 1.0, ALL_IN], // turn
+                                                         vec![0.25, 0.5, 1.0, ALL_IN]]; // river
 
 }
 
@@ -169,7 +174,7 @@ impl ActionHistory {
 
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
-    pub fn next_actions(&self, bet_abstraction: &Vec<f64>) -> Vec<Action> {
+    pub fn next_actions(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<Action> {
         let mut actions = Vec::new();
         let min_bet = match &self.last_action {
             Some(action) => 2 * action.amount,
@@ -177,7 +182,7 @@ impl ActionHistory {
         };
         let max_bet = self.stacks[self.player];
         let pot = self.pot();
-        for fraction in bet_abstraction.iter() {
+        for fraction in bet_abstraction[self.street].iter() {
             let bet = if fraction == &ALL_IN {
                 self.stacks[self.player]
             } else {
@@ -211,7 +216,7 @@ impl ActionHistory {
     // current history, with actions mapped to those of the given bet abstraction.
     // This assumes that folding and calling are always going to be implicitly
     // allowed in the abstraction.
-    pub fn translate(&self, bet_abstraction: &Vec<f64>) -> ActionHistory {
+    pub fn translate(&self, bet_abstraction: &Vec<Vec<f64>>) -> ActionHistory {
         let mut translated = ActionHistory::new();
         for street in self.history.clone() {
             for action in street {
@@ -236,7 +241,7 @@ impl ActionHistory {
         translated
     }
 
-    pub fn compress(&self, bet_abstraction: &Vec<f64>) -> Vec<u8> {
+    pub fn compress(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<u8> {
         let mut compressed = Vec::new();
         let mut builder = ActionHistory::new();
         for street in self.history.clone() {
@@ -244,7 +249,7 @@ impl ActionHistory {
                 for (i, candidate) in builder.next_actions(bet_abstraction).iter().enumerate() {
                     if action == candidate.clone() {
                         compressed.push(i as u8);
-                        break
+                        break;
                     }
                 }
                 builder.add(&action);
