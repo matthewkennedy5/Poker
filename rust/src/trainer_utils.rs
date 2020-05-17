@@ -509,13 +509,14 @@ pub fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) ->
 
 // Presamples actions and represents the blueprint strategy in a much more
 // compact format.
-pub fn write_compact_blueprint(nodes: &HashMap<InfoSet, Node>) {
+pub fn write_compact_blueprint(nodes: &HashMap<CompactInfoSet, Node>) {
     let mut compressed = HashMap::new();
     println!("[INFO] Compressing the blueprint strategy");
     let bar = card_utils::pbar(nodes.len() as u64);
     for (infoset, node) in nodes {
         let action = sample_action_from_node(&node);
-        compressed.insert(infoset.compress(), action);
+        // TODO: Store all action probabilities as f32
+        compressed.insert(infoset, action);
         bar.inc(1);
     }
     bar.finish();

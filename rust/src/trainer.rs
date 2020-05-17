@@ -17,7 +17,7 @@ const NODES_PATH: &str = "products/nodes.bin";
 pub fn train(iters: u64) {
     let mut rng = thread_rng();
     let mut deck = card_utils::deck();
-    let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
+    let mut nodes: HashMap<CompactInfoSet, Node> = HashMap::new();
     lazy_static::initialize(&HAND_TABLE);
     lazy_static::initialize(&ABSTRACTION);
     println!("[INFO] Beginning training.");
@@ -75,7 +75,7 @@ pub fn view_preflop(nodes: &HashMap<InfoSet, Node>) {
     }
 }
 
-pub fn load_nodes() -> HashMap<InfoSet, Node> {
+pub fn load_nodes() -> HashMap<CompactInfoSet, Node> {
     println!("[INFO] Loading strategy...");
     let file = File::open(NODES_PATH).expect("Nodes file not found");
     let reader = BufReader::new(file);
@@ -84,7 +84,7 @@ pub fn load_nodes() -> HashMap<InfoSet, Node> {
     nodes
 }
 
-fn serialize_nodes(nodes: &HashMap<InfoSet, Node>) {
+fn serialize_nodes(nodes: &HashMap<CompactInfoSet, Node>) {
     let bincode: Vec<u8> = bincode::serialize(nodes).unwrap();
     let mut file = File::create(NODES_PATH).unwrap();
     file.write_all(&bincode).unwrap();
@@ -109,7 +109,7 @@ fn iterate(
     deck: &[Card],
     history: ActionHistory,
     weights: [f64; 2],
-    nodes: &mut HashMap<InfoSet, Node>,
+    nodes: &mut HashMap<CompactInfoSet, Node>,
 ) -> f64 {
     if history.hand_over() {
         return terminal_utility(&deck, history, player);
@@ -117,27 +117,26 @@ fn iterate(
 
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
-    let mut infoset = InfoSet::from_deck(&deck, &history);
-    if !nodes.contains_key(&infoset) {
-        let new_node = Node::new(&infoset);
-        nodes.insert(infoset.clone(), new_node);
-    }
-    let mut node: Node = nodes.get(&infoset).unwrap().clone();
     let mut history = history.clone();
+    let mut infoset = InfoSet::from_deck(&deck, &history);
+    let mut node: Node = match nodes.get(&infoset.compress()) {
+        Some(n) => n.clone(),
+        None => Node::new(&infoset),
+    };
 
+    // If it's not our turn, we sample the other player's action from their
+    // current policy, and load our node.
     let opponent = 1 - player;
     if history.player == opponent {
-        // Process the opponent's turn
         history.add(&sample_action_from_node(&node));
-
         if history.hand_over() {
             return terminal_utility(&deck, history, player);
         }
         infoset = InfoSet::from_deck(&deck, &history);
-        if !nodes.contains_key(&infoset) {
-            nodes.insert(infoset.clone(), Node::new(&infoset));
-        }
-        node = nodes.get(&infoset).unwrap().clone();
+        node = match nodes.get(&infoset.compress()) {
+            Some(n) => n.clone(),
+            None => Node::new(&infoset),
+        };
     }
 
     // Grab the current strategy at this node
@@ -168,6 +167,6 @@ fn iterate(
     }
 
     let updated = node.clone();
-    nodes.insert(infoset, updated);
+    nodes.insert(infoset.compress(), updated);
     node_utility
 }

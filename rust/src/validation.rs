@@ -123,34 +123,35 @@ pub fn preflop_matrix() {
 }
 
 // Calculates the average donk bet percentage across all hands on the flop.
-pub fn donk_percentage() {
-    let mut avg_prob = 0.0;
-    let mut n_infosets = 0;
+// pub fn donk_percentage() {
+//     let mut avg_prob = 0.0;
+//     let mut n_infosets = 0;
 
-    let mut donk_history = ActionHistory::new();
-    donk_history.add(&Action {
-        action: ActionType::Bet,
-        amount: 250,
-    });
-    donk_history.add(&Action {
-        action: ActionType::Call,
-        amount: 250,
-    });
-    let nodes = crate::trainer::load_nodes();
+//     let mut donk_history = ActionHistory::new();
+//     donk_history.add(&Action {
+//         action: ActionType::Bet,
+//         amount: 250,
+//     });
+//     donk_history.add(&Action {
+//         action: ActionType::Call,
+//         amount: 250,
+//     });
+//     let donk_history = donk_history.compress(&BET_ABSTRACTION);
+//     let nodes = crate::trainer::load_nodes();
 
-    for (infoset, node) in &nodes {
-        if infoset.history == donk_history {
-            let strat = node.cumulative_strategy();
-            for (action, prob) in &strat {
-                if action.action == ActionType::Bet {
-                    avg_prob += prob;
-                }
-            }
-            n_infosets += 1;
-        }
-    }
-    println!(
-        "Donk frequency: {:.1}%",
-        avg_prob / (n_infosets as f64) * 100.0
-    );
-}
+//     for (infoset, node) in &nodes {
+//         if infoset.history == donk_history {
+//             let strat = node.cumulative_strategy();
+//             for (action, prob) in &strat {
+//                 if action.action == ActionType::Bet {
+//                     avg_prob += prob;
+//                 }
+//             }
+//             n_infosets += 1;
+//         }
+//     }
+//     println!(
+//         "Donk frequency: {:.1}%",
+//         avg_prob / (n_infosets as f64) * 100.0
+//     );
+// }
