@@ -344,6 +344,18 @@ impl fmt::Display for InfoSet {
     }
 }
 
+impl CompactInfoSet {
+    pub fn uncompress(&self) -> InfoSet {
+        let mut full_history = ActionHistory::new();
+        for action in &self.history {
+            let next_actions = full_history.next_actions(&BET_ABSTRACTION);
+            let next_action = &next_actions[action.clone() as usize];
+            full_history.add(next_action);
+        }
+        InfoSet { history: full_history, card_bucket: self.card_bucket}
+    }
+}
+
 // Returns a representative hand which is in the given abstraction bucket.
 fn hand_with_bucket(bucket: i32, street: usize) -> String {
     let mut deck = card_utils::deck();
@@ -407,7 +419,6 @@ impl Node {
     }
 
     pub fn cumulative_strategy(&self) -> HashMap<Action, f64> {
-        // TODO: DCFR
         normalize(&self.strategy_sum)
     }
 
@@ -514,9 +525,16 @@ pub fn write_compact_blueprint(nodes: &HashMap<CompactInfoSet, Node>) {
     println!("[INFO] Compressing the blueprint strategy");
     let bar = card_utils::pbar(nodes.len() as u64);
     for (infoset, node) in nodes {
-        let action = sample_action_from_node(&node);
-        // TODO: Store all action probabilities as f32
-        compressed.insert(infoset, action);
+        // let action = sample_action_from_node(&node);
+        // compressed.insert(infoset, action);
+
+        let strategy = node.cumulative_strategy();
+        let mut probs = Vec::new();
+        for action in infoset.uncompress().next_actions() {
+            probs.push(strategy.get(&action).unwrap().clone() as f32);
+        }
+        compressed.insert(infoset, probs);
+
         bar.inc(1);
     }
     bar.finish();

@@ -30,7 +30,7 @@ use std::collections::HashMap;
 fn main() {
     // backend::main().expect("Could not launch server");
 
-    trainer::train(10_000);
+    trainer::train(1_000_000);
     // validation::preflop_matrix();
     // validation::donk_percentage();
 
