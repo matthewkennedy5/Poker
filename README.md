@@ -51,13 +51,6 @@ It is useful to have a notion of the quality of a strategy, akin to "loss" in ma
 
 However, to truly calculate the exploitability, you'd have to run CFR to train an opponent against your strategy, and that would take a while. Fortunately, researchers at ??? came up with a greedy way to calculate a lower bound of the exploitability known as the **Local Best Response** (cite) which ends up being pretty good in practice. You can run this during training to see how good your blueprint strategy is getting. 
 
-### Real time solving
-
-### Heads-up comparison vs. other top bots
-
-### Compute requirements
-
-Another goal of this project was to write a bot that could be trained and run on laptop, no supercomputer needed. I first started writing this in Python, but then switched to Rust because Python was too slow and inefficient to accomplish this goal. All computation for the final version of this bot was done on my laptop which has an 8-core CPU and 8 GB of RAM. 
 
 ## Papers cited
 
