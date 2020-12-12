@@ -406,7 +406,7 @@ impl LightHandTable {
 // Writes a file containing all canonical river hand strengths. This can be used
 // if you want to convert 5-card lookup table to a 7-card lookup table for a
 // lookup speed boost. I wish I had more RAM.
-fn bootstrap_river_strengths() {
+pub fn bootstrap_river_strengths() {
     let canonical = load_river_canonical();
     let mut buffer = File::create("products/strengths7.txt").unwrap();
     let bar = pbar(canonical.len() as u64);
