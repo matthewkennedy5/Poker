@@ -8,6 +8,7 @@ use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs::File;
+use std::path::Path;
 use std::io::{BufRead, BufReader, Read, Write};
 
 const HAND_TABLE_PATH: &str = "products/strengths7.txt";
@@ -343,6 +344,10 @@ impl HandTable {
     }
 
     fn load_hand_strengths() -> HandData {
+        if !Path::new(HAND_TABLE_PATH).exists() {
+            println!("[INFO] Hand table not found.");
+            bootstrap_river_strengths();
+        }
         match File::open(HAND_TABLE_PATH) {
             Err(_e) => panic!("Hand table not found"),
             Ok(file) => HandData::read_serialized(file),

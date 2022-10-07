@@ -143,7 +143,7 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
 pub fn write_sorted_hands() {
     let hands = get_sorted_hand_ehs2(7);
     println!("[INFO] Writing sorted river hands for the LightAbstraction");
-    fs::create_dir(RIVER_SORTED_DIR);
+    fs::create_dir(RIVER_SORTED_DIR).expect("Couldn't create river directory");
     let bar = card_utils::pbar(hands.len() as u64);
     for card in card_utils::deck() {
         // We find every canonical river hand that starts with card, and add it
