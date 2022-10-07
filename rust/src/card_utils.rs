@@ -1,5 +1,4 @@
 use crate::itertools::Itertools;
-// use crate::rand::prelude::IteratorRandom;
 use bio::stats::combinatorics::combinations;
 use rand::prelude::SliceRandom;
 use rayon::prelude::*;

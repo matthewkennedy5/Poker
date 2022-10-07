@@ -1,8 +1,8 @@
 // Real-time bot logic. Right now this just does action translation, but this
 // is where I will add depth-limited solving.
+use std::collections::HashMap;
 use crate::card_utils::Card;
 use crate::trainer_utils::*;
-use std::collections::HashMap;
 
 lazy_static! {
     static ref BLUEPRINT: HashMap<CompactInfoSet, Action> = crate::trainer::load_blueprint();

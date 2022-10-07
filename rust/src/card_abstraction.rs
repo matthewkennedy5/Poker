@@ -8,11 +8,10 @@ use crate::card_utils;
 use crate::card_utils::{Card, HandData};
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
-use std::collections::HashMap;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::ErrorKind;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, Write};
 
 const FLOP_PATH: &str = "products/flop_abstraction.txt";
 const TURN_PATH: &str = "products/turn_abstraction.txt";
@@ -155,8 +154,6 @@ pub fn write_sorted_hands() {
         };
         let mut index = 0;
         for (hand, ehs2) in &hands {
-            // let first_card = card_utils::card(hand.clone(), 0);
-            // if card_utils::suit(first_card) as u8 == card.suit && card_utils::rank(first_card) as u8 == card.rank {
             let hand_str = card_utils::hand2str(hand.clone());
             let first_card = &hand_str[0..2];
             if first_card == card.to_string() {
@@ -197,7 +194,7 @@ impl LightAbstraction {
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
         let canonical = card_utils::canonical_hand(cards, true);
         let hand = card_utils::cards2hand(&canonical);
-        // look up hand number from 1 to 125 million or whatever, bucket it based on that
+        // look up hand number from 1 to 125 million, bucket it based on that
         match cards.len() {
             5 => self.flop.get(&hand).clone(),
             6 => self.turn.get(&hand).clone(),
@@ -237,6 +234,3 @@ fn hand_lookup(cards: &[Card]) -> Result<i32, ErrorKind> {
     }
     Err(ErrorKind::NotFound)
 }
-
-// TODO: Should I consider multiplicity of canonical hands for percentile bucketing?
-// Might not be a big deal if bucket sizes vary.

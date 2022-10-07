@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 extern crate indicatif;
 extern crate itertools;
 extern crate serde;
@@ -12,30 +15,13 @@ extern crate bio;
 extern crate qstring;
 extern crate rayon;
 
-mod backend;
-mod bot;
-mod card_abstraction;
-mod card_utils;
-mod exploiter;
 mod tests;
 mod trainer;
 mod trainer_utils;
-mod validation;
-
-use std::fs::File;
-use std::io::Write;
-use std::mem::size_of_val;
-use std::collections::HashMap;
+mod card_abstraction;
+mod card_utils;
+mod exploiter;
 
 fn main() {
-    // backend::main().expect("Could not launch server");
-
     trainer::train(1_000_000);
-    // validation::preflop_matrix();
-    // validation::donk_percentage();
-
-    // trainer::train(100_000_000);
-    // let nodes = trainer::load_nodes();
-    // trainer::view_preflop(&nodes);
-    // crate::trainer_utils::write_compact_blueprint(&nodes);
 }

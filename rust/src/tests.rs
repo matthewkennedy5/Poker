@@ -1,9 +1,3 @@
-use crate::card_abstraction::{Abstraction, LightAbstraction};
-use crate::card_utils::*;
-use crate::trainer::load_blueprint;
-use crate::trainer_utils::*;
-use rand::prelude::SliceRandom;
-
 #[test]
 fn uint_hands() {
     let hand: u64 = str2hand("Ac2d7h9cTd2s8c");
