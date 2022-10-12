@@ -17,11 +17,9 @@ const FLOP_CANONICAL_PATH: &str = "products/flop_canonical.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_canonical.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_canonical.txt";
 
-// TODO: To reduce memory usage if needed, incorporate the equity information
-// and hand strength information in one big lookup table, like HashMap<u64, (f64, i32)>
 lazy_static! {
     pub static ref HAND_TABLE: HandTable = HandTable::new();
-    // pub static ref HAND_TABLE: LightHandTable = LightHandTable::new();
+    pub static ref LIGHT_HAND_TABLE: LightHandTable = LightHandTable::new();
     static ref EQUITY_TABLE: EquityTable = EquityTable::new();
 }
 
@@ -335,6 +333,9 @@ impl HandTable {
         }
     }
 
+    // TODO: You used the same data structure (HandTable) to store both the 
+    // 7-card strength lookups (which don't require streets) and the abstraction buckets
+    // (which do require streets). This needs to be redesigned.
     pub fn hand_strength(&self, hand: &[Card]) -> i32 {
         let canonical = canonical_hand(&hand, false);
         let compact = cards2hand(&canonical);
@@ -409,14 +410,17 @@ impl LightHandTable {
 
 // Writes a file containing all canonical river hand strengths. This can be used
 // if you want to convert 5-card lookup table to a 7-card lookup table for a
-// lookup speed boost. I wish I had more RAM.
+// lookup speed boost.
 pub fn bootstrap_river_strengths() {
-    let canonical = load_river_canonical();
-    let mut buffer = File::create("products/strengths7.txt").unwrap();
-    let bar = pbar(canonical.len() as u64);
-    for hand in canonical {
-        let strength = HAND_TABLE.hand_strength(&hand2cards(hand));
-        let to_write = format!("{} {}\n", hand2str(hand.clone()), strength);
+    println!("[INFO] Generating 7-card hand strength lookup table.");
+    let canonical_hands = deal_canonical(7, false);
+    let deck = deck();
+    let mut buffer = File::create(HAND_TABLE_PATH).unwrap();
+    let bar = pbar(canonical_hands.len() as u64);
+    for hand in canonical_hands {
+        let cards = hand2cards(hand);
+        let strength = LIGHT_HAND_TABLE.hand_strength(&cards);
+        let to_write = format!("{} {}\n", cards2str(&cards), strength);
         buffer.write(to_write.as_bytes()).unwrap();
         bar.inc(1);
     }
@@ -556,10 +560,7 @@ pub fn load_turn_canonical() -> HashSet<u64> {
 }
 
 pub fn load_river_canonical() -> HashSet<u64> {
-    println!("[INFO] Loading canonical river hands.");
-    let canonical = load_canonical(7, RIVER_CANONICAL_PATH);
-    println!("[INFO] Done.");
-    canonical
+    load_canonical(7, RIVER_CANONICAL_PATH)
 }
 
 fn load_canonical(n_cards: usize, path: &str) -> HashSet<u64> {
@@ -573,7 +574,7 @@ fn load_canonical(n_cards: usize, path: &str) -> HashSet<u64> {
         }
         Err(_e) => {
             // Find the canonical hands and write them to disk.
-            canonical = deal_canonical(n_cards);
+            canonical = deal_canonical(n_cards, true);
             let mut buffer = File::create(path).unwrap();
             for hand in &canonical {
                 buffer.write(hand2str(hand.clone()).as_bytes()).unwrap();
@@ -585,7 +586,7 @@ fn load_canonical(n_cards: usize, path: &str) -> HashSet<u64> {
     canonical
 }
 
-fn deal_canonical(n_cards: usize) -> HashSet<u64> {
+pub fn deal_canonical(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
     match n_cards {
         5 => println!("[INFO] Finding all canonical flop hands."),
         6 => println!("[INFO] Finding all canonical turn hands."),
@@ -595,19 +596,31 @@ fn deal_canonical(n_cards: usize) -> HashSet<u64> {
 
     let mut canonical: HashSet<u64> = HashSet::new();
     let deck = deck();
-    let bar = pbar((combinations(52, 2) * combinations(50, (n_cards - 2) as u64)) as u64);
-    for preflop in deck.iter().combinations(2) {
-        let mut subdeck = deck.clone();
-        subdeck.retain(|c| !preflop.contains(&c));
-        for board in subdeck.iter().combinations(n_cards - 2) {
-            let hand = [deepcopy(&preflop), deepcopy(&board)].concat();
-            let hand_str = cards2str(&canonical_hand(&hand, true));
-            let hand = str2hand(&hand_str);
+
+    if preserve_streets {
+        let bar = pbar((combinations(52, 2) * combinations(50, (n_cards - 2) as u64)) as u64);
+        for preflop in deck.iter().combinations(2) {
+            let mut rest_of_deck = deck.clone();
+            rest_of_deck.retain(|c| !preflop.contains(&c));
+            for board in rest_of_deck.iter().combinations(n_cards - 2) {
+                let cards = [deepcopy(&preflop), deepcopy(&board)].concat();
+                let hand = cards2hand(&canonical_hand(&cards, true));
+                canonical.insert(hand);
+                bar.inc(1);
+            }
+        }
+        bar.finish();
+    } else {
+        let bar = pbar(combinations(52, n_cards as u64) as u64);
+        let hands = deck.iter().combinations(7);
+        for hand in hands {
+            let cards = deepcopy(&hand);
+            let hand = cards2hand(&canonical_hand(&cards, false));
             canonical.insert(hand);
             bar.inc(1);
         }
+        bar.finish();
     }
-    bar.finish();
     canonical
 }
 
@@ -681,7 +694,10 @@ impl HandData {
     }
 
     pub fn get(&self, hand: &u64) -> i32 {
-        self.data.get(hand).unwrap().clone()
+        self.data
+            .get(hand)
+            .expect(&format!("{} not found in HandData", hand))
+            .clone()
     }
 
     pub fn insert(&mut self, hand: &u64, data: i32) {
@@ -782,22 +798,46 @@ impl EquityTable {
     }
 }
 
-fn benchmark_hand_evaluator() {
-    let n = 1_000_000;
+// Estimates the throughput of the hand evaluator by shuffling the deck once and
+// finding the hand strengh score of each consecutive hand in the deck whose
+// cards are next to each other in the initial cycle. 
+pub fn benchmark_hand_evaluator() {
+    let n = 10_000_000;
     let mut deck = deck();
     let mut rng = &mut rand::thread_rng();
     deck.shuffle(&mut rng);
     lazy_static::initialize(&HAND_TABLE);
-    let bar = pbar(n as u64);
     let now = std::time::Instant::now();
     for i in 0..n {
         let index = i % (52 - 7);
-        let hand = &deck[index..index + 7];
+        let hand = &deck[index..index+7];
         let strength = HAND_TABLE.hand_strength(hand);
+    }
+    let secs: f64 = (now.elapsed().as_millis() as f64) / 1000.0;
+    let rate: f64 = (n as f64) / (secs as f64);
+    println!("{} hands per second", rate);
+}
+
+
+pub fn benchmark_hand_lookup_evaluator() {
+
+    let mut table: HashMap<u64, i32> = HashMap::new();
+    let mut strength = 0;
+    let length = 133784560;
+    let bar = pbar(133784560);
+    for hand in 0..133784560 {
+        strength += 1;      // Strengths are just incorrect dummy data right now
+        table.insert(hand, strength);
         bar.inc(1);
     }
     bar.finish();
-    let secs = now.elapsed().as_secs();
-    let rate = (n as f64) / (secs as f64);
-    println!("{} hands evaluated per second.", rate);
+
+    let n = 1_000_000_000;
+    let now = std::time::Instant::now();
+    for i in 0..n {
+        let strength = table.get(&(n % length));
+    }
+    let secs: f64 = (now.elapsed().as_millis() as f64) / 1000.0;
+    let rate: f64 = (n as f64) / (secs as f64);
+    println!("{} hands per second", rate);
 }

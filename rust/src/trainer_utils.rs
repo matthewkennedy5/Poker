@@ -28,9 +28,6 @@ pub const FOLD: Action = Action {
 
 // Allowed bets in terms of pot fractions. We mark the all-in action as -1.
 pub const ALL_IN: f64 = -1.0;
-// pub const BET_ABSTRACTION: [[f64; 5], 4] = [[0.33, 0.67, 1.0, 2.5, ALL_IN];
-// pub const BET_ABSTRACTION: [f64; 4] = [0.5, 1.0, 2.0, ALL_IN];
-// pub const BET_ABSTRACTION: [f64; 2] = [1.0, ALL_IN];
 
 // Discounted Regret Minimization parameters
 const ALPHA: f64 = 1.5;
@@ -42,10 +39,6 @@ pub const BLUEPRINT_STRATEGY_PATH: &str = "products/compact_blueprint.bin";
 lazy_static! {
     pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
     pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
-
-    // pub static ref ABSTRACTION: card_abstraction::LightAbstraction = card_abstraction::LightAbstraction::new();
-    // pub static ref HAND_TABLE: card_utils::LightHandTable = card_utils::LightHandTable::new();
-
     pub static ref BET_ABSTRACTION: Vec<Vec<f64>> = vec![vec![1.0, 2.0, 2.5, 3.0, 5.0, ALL_IN],   // preflop
                                                          vec![0.33, 0.67, 1.0, 2.0, ALL_IN],  // flop
                                                          vec![0.25, 0.5, 1.0, ALL_IN], // turn

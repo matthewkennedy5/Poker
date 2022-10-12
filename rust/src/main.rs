@@ -23,5 +23,6 @@ mod card_utils;
 mod exploiter;
 
 fn main() {
-    trainer::train(1_000_000);
+
+    card_utils::benchmark_hand_lookup_evaluator();
 }

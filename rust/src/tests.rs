@@ -1,3 +1,8 @@
+// use rand::prelude::SliceRandom;
+use crate::card_utils::*;
+// use crate::card_abstraction::*;
+// use crate::trainer::*;
+
 #[test]
 fn uint_hands() {
     let hand: u64 = str2hand("Ac2d7h9cTd2s8c");
@@ -99,21 +104,21 @@ fn hand_comparisons() {
     assert_eq!(same_flush, flush);
 }
 
-#[test]
-fn test_compact_infoset() {
-    let blueprint = load_blueprint();
-    for (infoset1, action1) in &blueprint {
-        let mut n = 0;
-        // Make sure that all infosets in nodes are distinct, so infoset1 is
-        // only equal to itself and no other infosets.
-        for (infoset2, action2) in &blueprint {
-            if infoset1 == infoset2 {
-                n += 1;
-            }
-        }
-        assert_eq!(n, 1);
-    }
-}
+// #[test]
+// fn test_compact_infoset() {
+//     let blueprint = load_blueprint();
+//     for (infoset1, action1) in &blueprint {
+//         let mut n = 0;
+//         // Make sure that all infosets in nodes are distinct, so infoset1 is
+//         // only equal to itself and no other infosets.
+//         for (infoset2, action2) in &blueprint {
+//             if infoset1 == infoset2 {
+//                 n += 1;
+//             }
+//         }
+//         assert_eq!(n, 1);
+//     }
+// }
 
 #[test]
 fn test_ranges() {
@@ -122,35 +127,35 @@ fn test_ranges() {
 
 // Makes sure that LightAbstraction and Abstraction return the same bins for
 // all cards.
-#[test]
-fn test_light_abstraction() {
-    let abs = Abstraction::new();
-    let light_abs = LightAbstraction::new();
-    println!("my test");
-    let hand = str2hand("Qc2d2c7c8h2h8c");
-    let cards = hand2cards(hand);
-    assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
-    println!("Testing flop");
-    for hand in load_flop_canonical() {
-        let cards = hand2cards(hand);
-        assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
-    }
-    println!("Testing turn");
-    for hand in load_turn_canonical() {
-        let cards = hand2cards(hand);
-        assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
-    }
-    println!("Testing river");
-    let river_hands = load_river_canonical();
-    let mut river_hands: Vec<&u64> = river_hands.iter().collect();
-    let mut rng = &mut rand::thread_rng();
-    river_hands.shuffle(&mut rng);
+// #[test]
+// fn test_light_abstraction() {
+//     let abs = Abstraction::new();
+//     let light_abs = LightAbstraction::new();
+//     println!("my test");
+//     let hand = str2hand("Qc2d2c7c8h2h8c");
+//     let cards = hand2cards(hand);
+//     assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
+//     println!("Testing flop");
+//     for hand in load_flop_canonical() {
+//         let cards = hand2cards(hand);
+//         assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
+//     }
+//     println!("Testing turn");
+//     for hand in load_turn_canonical() {
+//         let cards = hand2cards(hand);
+//         assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
+//     }
+//     println!("Testing river");
+//     let river_hands = load_river_canonical();
+//     let mut river_hands: Vec<&u64> = river_hands.iter().collect();
+//     let mut rng = &mut rand::thread_rng();
+//     river_hands.shuffle(&mut rng);
 
-    let bar = pbar(river_hands.len() as u64);
-    for hand in river_hands {
-        let cards = hand2cards(hand.clone());
-        assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
-        bar.inc(1);
-    }
-    bar.finish();
-}
+//     let bar = pbar(river_hands.len() as u64);
+//     for hand in river_hands {
+//         let cards = hand2cards(hand.clone());
+//         assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
+//         bar.inc(1);
+//     }
+//     bar.finish();
+// }
