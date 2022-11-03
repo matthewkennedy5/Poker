@@ -2,3 +2,6 @@
 *.pyc
 __pycache__/*
 params.json
+gui/package-lock.json
+rust/products/*
+
