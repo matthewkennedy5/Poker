@@ -1,32 +1,38 @@
 use crate::itertools::Itertools;
 use bio::stats::combinatorics::combinations;
 use rand::prelude::SliceRandom;
-use rayon::prelude::*;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
+use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs::File;
+use std::fs;
 use std::path::Path;
+use std::thread;
 use std::io::{BufRead, BufReader, Read, Write};
+use std::sync::mpsc;
+use dashmap::DashMap;
+use once_cell::sync::Lazy;
 
 const HAND_TABLE_PATH: &str = "products/strengths7.txt";
 const LIGHT_HAND_TABLE_PATH: &str = "products/strengths.json";
+const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.json";
 const EQUITY_TABLE_PATH: &str = "products/equity_table.txt";
-const FLOP_CANONICAL_PATH: &str = "products/flop_canonical.txt";
-const TURN_CANONICAL_PATH: &str = "products/turn_canonical.txt";
-const RIVER_CANONICAL_PATH: &str = "products/river_canonical.txt";
+const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.txt";
+const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.txt";
+const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
 
-lazy_static! {
-    pub static ref HAND_TABLE: HandTable = HandTable::new();
-    pub static ref LIGHT_HAND_TABLE: LightHandTable = LightHandTable::new();
-    static ref EQUITY_TABLE: EquityTable = EquityTable::new();
-}
+static HAND_TABLE: Lazy<HandTable> = Lazy::new(|| HandTable::new());
+static LIGHT_HAND_TABLE: Lazy<LightHandTable> = Lazy::new(|| LightHandTable::new());
+static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(|| FastHandTable::new());
+static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(|| EquityTable::new());
 
 pub const CLUBS: i32 = 0;
 pub const DIAMONDS: i32 = 1;
 pub const HEARTS: i32 = 2;
 pub const SPADES: i32 = 3;
+
+const NUM_THREADS: usize = 100;     // Number of threads to use in parallel loops
 
 #[derive(Hash, Debug, Clone, PartialOrd, Eq, Serialize, Deserialize)]
 pub struct Card {
@@ -96,7 +102,7 @@ impl fmt::Display for Card {
             12 => "Q",
             13 => "K",
             14 => "A",
-            _ => panic!("Bad rank value"),
+            _ => panic!("Bad rank value: {}", self.rank),
         };
         let suit = match self.suit as i32 {
             CLUBS => "c",
@@ -159,7 +165,7 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
     bar
 }
 
-// canonical / archetypal hand methods
+// isomorphic / archetypal hand methods
 // thanks to stackoverflow user Daniel Slutzbach: https://stackoverflow.com/a/3831682
 
 // returns true if the given list of ints contains duplicate elements.
@@ -207,8 +213,8 @@ fn sorted_correctly(cards: &[Card], streets: bool) -> bool {
     }
 }
 
-// Given a list of cards, returns true if they are canonical. the rules for being
-// canonical are as follows:
+// Given a list of cards, returns true if they are isomorphic. the rules for being
+// isomorphic are as follows:
 // 1. cards must be in sorted order (suit-first, alphabetic order of suits)
 // 2. each suit must have at least as many cards as later suits
 // 3. when two suits have the same number of cards, the first suit must have
@@ -223,7 +229,7 @@ fn sorted_correctly(cards: &[Card], streets: bool) -> bool {
 //    flop, that asad|jh9c2s is different than as2s|jh9cad. both hands have a
 //    pair of aces, but in the first hand, the player has pocket aces on the
 //    preflop and is in a much stronger position than the second hand.
-pub fn is_canonical(cards: &[Card], streets: bool) -> bool {
+pub fn is_isomorphic(cards: &[Card], streets: bool) -> bool {
     if !sorted_correctly(cards, streets) {
         // rule 1
         return false;
@@ -255,7 +261,7 @@ pub fn is_canonical(cards: &[Card], streets: bool) -> bool {
     true
 }
 
-fn sort_canonical(cards: &[Card], streets: bool) -> Vec<Card> {
+fn sort_isomorphic(cards: &[Card], streets: bool) -> Vec<Card> {
     let mut sorted;
     if streets && cards.len() > 2 {
         let mut preflop = (&cards[..2]).to_vec();
@@ -270,15 +276,15 @@ fn sort_canonical(cards: &[Card], streets: bool) -> Vec<Card> {
     sorted
 }
 
-// Translates the given cards into their equivalent canonical representation.
+// Translates the given cards into their equivalent isomorphic representation.
 // When dealing with poker hands that come up in the game, there is some
 // information that doesn't matter. For example, we don't care about the order
 // of the flop cards or the hole cards. There is also suit isomorphism, where
 // for example a 5-card flush of hearts is essentially the same as a 5-card
 // flush of diamonds. This function maps the set of all hands to the much
 // smaller set of distinct isomorphic hands.
-pub fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
-    let cards = &sort_canonical(&cards, streets);
+pub fn isomorphic_hand(cards: &[Card], streets: bool) -> Vec<Card> {
+    let cards = &sort_isomorphic(&cards, streets);
     // Separate the cards by suit
     let mut by_suits: Vec<Vec<u8>> = Vec::new();
     for suit in 0..4 {
@@ -310,15 +316,60 @@ pub fn canonical_hand(cards: &[Card], streets: bool) -> Vec<Card> {
         // Wipe the current suit in by_suits so it doesn't get used twice
         unused_suits.retain(|s| s != &max);
     }
-    let mut canonical = Vec::new();
+    let mut isomorphic = Vec::new();
     for card in cards {
-        canonical.push(Card {
+        isomorphic.push(Card {
             rank: card.rank,
             suit: suit_mapping[card.suit as usize],
         });
     }
-    canonical = sort_canonical(&canonical, streets);
-    canonical
+    isomorphic = sort_isomorphic(&isomorphic, streets);
+    isomorphic
+}
+
+pub struct FastHandTable {
+    strengths: HashMap<u64, i32>,
+}
+
+impl FastHandTable {
+
+    pub fn new() -> FastHandTable {
+        FastHandTable {
+            strengths: FastHandTable::load_hand_strengths(),
+        }
+    }
+
+    pub fn hand_strength(&self, hand: &[Card]) -> i32 {
+        let compact = cards2bitmap(hand);
+        let strength = self.strengths.get(&compact)
+                                     .expect(&format!("{} not in FastHandTable", compact))
+                                     .clone();
+        strength
+    }
+
+    fn load_hand_strengths() -> HashMap<u64, i32> {
+
+        if !Path::new(FAST_HAND_TABLE_PATH).exists() {
+            println!("[INFO] Creating fast hand table.");
+            let mut table: HashMap<u64, i32> = HashMap::new();
+            let deck = deck();
+            let bar = pbar(133784560);
+            for hand in deck.iter().combinations(7) {
+                let cards = deepcopy(&hand);
+                let strength = LIGHT_HAND_TABLE.hand_strength(&cards);
+                let bitmap = cards2bitmap(&cards);
+                table.insert(bitmap, strength);
+                bar.inc(1);
+            }
+            bar.finish();
+            let json: String = serde_json::to_string_pretty(&table).unwrap();
+            fs::write(FAST_HAND_TABLE_PATH, json).unwrap();
+        }
+
+        let json = fs::read_to_string(FAST_HAND_TABLE_PATH).unwrap();
+        let table: HashMap<u64, i32> = serde_json::from_str(&json).unwrap();
+        table
+    }
 }
 
 // For fast poker hand comparison, look up relative strength values in a table
@@ -337,8 +388,8 @@ impl HandTable {
     // 7-card strength lookups (which don't require streets) and the abstraction buckets
     // (which do require streets). This needs to be redesigned.
     pub fn hand_strength(&self, hand: &[Card]) -> i32 {
-        let canonical = canonical_hand(&hand, false);
-        let compact = cards2hand(&canonical);
+        let isomorphic = isomorphic_hand(&hand, false);
+        let compact = cards2hand(&isomorphic);
         let strength = self.strengths.get(&compact).clone();
         strength
     }
@@ -372,8 +423,8 @@ impl LightHandTable {
         // Return the best hand out of all 5-card subsets
         let mut max_strength = 0;
         for five_card in hand.iter().combinations(5) {
-            let canonical = canonical_hand(&deepcopy(&five_card), false);
-            let strength = self.strengths.get(&canonical).unwrap().clone();
+            let isomorphic = isomorphic_hand(&deepcopy(&five_card), false);
+            let strength = self.strengths.get(&isomorphic).unwrap().clone();
             if strength > max_strength {
                 max_strength = strength;
             }
@@ -408,16 +459,16 @@ impl LightHandTable {
     }
 }
 
-// Writes a file containing all canonical river hand strengths. This can be used
+// Writes a file containing all isomorphic river hand strengths. This can be used
 // if you want to convert 5-card lookup table to a 7-card lookup table for a
 // lookup speed boost.
 pub fn bootstrap_river_strengths() {
     println!("[INFO] Generating 7-card hand strength lookup table.");
-    let canonical_hands = deal_canonical(7, false);
+    let isomorphic_hands = deal_isomorphic(7, false);
     let deck = deck();
     let mut buffer = File::create(HAND_TABLE_PATH).unwrap();
-    let bar = pbar(canonical_hands.len() as u64);
-    for hand in canonical_hands {
+    let bar = pbar(isomorphic_hands.len() as u64);
+    for hand in isomorphic_hands {
         let cards = hand2cards(hand);
         let strength = LIGHT_HAND_TABLE.hand_strength(&cards);
         let to_write = format!("{} {}\n", cards2str(&cards), strength);
@@ -496,7 +547,8 @@ pub fn str2hand(hand_str: &str) -> u64 {
 pub fn hand2str(hand: u64) -> String {
     let mut hand_str = String::new();
     for card_index in 0..len(hand) {
-        let rank = match rank(card(hand, card_index)) {
+        let rank_number = rank(card(hand, card_index));
+        let rank = match rank_number {
             2 => "2",
             3 => "3",
             4 => "4",
@@ -510,7 +562,7 @@ pub fn hand2str(hand: u64) -> String {
             12 => "Q",
             13 => "K",
             14 => "A",
-            _ => panic!("Bad rank value"),
+            _ => panic!("Bad rank value: {}", rank_number),
         };
         let suit = match suit(card(hand, card_index)) {
             CLUBS => "c",
@@ -540,6 +592,7 @@ pub fn hand2cards(hand: u64) -> Vec<Card> {
     result
 }
 
+
 // Converts the old fashioned Vec<Card> representation into the compact u64
 // representation.
 pub fn cards2hand(cards: &[Card]) -> u64 {
@@ -551,50 +604,74 @@ pub fn cards2hand(cards: &[Card]) -> u64 {
     result
 }
 
-pub fn load_flop_canonical() -> HashSet<u64> {
-    load_canonical(5, FLOP_CANONICAL_PATH)
+/* 
+ * Represents hands using 52 bits, one bit for each card. If the card is present
+ * in the hand, then the corresponding bit will be 1. 
+ * 
+ * | filler     | Clubs       | Diamonds    | Hearts      | Spades      |
+ * |            |23456789TJQKA|23456789TJQKA|23456789TJQKA|23456789TJQKA|
+ * |000000000000|0000000000000|0000000000000|0000000000000|0000000000000|
+ * 
+ * for a total of 64 bits. 
+ */
+pub fn cards2bitmap(cards: &[Card]) -> u64 {
+    let mut bitmap: u64 = 0;
+    // Starting with rightmost bit: 1
+    // Shift left 52 times to move the bit to the rightmost filler bit
+    // Shift right 13 * suits times
+    // Shift right rank-1 times because I'm starting with 2 for ranks
+    for card in cards {
+        let shift = 52 - 13*card.suit - (card.rank - 1);
+        let card_bit: u64 = 1 << shift;
+        bitmap += card_bit;
+    }
+    bitmap
 }
 
-pub fn load_turn_canonical() -> HashSet<u64> {
-    load_canonical(6, TURN_CANONICAL_PATH)
+pub fn load_flop_isomorphic() -> HashSet<u64> {
+    load_isomorphic(5, FLOP_CANONICAL_PATH)
 }
 
-pub fn load_river_canonical() -> HashSet<u64> {
-    load_canonical(7, RIVER_CANONICAL_PATH)
+pub fn load_turn_isomorphic() -> HashSet<u64> {
+    load_isomorphic(6, TURN_CANONICAL_PATH)
 }
 
-fn load_canonical(n_cards: usize, path: &str) -> HashSet<u64> {
-    let mut canonical = HashSet::new();
+pub fn load_river_isomorphic() -> HashSet<u64> {
+    load_isomorphic(7, RIVER_CANONICAL_PATH)
+}
+
+fn load_isomorphic(n_cards: usize, path: &str) -> HashSet<u64> {
+    let mut isomorphic = HashSet::new();
     match File::open(path) {
         Ok(file) => {
             let reader = BufReader::new(file);
             for line in reader.lines() {
-                canonical.insert(str2hand(&line.unwrap()));
+                isomorphic.insert(str2hand(&line.unwrap()));
             }
         }
         Err(_e) => {
-            // Find the canonical hands and write them to disk.
-            canonical = deal_canonical(n_cards, true);
+            // Find the isomorphic hands and write them to disk.
+            isomorphic = deal_isomorphic(n_cards, true);
             let mut buffer = File::create(path).unwrap();
-            for hand in &canonical {
+            for hand in &isomorphic {
                 buffer.write(hand2str(hand.clone()).as_bytes()).unwrap();
                 buffer.write(b"\n").unwrap();
             }
-            println!("[INFO] Wrote canonical hands to {}.", path);
+            println!("[INFO] Wrote isomorphic hands to {}.", path);
         }
     };
-    canonical
+    isomorphic
 }
 
-pub fn deal_canonical(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
+pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
     match n_cards {
-        5 => println!("[INFO] Finding all canonical flop hands."),
-        6 => println!("[INFO] Finding all canonical turn hands."),
-        7 => println!("[INFO] Finding all canonical river hands."),
+        5 => println!("[INFO] Finding all isomorphic flop hands."),
+        6 => println!("[INFO] Finding all isomorphic turn hands."),
+        7 => println!("[INFO] Finding all isomorphic river hands."),
         _ => panic!("Bad number of cards"),
     };
 
-    let mut canonical: HashSet<u64> = HashSet::new();
+    let mut isomorphic: HashSet<u64> = HashSet::new();
     let deck = deck();
 
     if preserve_streets {
@@ -604,8 +681,8 @@ pub fn deal_canonical(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
             rest_of_deck.retain(|c| !preflop.contains(&c));
             for board in rest_of_deck.iter().combinations(n_cards - 2) {
                 let cards = [deepcopy(&preflop), deepcopy(&board)].concat();
-                let hand = cards2hand(&canonical_hand(&cards, true));
-                canonical.insert(hand);
+                let hand = cards2hand(&isomorphic_hand(&cards, true));
+                isomorphic.insert(hand);
                 bar.inc(1);
             }
         }
@@ -615,13 +692,13 @@ pub fn deal_canonical(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
         let hands = deck.iter().combinations(7);
         for hand in hands {
             let cards = deepcopy(&hand);
-            let hand = cards2hand(&canonical_hand(&cards, false));
-            canonical.insert(hand);
+            let hand = cards2hand(&isomorphic_hand(&cards, false));
+            isomorphic.insert(hand);
             bar.inc(1);
         }
         bar.finish();
     }
-    canonical
+    isomorphic
 }
 
 // Returns the second moment of the hand's equity distribution.
@@ -636,12 +713,14 @@ pub fn expected_hs2(hand: u64) -> f64 {
 
     if hand.len() == 7 {
         let equity = EQUITY_TABLE.lookup(&hand);
+        // let equity = river_equity(hand);
         return equity.powi(2);
     }
 
     for rollout in deck.iter().combinations(7 - hand.len()) {
         let full_hand = [hand.clone(), deepcopy(&rollout)].concat();
         let equity = EQUITY_TABLE.lookup(&full_hand);
+        // let equity = river_equity(full_hand);
         sum += equity.powi(2);
         count += 1.0;
     }
@@ -649,7 +728,8 @@ pub fn expected_hs2(hand: u64) -> f64 {
     average
 }
 
-fn river_equity(hand: &[Card]) -> f64 {
+fn river_equity(hand: Vec<Card>) -> f64 {
+// fn river_equity(hand: &[Card]) -> f64 {
     let mut deck = deck();
     // Remove the already-dealt cards from the deck
     deck.retain(|c| !hand.contains(&c));
@@ -658,17 +738,16 @@ fn river_equity(hand: &[Card]) -> f64 {
     let mut n_wins = 0.0;
     let mut n_runs = 0;
 
-    let rng = &mut rand::thread_rng();
-
     for opp_preflop in deck.iter().combinations(2) {
+
         n_runs += 1;
 
         // Create the poker hands by concatenating cards
         let my_hand = hand.to_vec();
         let opp_hand = [deepcopy(&opp_preflop), board.clone()].concat();
 
-        let my_strength = HAND_TABLE.hand_strength(&my_hand);
-        let opp_strength = HAND_TABLE.hand_strength(&opp_hand);
+        let my_strength = FAST_HAND_TABLE.hand_strength(&my_hand);
+        let opp_strength = FAST_HAND_TABLE.hand_strength(&opp_hand);
 
         if my_strength > opp_strength {
             n_wins += 1.0;
@@ -683,13 +762,13 @@ fn river_equity(hand: &[Card]) -> f64 {
 // For many applications (abstraction, hand strength, equity lookup) I need to
 // be able to store and lookup an integer corresponding to each hand
 pub struct HandData {
-    data: HashMap<u64, i32>,
+    data: DashMap<u64, i32>,
 }
 
 impl HandData {
     pub fn new() -> HandData {
         HandData {
-            data: HashMap::new(),
+            data: DashMap::new(),
         }
     }
 
@@ -728,10 +807,13 @@ impl HandData {
 
     pub fn serialize(&self, path: &str) {
         let mut buffer = File::create(path).unwrap();
-        for (hand, data) in &self.data {
-            let to_write = format!("{} {}\n", hand2str(hand.clone()), data);
-            buffer.write(to_write.as_bytes()).unwrap();
-        }
+        self.data.iter()
+                 .for_each(|r| {
+                    let hand = r.key().clone();
+                    let data = r.value();
+                    let to_write = format!("{} {}\n", hand2str(hand), data);
+                    buffer.write(to_write.as_bytes()).unwrap();
+                 });
     }
 }
 
@@ -767,20 +849,56 @@ impl EquityTable {
     }
 
     fn create() -> HashMap<u64, f64> {
-        println!("[INFO] Creating the river equity lookup table...");
-        let canonical = load_river_canonical();
-        let bar = pbar(canonical.len() as u64);
-        let equities: Vec<(u64, f64)> = canonical
-            .par_iter()
-            .map(|h| {
-                let equity = river_equity(&hand2cards(h.clone()));
-                bar.inc(1);
-                (h.clone(), equity)
-            })
-            .collect();
+        let isomorphic: Vec<u64> = load_river_isomorphic().iter().map(|x| x.clone()).collect();
 
+        println!("[INFO] Creating the river equity lookup table...");
+        let chunk_size = isomorphic.len() / NUM_THREADS;
+
+        let chunks: Vec<Vec<u64>> = isomorphic.chunks(chunk_size).map(|s| s.to_owned()).collect();
+        let mut handles = Vec::new();
+
+        let (tx, rx) = mpsc::channel();
+
+        let (pbar_tx, pbar_rx) = mpsc::channel();
+
+        for chunk in chunks {
+            let thread_tx = tx.clone();
+            let thread_pbar_tx = pbar_tx.clone();
+            handles.push(
+                thread::spawn(move || {
+                    let equities: Vec<(u64, f64)> = chunk
+                        .iter()
+                        .map(|h| {
+                            thread_pbar_tx.send(1).expect("could not send pbar increment");
+                            (h.clone(), river_equity(hand2cards(h.clone())))
+                        })
+                        .collect();
+                    thread_tx.send(equities).expect("Could not send the equity");
+                })
+            );
+        }
+
+        let bar = pbar(isomorphic.len() as u64);
+        for i in 0..isomorphic.len() {
+            let increment = pbar_rx.recv().unwrap();
+            bar.inc(increment);
+        }
         bar.finish();
+
+        let mut equities: Vec<(u64, f64)> = Vec::new();
+
+        for i in 0..handles.len() {
+            let mut result = rx.recv().expect("Could not receive result");
+            equities.append(&mut result);
+        }
+
+        for handle in handles {
+            handle.join().expect("Could not join the threads");
+        }
+
         let mut table = HashMap::new();
+
+        println!("[INFO] Writing to disk");
         // Serialize the equity table and construct the HashMap to return
         let mut buffer = File::create(EQUITY_TABLE_PATH).unwrap();
         for (hand, equity) in &equities {
@@ -788,13 +906,16 @@ impl EquityTable {
             buffer.write(to_write.as_bytes()).unwrap();
             table.insert(hand.clone(), equity.clone());
         }
+
         println!("[INFO] Done creating the river equity lookup table.");
         table
     }
 
     pub fn lookup(&self, hand: &[Card]) -> f64 {
-        let hand = cards2hand(&canonical_hand(hand, true));
-        self.table.get(&hand).unwrap().clone()
+        let hand = cards2hand(&isomorphic_hand(hand, true));
+        self.table.get(&hand)
+                  .expect(&format!("{} not in equity table", hand2str(hand)))
+                  .clone()
     }
 }
 
@@ -806,7 +927,7 @@ pub fn benchmark_hand_evaluator() {
     let mut deck = deck();
     let mut rng = &mut rand::thread_rng();
     deck.shuffle(&mut rng);
-    lazy_static::initialize(&HAND_TABLE);
+    // lazy_static::initialize(&HAND_TABLE);
     let now = std::time::Instant::now();
     for i in 0..n {
         let index = i % (52 - 7);

@@ -2,7 +2,7 @@ use crate::bot::bot_action;
 use crate::card_utils::{strvec2cards, Card, LightHandTable};
 use crate::trainer_utils::{Action, ActionHistory, ActionType};
 use actix_cors::Cors;
-use actix_web::{http, web, App, HttpRequest, HttpServer, Responder};
+use actix_web::{web, App, HttpRequest, HttpServer, Responder};
 use std::collections::HashMap;
 
 const SERVER: &str = "127.0.0.1:8000";
@@ -41,8 +41,7 @@ async fn get_cpu_action(req: HttpRequest) -> impl Responder {
     let board = parse_cards(board);
     let history = parse_history(history_json);
     let action = bot_action(&cpu_cards, &board, &history);
-    let is_check = action
-        == Action {
+    let is_check = action == Action {
             action: ActionType::Call,
             amount: 0,
         };

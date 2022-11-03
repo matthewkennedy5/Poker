@@ -10,10 +10,10 @@ edition = "2018"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "*"
 itertools = "*"
-indicatif = "0.14"
+indicatif = "0.16.2"
+dashmap = {version = "*", features = ["rayon"]}
 cute = "*"
 rand = "*"
-lazy_static = "*"
 rayon = "*"
 bio = "*"
 bincode = "*"
@@ -22,6 +22,8 @@ actix-web = "2.0"
 actix-rt = "1"
 actix-cors = "0.2"
 qstring = "*"
+lazy_static = "*"
+once_cell = "*"
 
 [profile.release]
 debug = 1

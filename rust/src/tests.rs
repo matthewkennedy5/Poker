@@ -1,7 +1,55 @@
-// use rand::prelude::SliceRandom;
+#[cfg(test)]
+
 use crate::card_utils::*;
-// use crate::card_abstraction::*;
-// use crate::trainer::*;
+
+#[test]
+fn card_bitmap() {
+    let hand = vec!["2d", "9s", "Qd", "Qs", "Ac", "Ah", "As"];
+    
+/*     filler       clubs           diamonds      hearts        spades
+ *
+ *    |            |23456789TJQKA|23456789TJQKA|23456789TJQKA|23456789TJQKA|
+ *    |000000000000|0000000000001|1000000000100|0000000000001|0000000100101|
+ */
+    let expected = 0b0000000000000000000000001100000000010000000000000010000000100101;
+    assert_eq!(cards2bitmap(&strvec2cards(&hand)), expected);
+
+}
+
+#[test]
+// Tests hand evaluation using the direct lookup table from u64 bitmap to the
+// hand's strength
+fn fast_hand_evaluation() {
+    let table = FastHandTable::new();
+
+    // define the hands we'll be using
+    let royal_flush = vec!["Jd", "As", "Js", "Ks", "Qs", "Ts", "2c"];
+    let royal_flush2 = vec!["Jd", "Ac", "Jc", "Kc", "Qc", "Tc", "2c"];
+    let straight_flush = vec!["7d", "2c", "8d", "Jd", "9d", "3d", "Td"];
+    let four = vec!["2h", "2c", "3d", "5c", "7d", "2d", "2s"];
+    let full_house = vec!["As", "Jd", "Qs", "Jc", "2c", "Ac", "Ah"];
+    let same_full_house = vec!["As", "Js", "2s", "Jc", "2c", "Ac", "Ah"];
+    let better_full_house = vec!["2d", "9s", "Qd", "Qs", "Ac", "Ah", "As"];
+
+    // Get strengths
+    let royal_flush = table.hand_strength(&strvec2cards(&royal_flush));
+    let royal_flush2 = table.hand_strength(&strvec2cards(&royal_flush2));
+    let straight_flush = table.hand_strength(&strvec2cards(&straight_flush));
+    let four = table.hand_strength(&strvec2cards(&four));
+    let full_house = table.hand_strength(&strvec2cards(&full_house));
+    let same_full_house = table.hand_strength(&strvec2cards(&same_full_house));
+    let better_full_house = table.hand_strength(&strvec2cards(&better_full_house));
+
+    // Test comparisons
+    assert!(royal_flush > straight_flush);
+    assert!(royal_flush > four);
+    assert!(straight_flush > better_full_house);
+    assert!(better_full_house > full_house);
+
+    // Test for ties
+    assert_eq!(royal_flush, royal_flush2);
+    assert_eq!(same_full_house, full_house);
+}
 
 #[test]
 fn uint_hands() {
@@ -136,17 +184,17 @@ fn test_ranges() {
 //     let cards = hand2cards(hand);
 //     assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
 //     println!("Testing flop");
-//     for hand in load_flop_canonical() {
+//     for hand in load_flop_isomorphic() {
 //         let cards = hand2cards(hand);
 //         assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
 //     }
 //     println!("Testing turn");
-//     for hand in load_turn_canonical() {
+//     for hand in load_turn_isomorphic() {
 //         let cards = hand2cards(hand);
 //         assert_eq!(abs.bin(&cards), light_abs.bin(&cards));
 //     }
 //     println!("Testing river");
-//     let river_hands = load_river_canonical();
+//     let river_hands = load_river_isomorphic();
 //     let mut river_hands: Vec<&u64> = river_hands.iter().collect();
 //     let mut rng = &mut rand::thread_rng();
 //     river_hands.shuffle(&mut rng);

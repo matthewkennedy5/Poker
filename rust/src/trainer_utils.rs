@@ -34,16 +34,15 @@ const ALPHA: f64 = 1.5;
 const BETA: f64 = 0.0;
 const GAMMA: f64 = 2.0;
 
-pub const BLUEPRINT_STRATEGY_PATH: &str = "products/compact_blueprint.bin";
+pub const BLUEPRINT_STRATEGY_PATH: &str = "products/blueprint.bin";
 
 lazy_static! {
     pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
     pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
-    pub static ref BET_ABSTRACTION: Vec<Vec<f64>> = vec![vec![1.0, 2.0, 2.5, 3.0, 5.0, ALL_IN],   // preflop
-                                                         vec![0.33, 0.67, 1.0, 2.0, ALL_IN],  // flop
-                                                         vec![0.25, 0.5, 1.0, ALL_IN], // turn
-                                                         vec![0.25, 0.5, 1.0, ALL_IN]]; // river
-
+    pub static ref BET_ABSTRACTION: Vec<Vec<f64>> = vec![vec![1.0, 2.0, 2.5, 3.0, 5.0, ALL_IN],  // preflop
+                                                            vec![0.33, 0.67, 1.0, 2.0, ALL_IN],  // flop
+                                                            vec![0.25, 0.5, 1.0, ALL_IN],  // turn
+                                                            vec![0.25, 0.5, 1.0, ALL_IN]];  // river
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
@@ -72,7 +71,7 @@ impl fmt::Display for Action {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ActionHistory {
-    history: Vec<Vec<Action>>, // Each index is a street
+    history: Vec<Vec<Action>>,  // Each index is a street
     last_action: Option<Action>,
     pub street: usize,
     pub player: usize,
@@ -239,7 +238,9 @@ impl ActionHistory {
         let mut builder = ActionHistory::new();
         for street in self.history.clone() {
             for action in street {
-                for (i, candidate) in builder.next_actions(bet_abstraction).iter().enumerate() {
+                for (i, candidate) in builder.next_actions(bet_abstraction)
+                                             .iter()
+                                             .enumerate() {
                     if action == candidate.clone() {
                         compressed.push(i as u8);
                         break;
@@ -514,19 +515,19 @@ pub fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) ->
 // Presamples actions and represents the blueprint strategy in a much more
 // compact format.
 pub fn write_compact_blueprint(nodes: &HashMap<CompactInfoSet, Node>) {
-    let mut compressed = HashMap::new();
+    let mut compressed: HashMap<CompactInfoSet, Action> = HashMap::new();
     println!("[INFO] Compressing the blueprint strategy");
     let bar = card_utils::pbar(nodes.len() as u64);
     for (infoset, node) in nodes {
-        // let action = sample_action_from_node(&node);
-        // compressed.insert(infoset, action);
+        let action = sample_action_from_node(&node);
+        compressed.insert(infoset.clone(), action);
 
-        let strategy = node.cumulative_strategy();
-        let mut probs = Vec::new();
-        for action in infoset.uncompress().next_actions() {
-            probs.push(strategy.get(&action).unwrap().clone() as f32);
-        }
-        compressed.insert(infoset, probs);
+        // let strategy = node.cumulative_strategy();
+        // let mut probs = Vec::new();
+        // for action in infoset.uncompress().next_actions() {
+        //     probs.push(strategy.get(&action).unwrap().clone() as f32);
+        // }
+        // compressed.insert(infoset, probs);
 
         bar.inc(1);
     }

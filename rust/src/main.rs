@@ -8,21 +8,23 @@ extern crate serde_json;
 #[macro_use(c)]
 extern crate cute;
 extern crate rand;
-#[macro_use]
-extern crate lazy_static;
 extern crate bincode;
 extern crate bio;
 extern crate qstring;
 extern crate rayon;
+#[macro_use]
+extern crate lazy_static;
 
-mod tests;
 mod trainer;
 mod trainer_utils;
 mod card_abstraction;
 mod card_utils;
 mod exploiter;
+mod tests;
+mod backend;
+mod bot;
 
 fn main() {
-
-    card_utils::benchmark_hand_lookup_evaluator();
+    backend::main().expect("Could not launch server");
 }
+

@@ -61,12 +61,12 @@ impl Abstraction {
         return bin as i32;
     }
 
-    // Lookup methods: Translate the card to its canonical version and return
+    // Lookup methods: Translate the card to its isomorphic version and return
     // the ID stored in the corresponding abstraction lookup table
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        let canonical = card_utils::canonical_hand(cards, true);
-        let hand = card_utils::cards2hand(&canonical);
+        let isomorphic = card_utils::isomorphic_hand(cards, true);
+        let hand = card_utils::cards2hand(&isomorphic);
         match cards.len() {
             5 => self.flop.get(&hand).clone(),
             6 => self.turn.get(&hand).clone(),
@@ -83,20 +83,20 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HandData {
     }
 }
 
-// Returns all canonical hands paired with their E[HS^2] values, in sorted order
+// Returns all isomorphic hands paired with their E[HS^2] values, in sorted order
 // by E[HS^2].
 fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<(u64, f64)> {
-    let canonical_hands = match n_cards {
-        5 => card_utils::load_flop_canonical(),
-        6 => card_utils::load_turn_canonical(),
-        7 => card_utils::load_river_canonical(),
+    let isomorphic_hands = match n_cards {
+        5 => card_utils::load_flop_isomorphic(),
+        6 => card_utils::load_turn_isomorphic(),
+        7 => card_utils::load_river_isomorphic(),
         _ => panic!("Bad number of cards"),
     };
 
     // Cluster the hands based on E[HS^2] percentile bucketing.
-    let bar = card_utils::pbar(canonical_hands.len() as u64);
+    let bar = card_utils::pbar(isomorphic_hands.len() as u64);
     // Calculate all E[HS^2] values in parallel
-    let mut hand_ehs2: Vec<(u64, f64)> = canonical_hands
+    let mut hand_ehs2: Vec<(u64, f64)> = isomorphic_hands
         .par_iter()
         .map(|h| {
             let ehs2 = card_utils::expected_hs2(h.clone());
@@ -110,9 +110,6 @@ fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<(u64, f64)> {
     hand_ehs2
 }
 
-// TODO: Store the E[HS^2] values themselves instead of the abstract buckets.
-// That way I only have to ever calculate them once, and can just re-bucket
-// whenever.
 fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
     match n_cards {
         5 => println!("[INFO] Preparing the flop abstraction."),
@@ -137,15 +134,15 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HandData {
     clusters
 }
 
-// Writes text files of canonical hands sorted by E[HS^2] from low to high, split
-// into different files depending on the first card in the canonical hand.
+// Writes text files of isomorphic hands sorted by E[HS^2] from low to high, split
+// into different files depending on the first card in the isomorphic hand.
 pub fn write_sorted_hands() {
     let hands = get_sorted_hand_ehs2(7);
     println!("[INFO] Writing sorted river hands for the LightAbstraction");
     fs::create_dir(RIVER_SORTED_DIR).expect("Couldn't create river directory");
     let bar = card_utils::pbar(hands.len() as u64);
     for card in card_utils::deck() {
-        // We find every canonical river hand that starts with card, and add it
+        // We find every isomorphic river hand that starts with card, and add it
         // to this text file in order of E[HS^2].
         let fname = format!("{}/{}.txt", RIVER_SORTED_DIR, card);
         let mut buffer = match OpenOptions::new().append(true).open(&fname) {
@@ -192,14 +189,14 @@ impl LightAbstraction {
     }
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        let canonical = card_utils::canonical_hand(cards, true);
-        let hand = card_utils::cards2hand(&canonical);
+        let isomorphic = card_utils::isomorphic_hand(cards, true);
+        let hand = card_utils::cards2hand(&isomorphic);
         // look up hand number from 1 to 125 million, bucket it based on that
         match cards.len() {
             5 => self.flop.get(&hand).clone(),
             6 => self.turn.get(&hand).clone(),
             7 => {
-                let index = hand_lookup(&canonical).expect("hand not found");
+                let index = hand_lookup(&isomorphic).expect("hand not found");
                 let bin =
                     ((index as f64) / (N_RIVER_CANONICAL as f64) * RIVER_BUCKETS as f64) as i32;
                 bin

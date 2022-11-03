@@ -9,16 +9,21 @@ lazy_static! {
 }
 
 pub fn bot_action(hand: &[Card], board: &[Card], history: &ActionHistory) -> Action {
+
     let translated = history.translate(&BET_ABSTRACTION.to_vec());
     let hand = [hand, board].concat();
     let infoset = InfoSet::from_hand(&hand, &translated).compress();
 
-    let mut action = {
+    let mut action: Action = {
         // Action translation
-        BLUEPRINT
-            .get(&infoset)
-            .expect("Infoset not found in blueprint")
-            .clone()
+        match BLUEPRINT.get(&infoset) {
+            Some(action) => action.clone(),
+            None => {
+                let node = Node::new(&infoset.uncompress());
+                let action = sample_action_from_node(&node);
+                action
+            }
+        }
     };
     // The translated action is based off a misunderstanding off the true bet
     // sizes, so we may have to adjust our call amount to line up with what's

@@ -1,11 +1,12 @@
 use crate::card_utils;
 use crate::card_utils::Card;
 use crate::trainer_utils::*;
+use crate::exploiter::*;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Write};
+use std::io::{Write, BufReader};
 
 // TODO: Use a parameter file
 const NODES_PATH: &str = "products/nodes.bin";
@@ -14,8 +15,6 @@ pub fn train(iters: u64) {
     let mut rng = thread_rng();
     let mut deck = card_utils::deck();
     let mut nodes: HashMap<CompactInfoSet, Node> = HashMap::new();
-    lazy_static::initialize(&HAND_TABLE);
-    lazy_static::initialize(&ABSTRACTION);
     println!("[INFO] Beginning training.");
     let mut p0_util = 0.0;
     let mut p1_util = 0.0;
@@ -31,8 +30,9 @@ pub fn train(iters: u64) {
             [1.0, 1.0],
             &mut nodes,
         );
-        if i % 1_000_000 == 0 {
+        if i % 100_000 == 0 {
             serialize_nodes(&nodes);
+            exploitability(&nodes);
         }
         bar.inc(1);
     }
@@ -71,9 +71,9 @@ pub fn view_preflop(nodes: &HashMap<InfoSet, Node>) {
     }
 }
 
-pub fn load_nodes() -> HashMap<CompactInfoSet, Node> {
-    println!("[INFO] Loading strategy...");
-    let file = File::open(NODES_PATH).expect("Nodes file not found");
+pub fn load_nodes(path: &str) -> HashMap<CompactInfoSet, Node> {
+    println!("[INFO] Loading strategy at {} ...", path);
+    let file = File::open(path).expect("Nodes file not found");
     let reader = BufReader::new(file);
     let nodes = bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
     println!("[INFO] Done loading strategy");
@@ -81,22 +81,39 @@ pub fn load_nodes() -> HashMap<CompactInfoSet, Node> {
 }
 
 fn serialize_nodes(nodes: &HashMap<CompactInfoSet, Node>) {
+    // let bincode: Vec<u8> = bincode::serialize(nodes).unwrap();
+    // let mut string_keys: HashMap<String, Node> = HashMap::new();
+    // for (infoset, node) in nodes {
+    //     let key: String = format!("{:?}", infoset);
+    //     string_keys.insert(key, node.clone());
+    // }
+    // println!("{:#?}", string_keys);
+    // let json: String = serde_json::to_string_pretty(&string_keys).unwrap();
+    // std::fs::write(NODES_PATH, json).unwrap();
+    // file.write_all(&json).unwrap();
+    // println!("[INFO] Saved strategy to disk.");
+
     let bincode: Vec<u8> = bincode::serialize(nodes).unwrap();
     let mut file = File::create(NODES_PATH).unwrap();
     file.write_all(&bincode).unwrap();
     println!("[INFO] Saved strategy to disk.");
+
 }
 
+// The blueprint strategy has pre-sampled actions (rather than probability distributions)
+// to save space (at the cost of increased worst-case exploitability). 
 pub fn load_blueprint() -> HashMap<CompactInfoSet, Action> {
+    println!("[INFO] Loading blueprint strategy...");
     let file = match File::open(BLUEPRINT_STRATEGY_PATH) {
         Err(_e) => {
-            write_compact_blueprint(&load_nodes());
+            write_compact_blueprint(&load_nodes(NODES_PATH));
             File::open(BLUEPRINT_STRATEGY_PATH).unwrap()
         }
         Ok(f) => f,
     };
     let reader = BufReader::new(file);
     let blueprint = bincode::deserialize_from(reader).expect("Failed to deserialize blueprint");
+    println!("[INFO] Done loading blueprint strategy");
     blueprint
 }
 
