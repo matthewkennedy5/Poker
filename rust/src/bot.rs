@@ -19,6 +19,7 @@ pub fn bot_action(hand: &[Card], board: &[Card], history: &ActionHistory) -> Act
         match BLUEPRINT.get(&infoset) {
             Some(action) => action.clone(),
             None => {
+                println!("Infoset not in strategy");
                 let node = Node::new(&infoset.uncompress());
                 let action = sample_action_from_node(&node);
                 action

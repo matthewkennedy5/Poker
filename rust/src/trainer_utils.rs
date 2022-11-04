@@ -521,19 +521,11 @@ pub fn write_compact_blueprint(nodes: &HashMap<CompactInfoSet, Node>) {
     for (infoset, node) in nodes {
         let action = sample_action_from_node(&node);
         compressed.insert(infoset.clone(), action);
-
-        // let strategy = node.cumulative_strategy();
-        // let mut probs = Vec::new();
-        // for action in infoset.uncompress().next_actions() {
-        //     probs.push(strategy.get(&action).unwrap().clone() as f32);
-        // }
-        // compressed.insert(infoset, probs);
-
         bar.inc(1);
     }
     bar.finish();
     let bincode: Vec<u8> = bincode::serialize(&compressed).unwrap();
     let mut file = File::create(BLUEPRINT_STRATEGY_PATH).unwrap();
     file.write_all(&bincode).unwrap();
-    println!("[INFO] Wrote compressed blueprint strategy to disk");
+    println!("[INFO] Wrote compressed blueprint strategy to {}", BLUEPRINT_STRATEGY_PATH);
 }
