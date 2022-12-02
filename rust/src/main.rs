@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 extern crate indicatif;
 extern crate itertools;
@@ -14,6 +15,9 @@ extern crate qstring;
 extern crate rayon;
 #[macro_use]
 extern crate lazy_static;
+extern crate actix_web;
+extern crate actix_rt;
+extern crate actix_files;
 
 mod trainer;
 mod trainer_utils;

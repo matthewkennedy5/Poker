@@ -8,6 +8,9 @@ import './App.css';
 
 const axios = require('axios');
 
+const URL = 'http://127.0.0.1:8000';
+// const URL = 'http://0.0.0.0:8000';
+
 class App extends Component {
 
   clearLog = () => {
@@ -104,12 +107,12 @@ class App extends Component {
   evaluateHands = async(humanHand, cpuHand) => {
       humanHand = humanHand.join();
       cpuHand = cpuHand.join();
-      const response = await axios.get('http://127.0.0.1:8000/compare?humanHand=' + humanHand + '&cpuHand=' + cpuHand);
+      const response = await axios.get(URL + '/compare?humanHand=' + humanHand + '&cpuHand=' + cpuHand);
       return response;
   }
 
   getCPUAction = async(cpuCards, history) => {
-      const response = await axios.get('http://127.0.0.1:8000/bot', {
+      const response = await axios.get(URL + '/bot', {
           params: {
               cpuCards: cpuCards.join(),
               board: this.state.board.join(),
@@ -140,7 +143,7 @@ class App extends Component {
     pot: 0,
     humanCards: ["back", "back"],
     cpuCards: ["back", "back"],
-    board: ["back", "back", "back", "back", "back"],  // TODO: Make board not appear before its time
+    board: ["back", "back", "back", "back", "back"], 
     score: 0,
     hands: 0,
     enabledButtons: {

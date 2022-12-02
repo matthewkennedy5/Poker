@@ -1,14 +1,29 @@
 use crate::bot::bot_action;
 use crate::card_utils::{strvec2cards, Card, LightHandTable};
 use crate::trainer_utils::{Action, ActionHistory, ActionType};
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Result, Responder, Error};
+use actix_web::http::StatusCode;
 use actix_cors::Cors;
-use actix_web::{web, App, HttpRequest, HttpServer, Responder};
+use actix_files as fs;
 use std::collections::HashMap;
-
-const SERVER: &str = "127.0.0.1:8000";
 
 lazy_static! {
     static ref HAND_STRENGTHS: LightHandTable = LightHandTable::new();
+}
+
+const SERVER: &str = "0.0.0.0:80";
+
+// #[get("/")]
+// fn index() -> &'static str {
+//     "Hello, world!"
+// }
+
+async fn home(req: HttpRequest) -> Result<HttpResponse, Error> {
+    Ok(
+        HttpResponse::build(StatusCode::OK)
+            .content_type("text/html; charset=utf-8")
+            .body(include_str!("../../gui/build/index.html"))
+    )
 }
 
 async fn compare_hands(req: HttpRequest) -> impl Responder {
@@ -94,11 +109,17 @@ pub async fn main() -> std::io::Result<()> {
     println!("[INFO] Launching server at {}", SERVER);
     HttpServer::new(|| {
         App::new()
-            .wrap(Cors::new().allowed_origin("http://localhost:3000").finish())
+            .service(fs::Files::new("../gui/build/static", ".").show_files_listing())
+            .wrap(Cors::default())
             .route("/compare", web::get().to(compare_hands))
             .route("/bot", web::get().to(get_cpu_action))
+            .route("/", web::get().to(home))
     })
     .bind(SERVER)?
     .run()
     .await
 }
+
+// pub fn main() {
+//     rocket::ignite().mount("/", routes![index]).launch();
+// }
