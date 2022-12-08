@@ -1,22 +1,18 @@
 use crate::bot::bot_action;
 use crate::card_utils::{strvec2cards, Card, LightHandTable};
 use crate::trainer_utils::{Action, ActionHistory, ActionType};
+use std::collections::HashMap;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Result, Responder, Error};
 use actix_web::http::StatusCode;
 use actix_cors::Cors;
 use actix_files as fs;
-use std::collections::HashMap;
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 lazy_static! {
     static ref HAND_STRENGTHS: LightHandTable = LightHandTable::new();
 }
 
 const SERVER: &str = "0.0.0.0:80";
-
-// #[get("/")]
-// fn index() -> &'static str {
-//     "Hello, world!"
-// }
 
 async fn home(req: HttpRequest) -> Result<HttpResponse, Error> {
     Ok(
@@ -45,6 +41,7 @@ async fn compare_hands(req: HttpRequest) -> impl Responder {
 }
 
 async fn get_cpu_action(req: HttpRequest) -> impl Responder {
+    println!("[INFO] Received HTTP request: {:#?}", req);
     let query = req.query_string();
     let query = qstring::QString::from(query);
     let cpu_cards = query.get("cpuCards").unwrap();
@@ -106,20 +103,22 @@ fn parse_cards(cards: &str) -> Vec<Card> {
 
 #[actix_rt::main]
 pub async fn main() -> std::io::Result<()> {
-    println!("[INFO] Launching server at {}", SERVER);
+    println!("[INFO] Launching server");
+
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    builder.set_private_key_file("../key.pem", SslFiletype::PEM)
+           .unwrap();
+    builder.set_certificate_chain_file("../cert.pem").unwrap();
     HttpServer::new(|| {
         App::new()
-            .service(fs::Files::new("../gui/build/static", ".").show_files_listing())
-            .wrap(Cors::default())
-            .route("/compare", web::get().to(compare_hands))
-            .route("/bot", web::get().to(get_cpu_action))
-            .route("/", web::get().to(home))
+            .route("/api/compare", web::get().to(compare_hands))
+            .route("/api/bot", web::get().to(get_cpu_action))
+            .service(fs::Files::new("/", "../gui/build").index_file("index.html"))
+            .wrap(Cors::permissive())
     })
-    .bind(SERVER)?
+    .bind("0.0.0.0:80")?
+    .bind_openssl("0.0.0.0:43", builder)?
     .run()
     .await
 }
 
-// pub fn main() {
-//     rocket::ignite().mount("/", routes![index]).launch();
-// }

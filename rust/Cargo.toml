@@ -21,13 +21,11 @@ statistical = "*"
 qstring = "*"
 lazy_static = "*"
 once_cell = "*"
-actix-web = "*"
+actix-web = {version = "*", features = ["openssl"]}
 actix-rt = "*"
 actix-files = "*"
 actix-cors = "*"
-# actix-web = "4.2.1"
-# actix-files = "0.6.2"
-# tokio = { version = "1.22.0", features = ["time"] }
+openssl = "*"
 
 [profile.release]
 debug = 1

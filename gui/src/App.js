@@ -8,8 +8,7 @@ import './App.css';
 
 const axios = require('axios');
 
-const URL = 'http://127.0.0.1:8000';
-// const URL = 'http://0.0.0.0:8000';
+const URL = 'http://www.pokertrainer.info'
 
 class App extends Component {
 
@@ -107,12 +106,12 @@ class App extends Component {
   evaluateHands = async(humanHand, cpuHand) => {
       humanHand = humanHand.join();
       cpuHand = cpuHand.join();
-      const response = await axios.get(URL + '/compare?humanHand=' + humanHand + '&cpuHand=' + cpuHand);
+      const response = await axios.get(URL + '/api/compare?humanHand=' + humanHand + '&cpuHand=' + cpuHand);
       return response;
   }
 
   getCPUAction = async(cpuCards, history) => {
-      const response = await axios.get(URL + '/bot', {
+      const response = await axios.get(URL + '/api/bot', {
           params: {
               cpuCards: cpuCards.join(),
               board: this.state.board.join(),
