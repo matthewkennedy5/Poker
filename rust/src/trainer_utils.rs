@@ -1,6 +1,7 @@
 use crate::card_abstraction;
 use crate::card_utils;
 use crate::card_utils::Card;
+use crate::config::CONFIG;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use std::cmp::Eq;
@@ -9,10 +10,6 @@ use std::fmt;
 use std::fs::File;
 use std::hash::Hash;
 use std::io::Write;
-
-pub const SMALL_BLIND: i32 = 50;
-pub const BIG_BLIND: i32 = 100;
-pub const STACK_SIZE: i32 = 200 * BIG_BLIND;
 
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
@@ -26,23 +23,11 @@ pub const FOLD: Action = Action {
     amount: 0,
 };
 
-// Allowed bets in terms of pot fractions. We mark the all-in action as -1.
 pub const ALL_IN: f64 = -1.0;
-
-// Discounted Regret Minimization parameters
-const ALPHA: f64 = 1.5;
-const BETA: f64 = 0.0;
-const GAMMA: f64 = 2.0;
-
-pub const BLUEPRINT_STRATEGY_PATH: &str = "products/blueprint.bin";
 
 lazy_static! {
     pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
     pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
-    pub static ref BET_ABSTRACTION: Vec<Vec<f64>> = vec![vec![1.0, 2.0, 2.5, 3.0, 5.0, ALL_IN],  // preflop
-                                                         vec![0.33, 0.67, 1.0, 2.0, ALL_IN],  // flop
-                                                         vec![0.25, 0.5, 1.0, ALL_IN],  // turn
-                                                         vec![0.25, 0.5, 1.0, ALL_IN]];  // river
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
@@ -85,7 +70,7 @@ impl ActionHistory {
             street: PREFLOP,
             last_action: None,
             player: DEALER,
-            stacks: [STACK_SIZE, STACK_SIZE],
+            stacks: [CONFIG.stack_size, CONFIG.stack_size],
         }
     }
 
@@ -135,9 +120,9 @@ impl ActionHistory {
     }
 
     pub fn pot(&self) -> i32 {
-        let pot = 2 * STACK_SIZE - self.stacks[0] - self.stacks[1];
+        let pot = 2 * CONFIG.stack_size - self.stacks[0] - self.stacks[1];
         if pot == 0 {
-            BIG_BLIND
+            CONFIG.big_blind
         } else {
             pot
         }
@@ -146,7 +131,7 @@ impl ActionHistory {
     // Returns the amount needed to call, so 0 for checking
     pub fn to_call(&self) -> i32 {
         if self.street == PREFLOP && self.history[PREFLOP].len() == 0 {
-            BIG_BLIND
+            CONFIG.big_blind
         } else {
             self.stacks[self.player] - self.stacks[1 - self.player]
         }
@@ -155,7 +140,7 @@ impl ActionHistory {
     pub fn min_bet(&self) -> i32 {
         match &self.last_action {
             Some(action) => 2 * action.amount,
-            None => BIG_BLIND,
+            None => CONFIG.big_blind,
         }
     }
 
@@ -170,7 +155,7 @@ impl ActionHistory {
         let mut actions = Vec::new();
         let min_bet = match &self.last_action {
             Some(action) => 2 * action.amount,
-            None => BIG_BLIND,
+            None => CONFIG.big_blind,
         };
         let max_bet = self.stacks[self.player];
         let pot = self.pot();
@@ -320,12 +305,12 @@ impl InfoSet {
     }
 
     pub fn next_actions(&self) -> Vec<Action> {
-        self.history.next_actions(&BET_ABSTRACTION.to_vec())
+        self.history.next_actions(&CONFIG.bet_abstraction)
     }
 
     pub fn compress(&self) -> CompactInfoSet {
         CompactInfoSet {
-            history: self.history.compress(&BET_ABSTRACTION.to_vec()),
+            history: self.history.compress(&CONFIG.bet_abstraction),
             card_bucket: self.card_bucket,
         }
     }
@@ -342,7 +327,7 @@ impl CompactInfoSet {
     pub fn uncompress(&self) -> InfoSet {
         let mut full_history = ActionHistory::new();
         for action in &self.history {
-            let next_actions = full_history.next_actions(&BET_ABSTRACTION);
+            let next_actions = full_history.next_actions(&CONFIG.bet_abstraction);
             let next_action = &next_actions[action.clone() as usize];
             full_history.add(next_action);
         }
@@ -402,7 +387,7 @@ impl Node {
             let mut cumulative_strategy = sum_prob + new_prob;
             // Multiply the cumulative strategy sum according to Discounted
             // Counterfactual Regret Minimization
-            cumulative_strategy *= (self.t / (self.t + 1.0)).powf(GAMMA);
+            cumulative_strategy *= (self.t / (self.t + 1.0)).powf(CONFIG.gamma);
             self.strategy_sum
                 .insert(action.clone(), cumulative_strategy);
         }
@@ -421,9 +406,9 @@ impl Node {
         // Update the accumulated regret according to Discounted Counterfactual
         // Regret Minimization rules
         if accumulated_regret >= 0.0 {
-            accumulated_regret *= self.t.powf(ALPHA) / (self.t.powf(ALPHA) + 1.0);
+            accumulated_regret *= self.t.powf(CONFIG.alpha) / (self.t.powf(CONFIG.alpha) + 1.0);
         } else {
-            accumulated_regret *= self.t.powf(BETA) / (self.t.powf(BETA) + 1.0);
+            accumulated_regret *= self.t.powf(CONFIG.beta) / (self.t.powf(CONFIG.beta) + 1.0);
         }
         self.regrets.insert(action.clone(), accumulated_regret);
     }
@@ -475,13 +460,13 @@ pub fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) ->
         // Someone folded -- assign the chips to the winner.
         let winner = history.player;
         let folder = 1 - winner;
-        let mut winnings: f64 = (STACK_SIZE - history.stack_sizes()[folder]) as f64;
+        let mut winnings: f64 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
 
         // If someone folded on the first preflop round, they lose their blind
         if winnings == 0.0 {
             winnings += match folder {
-                DEALER => SMALL_BLIND as f64,
-                OPPONENT => BIG_BLIND as f64,
+                DEALER => CONFIG.small_blind as f64,
+                OPPONENT => CONFIG.big_blind as f64,
                 _ => panic!("Bad player number"),
             };
         }
@@ -525,7 +510,7 @@ pub fn write_compact_blueprint(nodes: &HashMap<CompactInfoSet, Node>) {
     }
     bar.finish();
     let bincode: Vec<u8> = bincode::serialize(&compressed).unwrap();
-    let mut file = File::create(BLUEPRINT_STRATEGY_PATH).unwrap();
+    let mut file = File::create(&CONFIG.blueprint_strategy_path).unwrap();
     file.write_all(&bincode).unwrap();
-    println!("[INFO] Wrote compressed blueprint strategy to {}", BLUEPRINT_STRATEGY_PATH);
+    println!("[INFO] Wrote compressed blueprint strategy to {}", CONFIG.blueprint_strategy_path);
 }

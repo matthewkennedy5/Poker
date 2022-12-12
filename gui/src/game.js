@@ -1,7 +1,8 @@
 import {Random} from "random-js";
 import {Component} from 'react';
 
-// TODO: Redesign this to be DRY
+// TODO: Read these from a config file, however this seems hard to do on the 
+// frontend. 
 const STACK_SIZE = 20000;
 const BIG_BLIND = 100;
 const SMALL_BLIND = 50;

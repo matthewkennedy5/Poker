@@ -1,0 +1,22 @@
+# Chips
+stack_size = 20000
+big_blind = 100
+small_blind = 50
+
+# Bet abstractions, expressed as multiples of the pot size. The "all in" action 
+# is implicitly included for every street.
+bet_abstraction = [
+    [1.0, 2.0, 2.5, 3.0, 5.0, -1.0],
+    [0.33, 0.67, 1.0, 2.0, -1.0],
+    [0.25, 0.5, 1.0, -1.0],
+    [0.25, 0.5, 1.0, -1.0],
+]
+
+# DCFR
+alpha = 1.5
+beta = 0.0
+gamma = 2.0
+
+# Filenames
+blueprint_strategy_path = "products/blueprint.bin"
+nodes_path = "products/nodes.bin"

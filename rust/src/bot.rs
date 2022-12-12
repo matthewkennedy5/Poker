@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use crate::card_utils::Card;
 use crate::trainer_utils::*;
+use crate::config::CONFIG;
 
 lazy_static! {
     static ref BLUEPRINT: HashMap<CompactInfoSet, Action> = crate::trainer::load_blueprint();
@@ -10,7 +11,7 @@ lazy_static! {
 
 pub fn bot_action(hand: &[Card], board: &[Card], history: &ActionHistory) -> Action {
 
-    let translated = history.translate(&BET_ABSTRACTION.to_vec());
+    let translated = history.translate(&CONFIG.bet_abstraction);
     let hand = [hand, board].concat();
     let infoset = InfoSet::from_hand(&hand, &translated).compress();
 

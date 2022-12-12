@@ -1,3 +1,4 @@
+use crate::config::CONFIG;
 use crate::card_utils;
 use crate::card_utils::Card;
 use crate::trainer_utils::*;
@@ -7,9 +8,6 @@ use rand::thread_rng;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Write, BufReader};
-
-// TODO: Use a parameter file
-const NODES_PATH: &str = "products/nodes.bin";
 
 pub fn train(iters: u64) {
     let mut rng = thread_rng();
@@ -46,8 +44,8 @@ pub fn train(iters: u64) {
         "Utilities:
             Dealer:   {} BB/h,
             Opponent: {} BB/h",
-        p0_util / (iters as f64) / (BIG_BLIND as f64),
-        p1_util / (iters as f64) / (BIG_BLIND as f64),
+        p0_util / (iters as f64) / (CONFIG.big_blind as f64),
+        p1_util / (iters as f64) / (CONFIG.big_blind as f64),
     );
 
     serialize_nodes(&nodes);
@@ -81,20 +79,8 @@ pub fn load_nodes(path: &str) -> HashMap<CompactInfoSet, Node> {
 }
 
 fn serialize_nodes(nodes: &HashMap<CompactInfoSet, Node>) {
-    // let bincode: Vec<u8> = bincode::serialize(nodes).unwrap();
-    // let mut string_keys: HashMap<String, Node> = HashMap::new();
-    // for (infoset, node) in nodes {
-    //     let key: String = format!("{:?}", infoset);
-    //     string_keys.insert(key, node.clone());
-    // }
-    // println!("{:#?}", string_keys);
-    // let json: String = serde_json::to_string_pretty(&string_keys).unwrap();
-    // std::fs::write(NODES_PATH, json).unwrap();
-    // file.write_all(&json).unwrap();
-    // println!("[INFO] Saved strategy to disk.");
-
     let bincode: Vec<u8> = bincode::serialize(nodes).unwrap();
-    let mut file = File::create(NODES_PATH).unwrap();
+    let mut file = File::create(&CONFIG.nodes_path).unwrap();
     file.write_all(&bincode).unwrap();
     println!("[INFO] Saved strategy to disk.");
 
@@ -104,10 +90,10 @@ fn serialize_nodes(nodes: &HashMap<CompactInfoSet, Node>) {
 // to save space (at the cost of increased worst-case exploitability). 
 pub fn load_blueprint() -> HashMap<CompactInfoSet, Action> {
     println!("[INFO] Loading blueprint strategy...");
-    let file = match File::open(BLUEPRINT_STRATEGY_PATH) {
+    let file = match File::open(&CONFIG.blueprint_strategy_path) {
         Err(_e) => {
-            write_compact_blueprint(&load_nodes(NODES_PATH));
-            File::open(BLUEPRINT_STRATEGY_PATH).unwrap()
+            write_compact_blueprint(&load_nodes(&CONFIG.nodes_path));
+            File::open(&CONFIG.blueprint_strategy_path).unwrap()
         }
         Ok(f) => f,
     };

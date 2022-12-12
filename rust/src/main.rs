@@ -19,6 +19,7 @@ extern crate actix_web;
 extern crate actix_rt;
 extern crate actix_files;
 
+mod config;
 mod trainer;
 mod trainer_utils;
 mod card_abstraction;
@@ -31,4 +32,3 @@ mod bot;
 fn main() {
     backend::main().expect("Could not launch server");
 }
-
