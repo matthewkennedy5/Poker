@@ -8,7 +8,7 @@ import './App.css';
 
 const axios = require('axios');
 
-const URL = 'http://www.pokertrainer.info'
+const URL = 'https://www.pokertrainer.info'
 
 class App extends Component {
 

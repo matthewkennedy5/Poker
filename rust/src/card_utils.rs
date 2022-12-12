@@ -1,6 +1,5 @@
 use crate::itertools::Itertools;
 use bio::stats::combinatorics::combinations;
-use rand::prelude::SliceRandom;
 use serde::{Serialize, Deserialize};
 use serde_json;
 use std::collections::{HashMap, HashSet};
@@ -917,48 +916,4 @@ impl EquityTable {
                   .expect(&format!("{} not in equity table", hand2str(hand)))
                   .clone()
     }
-}
-
-// Estimates the throughput of the hand evaluator by shuffling the deck once and
-// finding the hand strengh score of each consecutive hand in the deck whose
-// cards are next to each other in the initial cycle. 
-pub fn benchmark_hand_evaluator() {
-    let n = 10_000_000;
-    let mut deck = deck();
-    let mut rng = &mut rand::thread_rng();
-    deck.shuffle(&mut rng);
-    // lazy_static::initialize(&HAND_TABLE);
-    let now = std::time::Instant::now();
-    for i in 0..n {
-        let index = i % (52 - 7);
-        let hand = &deck[index..index+7];
-        let strength = HAND_TABLE.hand_strength(hand);
-    }
-    let secs: f64 = (now.elapsed().as_millis() as f64) / 1000.0;
-    let rate: f64 = (n as f64) / (secs as f64);
-    println!("{} hands per second", rate);
-}
-
-
-pub fn benchmark_hand_lookup_evaluator() {
-
-    let mut table: HashMap<u64, i32> = HashMap::new();
-    let mut strength = 0;
-    let length = 133784560;
-    let bar = pbar(133784560);
-    for hand in 0..133784560 {
-        strength += 1;      // Strengths are just incorrect dummy data right now
-        table.insert(hand, strength);
-        bar.inc(1);
-    }
-    bar.finish();
-
-    let n = 1_000_000_000;
-    let now = std::time::Instant::now();
-    for i in 0..n {
-        let strength = table.get(&(n % length));
-    }
-    let secs: f64 = (now.elapsed().as_millis() as f64) / 1000.0;
-    let rate: f64 = (n as f64) / (secs as f64);
-    println!("{} hands per second", rate);
 }

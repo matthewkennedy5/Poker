@@ -25,7 +25,6 @@ actix-web = {version = "*", features = ["openssl"]}
 actix-rt = "*"
 actix-files = "*"
 actix-cors = "*"
-openssl = "*"
 
 [profile.release]
 debug = 1

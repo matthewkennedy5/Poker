@@ -40,9 +40,9 @@ lazy_static! {
     pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
     pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
     pub static ref BET_ABSTRACTION: Vec<Vec<f64>> = vec![vec![1.0, 2.0, 2.5, 3.0, 5.0, ALL_IN],  // preflop
-                                                            vec![0.33, 0.67, 1.0, 2.0, ALL_IN],  // flop
-                                                            vec![0.25, 0.5, 1.0, ALL_IN],  // turn
-                                                            vec![0.25, 0.5, 1.0, ALL_IN]];  // river
+                                                         vec![0.33, 0.67, 1.0, 2.0, ALL_IN],  // flop
+                                                         vec![0.25, 0.5, 1.0, ALL_IN],  // turn
+                                                         vec![0.25, 0.5, 1.0, ALL_IN]];  // river
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]

@@ -1,9 +1,10 @@
 import {Random} from "random-js";
 import {Component} from 'react';
 
+// TODO: Redesign this to be DRY
 const STACK_SIZE = 20000;
-const BIG_BLIND = 200;
-const SMALL_BLIND = 100;
+const BIG_BLIND = 100;
+const SMALL_BLIND = 50;
 
 const DECK = ['2c', '2s', '2h', '2d',
               '3c', '3s', '3h', '3d',
@@ -23,7 +24,7 @@ const DECK = ['2c', '2s', '2h', '2d',
 class Game extends Component {
 
     constructor(props) {
-        super(props);
+        super(props);   // TODO: change this deprecated function
         this.dealer = "human";
         this.street = "preflop";
         this.bets = [0, 0];
@@ -315,7 +316,7 @@ class Game extends Component {
     };
 
     playStreet() {
-        if (this.street === "showdown" || this.stacks["human"] + this.stacks["cpu"] === 0){
+        if (this.street === "showdown" || this.stacks["human"] + this.stacks["cpu"] === 0) {
             this.showdown();
             return;
         }

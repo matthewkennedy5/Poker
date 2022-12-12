@@ -2,25 +2,15 @@ use crate::bot::bot_action;
 use crate::card_utils::{strvec2cards, Card, LightHandTable};
 use crate::trainer_utils::{Action, ActionHistory, ActionType};
 use std::collections::HashMap;
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Result, Responder, Error};
-use actix_web::http::StatusCode;
+use actix_web::{web, App, HttpRequest, HttpServer, Responder};
 use actix_cors::Cors;
 use actix_files as fs;
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 lazy_static! {
     static ref HAND_STRENGTHS: LightHandTable = LightHandTable::new();
 }
 
 const SERVER: &str = "0.0.0.0:80";
-
-async fn home(req: HttpRequest) -> Result<HttpResponse, Error> {
-    Ok(
-        HttpResponse::build(StatusCode::OK)
-            .content_type("text/html; charset=utf-8")
-            .body(include_str!("../../gui/build/index.html"))
-    )
-}
 
 async fn compare_hands(req: HttpRequest) -> impl Responder {
     let query = req.query_string();
@@ -103,12 +93,7 @@ fn parse_cards(cards: &str) -> Vec<Card> {
 
 #[actix_rt::main]
 pub async fn main() -> std::io::Result<()> {
-    println!("[INFO] Launching server");
-
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-    builder.set_private_key_file("../key.pem", SslFiletype::PEM)
-           .unwrap();
-    builder.set_certificate_chain_file("../cert.pem").unwrap();
+    println!("[INFO] Launched server");
     HttpServer::new(|| {
         App::new()
             .route("/api/compare", web::get().to(compare_hands))
@@ -117,8 +102,6 @@ pub async fn main() -> std::io::Result<()> {
             .wrap(Cors::permissive())
     })
     .bind("0.0.0.0:80")?
-    .bind_openssl("0.0.0.0:43", builder)?
     .run()
     .await
 }
-
