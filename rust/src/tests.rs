@@ -1,6 +1,9 @@
 #[cfg(test)]
 
+use crate::config::CONFIG;
 use crate::card_utils::*;
+use crate::trainer_utils::*;
+use crate::bot::*;
 
 #[test]
 fn card_bitmap() {
@@ -150,4 +153,22 @@ fn hand_comparisons() {
     assert_eq!(same_full_house, full_house);
     assert_eq!(other_high_card, high_card);
     assert_eq!(same_flush, flush);
+}
+
+#[test]
+fn negative_bet_size() {
+    let mut history = ActionHistory::new();
+    history.add(&Action {action: ActionType::Call, amount: 100});
+    history.add(&Action {action: ActionType::Call, amount: 100});
+    history.add(&Action {action: ActionType::Bet, amount: 50});
+    history.add(&Action {action: ActionType::Bet, amount: 100});
+    history.add(&Action {action: ActionType::Bet, amount: 200});
+    // println!("{:#?}", next_actions);
+    // history.add(&Action {action: ActionType::Bet, amount: 19834});
+    // history.add(&Action {action: ActionType::Bet, amount: 19650});
+    let hand = hand2cards(str2hand("Ts8s"));
+    let board = hand2cards(str2hand("Js5sQc"));
+
+    let response = bot_action(&hand, &board, &history);
+    assert!(response.amount != 19834);
 }

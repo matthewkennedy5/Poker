@@ -6,6 +6,7 @@
 
 use crate::card_utils;
 use crate::card_utils::{Card, HandData};
+use crate::config::CONFIG;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use std::fs;
@@ -22,10 +23,6 @@ const N_FLOP_CANONICAL: i32 = 1_342_562;
 const N_TURN_CANONICAL: i32 = 14_403_610;
 const N_RIVER_CANONICAL: i32 = 125_756_657;
 
-const FLOP_BUCKETS: i32 = 1000;
-const TURN_BUCKETS: i32 = 1000;
-const RIVER_BUCKETS: i32 = 1000;
-
 pub struct Abstraction {
     flop: HandData,
     turn: HandData,
@@ -35,9 +32,9 @@ pub struct Abstraction {
 impl Abstraction {
     pub fn new() -> Abstraction {
         Abstraction {
-            flop: load_abstraction(FLOP_PATH, 5, FLOP_BUCKETS),
-            turn: load_abstraction(TURN_PATH, 6, TURN_BUCKETS),
-            river: load_abstraction(RIVER_PATH, 7, RIVER_BUCKETS),
+            flop: load_abstraction(FLOP_PATH, 5, CONFIG.flop_buckets),
+            turn: load_abstraction(TURN_PATH, 6, CONFIG.turn_buckets),
+            river: load_abstraction(RIVER_PATH, 7, CONFIG.river_buckets),
         }
     }
 
@@ -175,8 +172,8 @@ pub struct LightAbstraction {
 impl LightAbstraction {
     pub fn new() -> LightAbstraction {
         LightAbstraction {
-            flop: load_abstraction(FLOP_PATH, 5, FLOP_BUCKETS),
-            turn: load_abstraction(TURN_PATH, 6, TURN_BUCKETS),
+            flop: load_abstraction(FLOP_PATH, 5, CONFIG.flop_buckets),
+            turn: load_abstraction(TURN_PATH, 6, CONFIG.turn_buckets),
         }
     }
 
@@ -198,7 +195,7 @@ impl LightAbstraction {
             7 => {
                 let index = hand_lookup(&isomorphic).expect("hand not found");
                 let bin =
-                    ((index as f64) / (N_RIVER_CANONICAL as f64) * RIVER_BUCKETS as f64) as i32;
+                    ((index as f64) / (N_RIVER_CANONICAL as f64) * CONFIG.river_buckets as f64) as i32;
                 bin
             }
             _ => panic!("Bad number of cards"),

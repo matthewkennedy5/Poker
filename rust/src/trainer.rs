@@ -28,16 +28,13 @@ pub fn train(iters: u64) {
             [1.0, 1.0],
             &mut nodes,
         );
-        if i % 100_000 == 0 {
+        if i % CONFIG.eval_every == 0 {
             serialize_nodes(&nodes);
             exploitability(&nodes);
         }
         bar.inc(1);
     }
     bar.finish();
-    // exploitability(&nodes);
-
-    // view_preflop(&nodes);
 
     println!("{} nodes reached.", nodes.len());
     println!(
@@ -82,7 +79,7 @@ fn serialize_nodes(nodes: &HashMap<CompactInfoSet, Node>) {
     let bincode: Vec<u8> = bincode::serialize(nodes).unwrap();
     let mut file = File::create(&CONFIG.nodes_path).unwrap();
     file.write_all(&bincode).unwrap();
-    println!("[INFO] Saved strategy to disk.");
+    println!("[INFO] Saved strategy.");
 
 }
 

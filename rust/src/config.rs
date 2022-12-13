@@ -21,6 +21,9 @@ pub struct Config {
 
     // Abstraction
     pub bet_abstraction: Vec<Vec<f64>>,
+    pub flop_buckets: i32,
+    pub turn_buckets: i32,
+    pub river_buckets: i32,
 
     // DCFR parameters
     pub alpha: f64,
@@ -30,4 +33,9 @@ pub struct Config {
     // File paths
     pub blueprint_strategy_path: String,
     pub nodes_path: String,
+
+    // Training
+    pub train_iters: u64,
+    pub lbr_iters: u64,
+    pub eval_every: u64,
 }

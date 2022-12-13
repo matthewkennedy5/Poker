@@ -16,7 +16,6 @@ pub fn bot_action(hand: &[Card], board: &[Card], history: &ActionHistory) -> Act
     let infoset = InfoSet::from_hand(&hand, &translated).compress();
 
     let mut action: Action = {
-        // Action translation
         match BLUEPRINT.get(&infoset) {
             Some(action) => action.clone(),
             None => {
@@ -38,20 +37,4 @@ pub fn bot_action(hand: &[Card], board: &[Card], history: &ActionHistory) -> Act
         action.amount = history.min_bet();
     }
     action
-}
-
-// After an opponent makes an off-tree action, we need to solve a new subgame
-// starting from that action.
-// Solves a subgame starting with their move, but including their action in the
-// abstraction now. Then we can use the probability assigned to that action for
-// each possible hands to update our belief distribution over their hands.
-fn solve_subgame(hand: &[Card], history: &ActionHistory, opp_range: &HashMap<Vec<Card>, f64>) {
-    // let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
-    // for i in 0..1000 {
-    //     sample opponent hand from range
-    //     iterate(DEALER, deck, history, [1.0, 1.0], &mut nodes);
-    //     iterate(OPPONENT, deck, history, [1.0, 1.0], &mut nodes);
-    // }
-    // let strategy = nodes.get(this infoset);
-    // strategy
 }
