@@ -269,7 +269,7 @@ class Game extends Component {
             enabled.push("minBet");
         }
         const pot = this.props.getPot();
-        if (stack >= pot/2) {
+        if (stack >= pot/2 && pot/2 > this.getCallAmount()) {
             enabled.push("betHalfPot");
         }
         if (stack >= pot) {

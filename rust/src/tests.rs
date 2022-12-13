@@ -4,6 +4,11 @@ use crate::config::CONFIG;
 use crate::card_utils::*;
 use crate::trainer_utils::*;
 use crate::bot::*;
+use std::collections::HashMap;
+
+lazy_static! {
+    static ref BLUEPRINT: HashMap<CompactInfoSet, Action> = crate::trainer::load_blueprint();
+}
 
 #[test]
 fn card_bitmap() {
@@ -171,4 +176,12 @@ fn negative_bet_size() {
 
     let response = bot_action(&hand, &board, &history);
     assert!(response.amount != 19834);
+}
+
+// Test that there are no negative bet sizes in the blueprint strategy.
+#[test]
+fn blueprint_bets_positive() {
+    for (infoset, action) in BLUEPRINT.iter() {
+        assert!(action.amount >= 0);
+    }
 }
