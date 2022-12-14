@@ -185,3 +185,32 @@ fn blueprint_bets_positive() {
         assert!(action.amount >= 0);
     }
 }
+
+#[test]
+fn cpu_bets_more_than_stack() {
+    let mut history = ActionHistory::new();
+    let actions = vec![
+        Action {action: ActionType::Bet, amount: 50},
+        Action {action: ActionType::Bet, amount: 250},
+        Action {action: ActionType::Bet, amount: 500},
+        Action {action: ActionType::Call, amount: 300},
+        Action {action: ActionType::Bet, amount: 1000},
+        Action {action: ActionType::Bet, amount: 2000},
+    ];
+    for a in actions {
+        history.add(&a);
+    }
+    let hand = hand2cards(str2hand("QdQs"));
+    let board = hand2cards(str2hand("6dTcJd"));
+
+    println!("{:#?}", history.next_actions(&CONFIG.bet_abstraction));
+
+    let response = bot_action(&hand, &board, &history);
+    assert!(response.amount != 18750);
+}
+
+// TODO: Add a test that none of the actions in the blueprint strategy involve
+// illegal bet sizes. This might require adding a function ActionHistory to return
+// whether a given action is a legal next move. Then you might want to dedupe that
+// with the frontend code. 
+

@@ -2,14 +2,8 @@ use crate::card_abstraction;
 use crate::card_utils;
 use crate::card_utils::Card;
 use crate::config::CONFIG;
-use rand::prelude::SliceRandom;
-use rand::thread_rng;
-use std::cmp::Eq;
-use std::collections::HashMap;
-use std::fmt;
-use std::fs::File;
-use std::hash::Hash;
-use std::io::Write;
+use rand::{prelude::SliceRandom, thread_rng};
+use std::{fmt, fs::File, hash::Hash, io::Write, cmp::Eq, collections::HashMap};
 
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
@@ -144,9 +138,12 @@ impl ActionHistory {
         }
     }
 
+    pub fn max_bet(&self) -> i32 {
+        self.stacks[self.player]
+    }
+
     pub fn is_bet_legal(&self, bet: i32) -> bool {
-        let max_bet = self.stacks[self.player];
-        return self.min_bet() <= bet && bet <= max_bet;
+        return self.min_bet() <= bet && bet <= self.max_bet();
     }
 
     // Returns a vector of the possible next actions after this state, that are

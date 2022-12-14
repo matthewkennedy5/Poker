@@ -29,3 +29,7 @@ toml = "*"
 
 [profile.release]
 debug = 1
+
+[profile.dev]
+opt-level = 1
+debug = true
