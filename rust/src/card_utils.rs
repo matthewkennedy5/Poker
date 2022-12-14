@@ -732,7 +732,7 @@ impl HandData {
 
     // There are multiple places where I have to serialize a HashMap of cards->i32
     // with some sort of data such as hand strength or abstraction ID. This loads
-    // that data from a file desciptor and returns the HashMap lookup table.
+    // that data from a file desciptor and returns the lookup table.
     pub fn read_serialized(file: File) -> HandData {
         let mut table = HandData::new();
         let reader = BufReader::new(file);
