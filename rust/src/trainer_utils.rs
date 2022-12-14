@@ -1,9 +1,9 @@
-use crate::card_abstraction;
-use crate::card_utils;
-use crate::card_utils::Card;
+use crate::card_abstraction::Abstraction;
+use crate::card_utils::*;
 use crate::config::CONFIG;
-use rand::{prelude::SliceRandom, thread_rng};
 use std::{fmt, fs::File, hash::Hash, io::Write, cmp::Eq, collections::HashMap};
+use rand::{prelude::SliceRandom, thread_rng};
+use once_cell::sync::Lazy;
 
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
@@ -16,13 +16,9 @@ pub const FOLD: Action = Action {
     action: ActionType::Fold,
     amount: 0,
 };
-
 pub const ALL_IN: f64 = -1.0;
 
-lazy_static! {
-    pub static ref ABSTRACTION: card_abstraction::Abstraction = card_abstraction::Abstraction::new();
-    pub static ref HAND_TABLE: card_utils::HandTable = card_utils::HandTable::new();
-}
+pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(|| Abstraction::new());
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ActionType {
@@ -334,13 +330,13 @@ impl CompactInfoSet {
 
 // Returns a representative hand which is in the given abstraction bucket.
 fn hand_with_bucket(bucket: i32, street: usize) -> String {
-    let mut deck = card_utils::deck();
+    let mut deck = deck();
     let mut rng = thread_rng();
     loop {
         deck.shuffle(&mut rng);
         let hand = get_hand(&deck, 0, street);
         if ABSTRACTION.bin(&hand) == bucket {
-            return card_utils::cards2str(&hand);
+            return cards2str(&hand);
         }
     }
 }
@@ -481,8 +477,8 @@ pub fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) ->
     let pot = history.pot();
     let player_hand = get_hand(&deck, player, RIVER);
     let opponent_hand = get_hand(&deck, opponent, RIVER);
-    let player_strength = HAND_TABLE.hand_strength(&player_hand);
-    let opponent_strength = HAND_TABLE.hand_strength(&opponent_hand);
+    let player_strength = FAST_HAND_TABLE.hand_strength(&player_hand);
+    let opponent_strength = FAST_HAND_TABLE.hand_strength(&opponent_hand);
 
     if player_strength > opponent_strength {
         return (pot / 2) as f64;
@@ -499,7 +495,7 @@ pub fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) ->
 pub fn write_compact_blueprint(nodes: &HashMap<CompactInfoSet, Node>) {
     let mut compressed: HashMap<CompactInfoSet, Action> = HashMap::new();
     println!("[INFO] Compressing the blueprint strategy");
-    let bar = card_utils::pbar(nodes.len() as u64);
+    let bar = pbar(nodes.len() as u64);
     for (infoset, node) in nodes {
         let action = sample_action_from_node(&node);
         compressed.insert(infoset.clone(), action);

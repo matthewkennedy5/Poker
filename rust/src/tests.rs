@@ -168,12 +168,8 @@ fn negative_bet_size() {
     history.add(&Action {action: ActionType::Bet, amount: 50});
     history.add(&Action {action: ActionType::Bet, amount: 100});
     history.add(&Action {action: ActionType::Bet, amount: 200});
-    // println!("{:#?}", next_actions);
-    // history.add(&Action {action: ActionType::Bet, amount: 19834});
-    // history.add(&Action {action: ActionType::Bet, amount: 19650});
     let hand = hand2cards(str2hand("Ts8s"));
     let board = hand2cards(str2hand("Js5sQc"));
-
     let response = bot_action(&hand, &board, &history);
     assert!(response.amount != 19834);
 }
@@ -202,8 +198,6 @@ fn cpu_bets_more_than_stack() {
     }
     let hand = hand2cards(str2hand("QdQs"));
     let board = hand2cards(str2hand("6dTcJd"));
-
-    println!("{:#?}", history.next_actions(&CONFIG.bet_abstraction));
 
     let response = bot_action(&hand, &board, &history);
     assert!(response.amount != 18750);

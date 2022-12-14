@@ -13,7 +13,6 @@ use std::sync::mpsc;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
-const HAND_TABLE_PATH: &str = "products/strengths7.txt";
 const LIGHT_HAND_TABLE_PATH: &str = "products/strengths.json";
 const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.json";
 const EQUITY_TABLE_PATH: &str = "products/equity_table.txt";
@@ -21,9 +20,8 @@ const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
 
-static HAND_TABLE: Lazy<HandTable> = Lazy::new(|| HandTable::new());
+pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(|| FastHandTable::new());
 static LIGHT_HAND_TABLE: Lazy<LightHandTable> = Lazy::new(|| LightHandTable::new());
-static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(|| FastHandTable::new());
 static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(|| EquityTable::new());
 
 pub const CLUBS: i32 = 0;
@@ -371,40 +369,6 @@ impl FastHandTable {
     }
 }
 
-// For fast poker hand comparison, look up relative strength values in a table
-pub struct HandTable {
-    strengths: HandData,
-}
-
-impl HandTable {
-    pub fn new() -> HandTable {
-        HandTable {
-            strengths: HandTable::load_hand_strengths(),
-        }
-    }
-
-    // TODO: You used the same data structure (HandTable) to store both the 
-    // 7-card strength lookups (which don't require streets) and the abstraction buckets
-    // (which do require streets). This needs to be redesigned.
-    pub fn hand_strength(&self, hand: &[Card]) -> i32 {
-        let isomorphic = isomorphic_hand(&hand, false);
-        let compact = cards2hand(&isomorphic);
-        let strength = self.strengths.get(&compact).clone();
-        strength
-    }
-
-    fn load_hand_strengths() -> HandData {
-        if !Path::new(HAND_TABLE_PATH).exists() {
-            println!("[INFO] Hand table not found.");
-            bootstrap_river_strengths();
-        }
-        match File::open(HAND_TABLE_PATH) {
-            Err(_e) => panic!("Hand table not found"),
-            Ok(file) => HandData::read_serialized(file),
-        }
-    }
-}
-
 // Slower 5-card lookup table which uses a lot less memory than the normal fast
 // HandTable. This has the benefit of reducing startup time.
 pub struct LightHandTable {
@@ -458,25 +422,6 @@ impl LightHandTable {
     }
 }
 
-// Writes a file containing all isomorphic river hand strengths. This can be used
-// if you want to convert 5-card lookup table to a 7-card lookup table for a
-// lookup speed boost.
-pub fn bootstrap_river_strengths() {
-    println!("[INFO] Generating 7-card hand strength lookup table.");
-    let isomorphic_hands = deal_isomorphic(7, false);
-    let deck = deck();
-    let mut buffer = File::create(HAND_TABLE_PATH).unwrap();
-    let bar = pbar(isomorphic_hands.len() as u64);
-    for hand in isomorphic_hands {
-        let cards = hand2cards(hand);
-        let strength = LIGHT_HAND_TABLE.hand_strength(&cards);
-        let to_write = format!("{} {}\n", cards2str(&cards), strength);
-        buffer.write(to_write.as_bytes()).unwrap();
-        bar.inc(1);
-    }
-    bar.finish();
-}
-
 // u64 hand representation
 // Each card is a single u8 byte, where
 //
@@ -488,7 +433,6 @@ pub fn bootstrap_river_strengths() {
 // right-padded by zeros. If no card is present, the value will be zero, which
 // is how the length is determined. This byte representation allows for a
 // small memory footprint without needing to use Rust's lifetime parameters.
-
 pub fn card(hand: u64, card_index: i32) -> i32 {
     ((hand & 0xFF << 8 * card_index) >> 8 * card_index) as i32
 }

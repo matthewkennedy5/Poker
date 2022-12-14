@@ -25,6 +25,7 @@ mod trainer_utils;
 mod card_abstraction;
 mod card_utils;
 mod exploiter;
+#[cfg(test)]
 mod tests;
 mod backend;
 mod bot;
