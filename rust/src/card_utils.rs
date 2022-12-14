@@ -1,15 +1,15 @@
 use crate::itertools::Itertools;
+use std::{
+    fmt,
+    thread,
+    io::{BufRead, BufReader, Read, Write},
+    collections::{HashMap, HashSet}, fs::{File, self}, 
+    path::Path
+};
+use std::sync::mpsc;
 use bio::stats::combinatorics::combinations;
 use serde::{Serialize, Deserialize};
 use serde_json;
-use std::collections::{HashMap, HashSet};
-use std::fmt;
-use std::fs::File;
-use std::fs;
-use std::path::Path;
-use std::thread;
-use std::io::{BufRead, BufReader, Read, Write};
-use std::sync::mpsc;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
@@ -733,8 +733,8 @@ impl HandData {
     // There are multiple places where I have to serialize a HashMap of cards->i32
     // with some sort of data such as hand strength or abstraction ID. This loads
     // that data from a file desciptor and returns the lookup table.
-    pub fn read_serialized(file: File) -> HandData {
-        let mut table = HandData::new();
+    pub fn read_serialized(file: File) -> HashMap<u64, i32> {
+        let mut table: HashMap<u64, i32> = HashMap::new();
         let reader = BufReader::new(file);
         for line in reader.lines() {
             let line_str = line.unwrap();
@@ -743,20 +743,18 @@ impl HandData {
             let bucket = data.next().unwrap();
             let hand = str2hand(hand);
             let bucket = bucket.to_string().parse().unwrap();
-            table.insert(&hand, bucket);
+            table.insert(hand, bucket);
         }
         table
     }
 
-    pub fn serialize(&self, path: &str) {
-        let mut buffer = File::create(path).unwrap();
-        self.data.iter()
-                 .for_each(|r| {
-                    let hand = r.key().clone();
-                    let data = r.value();
-                    let to_write = format!("{} {}\n", hand2str(hand), data);
-                    buffer.write(to_write.as_bytes()).unwrap();
-                 });
+}
+
+pub fn serialize(hand_data: HashMap<u64, i32>, path: &str) {
+    let mut buffer = File::create(path).unwrap();
+    for (hand, data) in hand_data {
+        let to_write = format!("{} {}\n", hand2str(hand), data);
+        buffer.write(to_write.as_bytes()).unwrap();
     }
 }
 
