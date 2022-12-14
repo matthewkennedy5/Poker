@@ -704,50 +704,22 @@ fn river_equity(hand: Vec<Card>) -> f64 {
 
 // For many applications (abstraction, hand strength, equity lookup) I need to
 // be able to store and lookup an integer corresponding to each hand
-pub struct HandData {
-    data: DashMap<u64, i32>,
-}
-
-impl HandData {
-    pub fn new() -> HandData {
-        HandData {
-            data: DashMap::new(),
-        }
+// There are multiple places where I have to serialize a HashMap of cards->i32
+// with some sort of data such as hand strength or abstraction ID. This loads
+// that data from a file desciptor and returns the lookup table.
+pub fn read_serialized(file: File) -> HashMap<u64, i32> {
+    let mut table: HashMap<u64, i32> = HashMap::new();
+    let reader = BufReader::new(file);
+    for line in reader.lines() {
+        let line_str = line.unwrap();
+        let mut data = line_str.split_whitespace();
+        let hand = data.next().unwrap();
+        let bucket = data.next().unwrap();
+        let hand = str2hand(hand);
+        let bucket = bucket.to_string().parse().unwrap();
+        table.insert(hand, bucket);
     }
-
-    pub fn get(&self, hand: &u64) -> i32 {
-        self.data
-            .get(hand)
-            .expect(&format!("{} not found in HandData", hand))
-            .clone()
-    }
-
-    pub fn insert(&mut self, hand: &u64, data: i32) {
-        self.data.insert(hand.clone(), data);
-    }
-
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-
-    // There are multiple places where I have to serialize a HashMap of cards->i32
-    // with some sort of data such as hand strength or abstraction ID. This loads
-    // that data from a file desciptor and returns the lookup table.
-    pub fn read_serialized(file: File) -> HashMap<u64, i32> {
-        let mut table: HashMap<u64, i32> = HashMap::new();
-        let reader = BufReader::new(file);
-        for line in reader.lines() {
-            let line_str = line.unwrap();
-            let mut data = line_str.split_whitespace();
-            let hand = data.next().unwrap();
-            let bucket = data.next().unwrap();
-            let hand = str2hand(hand);
-            let bucket = bucket.to_string().parse().unwrap();
-            table.insert(hand, bucket);
-        }
-        table
-    }
-
+    table
 }
 
 pub fn serialize(hand_data: HashMap<u64, i32>, path: &str) {
