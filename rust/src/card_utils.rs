@@ -10,7 +10,6 @@ use std::sync::mpsc;
 use bio::stats::combinatorics::combinations;
 use serde::{Serialize, Deserialize};
 use serde_json;
-use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
 const LIGHT_HAND_TABLE_PATH: &str = "products/strengths.json";
@@ -165,99 +164,6 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
 // isomorphic / archetypal hand methods
 // thanks to stackoverflow user Daniel Slutzbach: https://stackoverflow.com/a/3831682
 
-// returns true if the given list of ints contains duplicate elements.
-fn contains_duplicates(list: &[u8]) -> bool {
-    for i in 0..list.len() {
-        for j in i + 1..list.len() {
-            if &list[i] == &list[j] {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-fn suit_first_greater_than(card1: &Card, card2: &Card) -> bool {
-    if card1.suit < card2.suit {
-        return false;
-    }
-    if card1.suit == card2.suit && card1.rank <= card2.rank {
-        return false;
-    }
-    return true;
-}
-
-fn sorted_correctly(cards: &[Card], streets: bool) -> bool {
-    if streets {
-        if cards.len() >= 2 && suit_first_greater_than(&cards[0], &cards[1]) {
-            // preflop is out of order
-            return false;
-        }
-        if cards.len() > 2 {
-            // Check that the board cards are sorted relative to each other
-            let board = &cards[2..].to_vec();
-            let mut sorted_board = board.clone();
-            sorted_board.sort_by_key(|c| (c.suit.clone(), c.rank));
-            return board == &sorted_board;
-        }
-        // 1 or 0 cards, always sorted correctly
-        return true;
-    } else {
-        // make sure that all the cards are sorted since we aren't looking at streets
-        let mut sorted_cards = cards.to_vec();
-        sorted_cards.sort_by_key(|c| (c.suit.clone(), c.rank));
-        return sorted_cards == cards;
-    }
-}
-
-// Given a list of cards, returns true if they are isomorphic. the rules for being
-// isomorphic are as follows:
-// 1. cards must be in sorted order (suit-first, alphabetic order of suits)
-// 2. each suit must have at least as many cards as later suits
-// 3. when two suits have the same number of cards, the first suit must have
-//    lower or equal ranks lexicographically, eg ([1, 5] < [2, 4])
-// 4. no duplicate cards
-// Thanks again to StackOverflow user Daniel Stutzbach for thinking of these rules.
-//
-// Inputs:
-// cards - array of card instances representing the hand
-// streets - whether to distinguish cards from different streets. meaning,
-//    if the first two cards represent the preflop and the last three are the,
-//    flop, that asad|jh9c2s is different than as2s|jh9cad. both hands have a
-//    pair of aces, but in the first hand, the player has pocket aces on the
-//    preflop and is in a much stronger position than the second hand.
-pub fn is_isomorphic(cards: &[Card], streets: bool) -> bool {
-    if !sorted_correctly(cards, streets) {
-        // rule 1
-        return false;
-    }
-    // by_suits is a different way of representing the hand -- it maps suits to
-    // the ranks present for that suit
-    let mut by_suits: Vec<Vec<u8>> = Vec::new();
-    for suit in 0..4 {
-        let ranks = c![card.rank, for card in cards, if card.suit == suit];
-        by_suits.push(ranks.to_vec());
-        if contains_duplicates(&ranks) {
-            // duplicate cards have been provided, so this cannot be a real hand
-            // rule 4
-            return false;
-        }
-    }
-    for i in 1..4 {
-        let suit1 = &by_suits[i - 1];
-        let suit2 = &by_suits[i];
-        if suit1.len() < suit2.len() {
-            // rule 2
-            return false;
-        }
-        if suit1.len() == suit2.len() && suit1 > suit2 {
-            // rule 3. the ranks of the cards are compared for lexicographic ordering.
-            return false;
-        }
-    }
-    true
-}
-
 fn sort_isomorphic(cards: &[Card], streets: bool) -> Vec<Card> {
     let mut sorted;
     if streets && cards.len() > 2 {
@@ -397,7 +303,7 @@ impl LightHandTable {
 
     fn load_hand_strengths() -> HashMap<Vec<Card>, i32> {
         let str_map: HashMap<String, i32> = match File::open(LIGHT_HAND_TABLE_PATH) {
-            Err(e) => panic!("Hand table not found"),
+            Err(_e) => panic!("Hand table not found"),
             Ok(mut file) => {
                 // Load up the hand table from the JSON
                 let mut buffer = String::new();
@@ -792,7 +698,7 @@ impl EquityTable {
         }
 
         let bar = pbar(isomorphic.len() as u64);
-        for i in 0..isomorphic.len() {
+        for _i in 0..isomorphic.len() {
             let increment = pbar_rx.recv().unwrap();
             bar.inc(increment);
         }
@@ -800,7 +706,7 @@ impl EquityTable {
 
         let mut equities: Vec<(u64, f64)> = Vec::new();
 
-        for i in 0..handles.len() {
+        for _i in 0..handles.len() {
             let mut result = rx.recv().expect("Could not receive result");
             equities.append(&mut result);
         }

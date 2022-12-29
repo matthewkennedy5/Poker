@@ -50,22 +50,6 @@ pub fn train(iters: u64) {
     // println!("Exploitability: {}", exploitability(&nodes));
 }
 
-pub fn view_preflop(nodes: &HashMap<InfoSet, Node>) {
-    // Print the preflop strategy
-    for (infoset, node) in nodes {
-        if infoset.history.street == PREFLOP {
-            if node.t > 500.0 {
-                println!(
-                    "{}: {:#?}t: {}\n",
-                    infoset,
-                    node.cumulative_strategy(),
-                    node.t
-                );
-            }
-        }
-    }
-}
-
 pub fn load_nodes(path: &str) -> HashMap<CompactInfoSet, Node> {
     println!("[INFO] Loading strategy at {} ...", path);
     let file = File::open(path).expect("Nodes file not found");

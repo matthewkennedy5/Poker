@@ -138,10 +138,6 @@ impl ActionHistory {
         self.stacks[self.player]
     }
 
-    pub fn is_bet_legal(&self, bet: i32) -> bool {
-        return self.min_bet() <= bet && bet <= self.max_bet();
-    }
-
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
     pub fn next_actions(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<Action> {

@@ -1,6 +1,5 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![feature(proc_macro_hygiene, decl_macro)]
+// #![allow(dead_code)]
+// #![allow(unused_variables)]
 
 extern crate indicatif;
 extern crate itertools;
@@ -31,6 +30,6 @@ mod backend;
 mod bot;
 
 fn main() {
-    // trainer::train(10_000_000);
+    trainer::train(10_000_000);
     backend::main().expect("Could not launch server");
 }

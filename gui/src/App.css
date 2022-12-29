@@ -1,148 +1,138 @@
-.App {
-  text-align: center;
+/* Add some basic styles for the overall layout of the game */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #eeeeee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* Style the container for the game board */
+.table {
+  background-color: #ffffff;
+  border: 1px solid #cccccc;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  width: 800px;
+  height: 600px;
+  overflow: hidden;
 }
 
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.table {
-  position: relative;
-  display: inline-block;
-}
-
-.humanCard1 {
-  position: absolute;
-  top: 395px;
-  left: 300px;
-  height: 20%;
-  width: 20%;
-}
-
-.humanCard2 {
-  position: absolute;
-  top: 395px;
-  left: 400px;
-  height: 20%;
-  width: 20%;
-}
-
-.cpuCard1 {
-  position: absolute;
-  top: 25px;
-  left: 450px;
-  height: 116px;
-  width: 80px;
-}
-
-.cpuCard2 {
-  position: absolute;
-  top: 25px;
-  left: 550px;
-  height: 116px;
-  width: 80px;
-}
-
-.board1 {
-  position: absolute;
-  top: 200px;
-  left: 300px;
-  height: 116px;
-  width: 80px;
-}
-
-.board2 {
-  position: absolute;
-  top: 200px;
-  left: 400px;
-  height: 116px;
-  width: 80px;
-}
-
-.board3 {
-  position: absolute;
-  top: 200px;
-  left: 500px;
-  height: 116px;
-  width: 80px;
-}
-
-.board4 {
-  position: absolute;
-  top: 200px;
-  left: 600px;
-  height: 116px;
-  width: 80px;
-}
-
-.board5 {
-  position: absolute;
-  top: 200px;
-  left: 700px;
-  height: 116px;
-  width: 80px;
-}
-
-.table svg {
-   display: block;
-   max-width: 100%;
-}
-
-.pot {
-  position: absolute;
-  top: 400px;
-  left: 700px;
-  font-family: "Courier New";
-  font-size: 36px;
-}
-
-.score {
-  position: absolute;
-  top: 100px;
-  left: 1100px;
-}
-
-.buttons {
-  position: absolute;
-  top: 550px;
-  left: 140px;
-}
-
+/* Style the top bar that displays the game information */
 .log {
-  position: absolute;
-  top: 160px;
-  left: 1100px;
-  white-space: pre-line;
+  background-color: #f7f7f7;
+  border-bottom: 1px solid #cccccc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
+/* Style the game status message */
+.game-status {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333333;
+}
+
+/* Style the container for the player cards */
+.player-cards {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Style the individual player cards */
+.player-card {
+  background-color: #ffffff;
+  border: 1px solid #cccccc;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+  width: 150px;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Style the card value and suit */
+.card-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333333;
+}
+
+.card-suit {
+  font-size: 18px;
+  color: #333333;
+}
+
+/* Style the container for the community cards */
+.community-cards {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Style the individual community cards */
+.community-card {
+  background-color: #ffffff;
+  border: 1px solid #cccccc;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+  width: 150px;
+  height:200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  box-sizing: border-box;
+ }
+  
+ /* Style the action buttons */
+.action-buttons {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+  
+.action-button {
+  background-color: #ffffff;
+  border: 1px solid #cccccc;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
+  color: #333333;
+  font-size: 18px;
+  font-weight: bold;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+  
+.action-button:hover {
+  background-color: #f7f7f7;
+}
+  
+.action-button:active {
+  background-color: #eaeaea;
+}
+  
+  

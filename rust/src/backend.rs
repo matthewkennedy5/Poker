@@ -10,8 +10,6 @@ lazy_static! {
     static ref HAND_STRENGTHS: LightHandTable = LightHandTable::new();
 }
 
-const SERVER: &str = "0.0.0.0:80";
-
 async fn compare_hands(req: HttpRequest) -> impl Responder {
     let query = req.query_string();
     let query = qstring::QString::from(query);

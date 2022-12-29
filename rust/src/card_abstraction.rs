@@ -8,19 +8,13 @@ use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{
-    io::Write, 
-    fs::{self, File, OpenOptions},
     collections::HashMap,
+    fs::File,
 };
 
 const FLOP_PATH: &str = "products/flop_abstraction.txt";
 const TURN_PATH: &str = "products/turn_abstraction.txt";
 const RIVER_PATH: &str = "products/river_abstraction.txt";
-const RIVER_SORTED_DIR: &str = "products/river_sorted_ehs2";
-
-const N_FLOP_CANONICAL: i32 = 1_342_562;
-const N_TURN_CANONICAL: i32 = 14_403_610;
-const N_RIVER_CANONICAL: i32 = 125_756_657;
 
 pub struct Abstraction {
     flop: HashMap<u64, i32>,
@@ -128,34 +122,4 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     };
     serialize(clusters.clone(), path);
     clusters
-}
-
-// Writes text files of isomorphic hands sorted by E[HS^2] from low to high, split
-// into different files depending on the first card in the isomorphic hand.
-pub fn write_sorted_hands() {
-    let hands = get_sorted_hand_ehs2(7);
-    println!("[INFO] Writing sorted river hands for the LightAbstraction");
-    fs::create_dir(RIVER_SORTED_DIR).expect("Couldn't create river directory");
-    let bar = pbar(hands.len() as u64);
-    for card in deck() {
-        // We find every isomorphic river hand that starts with card, and add it
-        // to this text file in order of E[HS^2].
-        let fname = format!("{}/{}.txt", RIVER_SORTED_DIR, card);
-        let mut buffer = match OpenOptions::new().append(true).open(&fname) {
-            Err(_e) => File::create(fname).expect("Could not create file"),
-            Ok(f) => f,
-        };
-        let mut index = 0;
-        for (hand, ehs2) in &hands {
-            let hand_str = hand2str(hand.clone());
-            let first_card = &hand_str[0..2];
-            if first_card == card.to_string() {
-                let to_write = format!("{} {}\n", hand_str, index);
-                buffer.write(to_write.as_bytes()).unwrap();
-                bar.inc(1);
-            }
-            index += 1;
-        }
-    }
-    bar.finish();
 }
