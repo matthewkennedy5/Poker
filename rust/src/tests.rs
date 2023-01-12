@@ -1,14 +1,12 @@
 #[cfg(test)]
 
-use crate::config::CONFIG;
 use crate::card_utils::*;
 use crate::trainer_utils::*;
 use crate::bot::*;
 use std::collections::HashMap;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    static ref BLUEPRINT: HashMap<CompactInfoSet, Action> = crate::trainer::load_blueprint();
-}
+static BLUEPRINT: Lazy<HashMap<CompactInfoSet, Action>> = Lazy::new(|| crate::trainer::load_blueprint());
 
 #[test]
 fn card_bitmap() {
@@ -40,13 +38,13 @@ fn fast_hand_evaluation() {
     let better_full_house = vec!["2d", "9s", "Qd", "Qs", "Ac", "Ah", "As"];
 
     // Get strengths
-    let royal_flush = table.hand_strength(&strvec2cards(&royal_flush));
-    let royal_flush2 = table.hand_strength(&strvec2cards(&royal_flush2));
-    let straight_flush = table.hand_strength(&strvec2cards(&straight_flush));
-    let four = table.hand_strength(&strvec2cards(&four));
-    let full_house = table.hand_strength(&strvec2cards(&full_house));
-    let same_full_house = table.hand_strength(&strvec2cards(&same_full_house));
-    let better_full_house = table.hand_strength(&strvec2cards(&better_full_house));
+    let royal_flush = fast_hand_strength(royal_flush, &table);
+    let royal_flush2 = fast_hand_strength(royal_flush2, &table);
+    let straight_flush = fast_hand_strength(straight_flush, &table);
+    let four = fast_hand_strength(four, &table);
+    let full_house = fast_hand_strength(full_house, &table);
+    let same_full_house = fast_hand_strength(same_full_house, &table);
+    let better_full_house = fast_hand_strength(better_full_house, &table);
 
     // Test comparisons
     assert!(royal_flush > straight_flush);
@@ -84,6 +82,14 @@ fn uint_hands() {
     assert_eq!(hand2cards(cards2hand(&cards)), cards);
 }
 
+fn light_hand_strength(hand: Vec<&str>, table: &LightHandTable) -> i32 {
+    return table.hand_strength(&strvec2cards(&hand));
+}
+
+fn fast_hand_strength(hand: Vec<&str>, table: &FastHandTable) -> i32 {
+    return table.hand_strength(&strvec2cards(&hand));
+}
+
 #[test]
 fn hand_comparisons() {
     let table = LightHandTable::new();
@@ -113,28 +119,28 @@ fn hand_comparisons() {
     let other_high_card = vec!["Ks", "As", "Qs", "2h", "3s"];
 
     // Get strengths
-    let royal_flush = table.hand_strength(&strvec2cards(&royal_flush));
-    let royal_flush2 = table.hand_strength(&strvec2cards(&royal_flush2));
-    let straight_flush = table.hand_strength(&strvec2cards(&straight_flush));
-    let four = table.hand_strength(&strvec2cards(&four));
-    let full_house = table.hand_strength(&strvec2cards(&full_house));
-    let full_house2 = table.hand_strength(&strvec2cards(&full_house2));
-    let full_house3 = table.hand_strength(&strvec2cards(&full_house3));
-    let same_full_house = table.hand_strength(&strvec2cards(&same_full_house));
-    let better_full_house = table.hand_strength(&strvec2cards(&better_full_house));
-    let flush = table.hand_strength(&strvec2cards(&flush));
-    let same_flush = table.hand_strength(&strvec2cards(&same_flush));
-    let better_flush = table.hand_strength(&strvec2cards(&better_flush));
-    let straight = table.hand_strength(&strvec2cards(&straight));
-    let better_straight = table.hand_strength(&strvec2cards(&better_straight));
-    let trips = table.hand_strength(&strvec2cards(&trips));
-    let two_pair = table.hand_strength(&strvec2cards(&two_pair));
-    let better_two_pair = table.hand_strength(&strvec2cards(&better_two_pair));
-    let pair = table.hand_strength(&strvec2cards(&pair));
-    let ace_pair = table.hand_strength(&strvec2cards(&ace_pair));
-    let better_kicker = table.hand_strength(&strvec2cards(&better_kicker));
-    let high_card = table.hand_strength(&strvec2cards(&high_card));
-    let other_high_card = table.hand_strength(&strvec2cards(&other_high_card));
+    let royal_flush = light_hand_strength(royal_flush, &table);
+    let royal_flush2 = light_hand_strength(royal_flush2, &table);
+    let straight_flush = light_hand_strength(straight_flush, &table);
+    let four = light_hand_strength(four, &table);
+    let full_house = light_hand_strength(full_house, &table);
+    let full_house2 = light_hand_strength(full_house2, &table);
+    let full_house3 = light_hand_strength(full_house3, &table);
+    let same_full_house = light_hand_strength(same_full_house, &table);
+    let better_full_house = light_hand_strength(better_full_house, &table);
+    let flush = light_hand_strength(flush, &table);
+    let same_flush = light_hand_strength(same_flush, &table);
+    let better_flush = light_hand_strength(better_flush, &table);
+    let straight = light_hand_strength(straight, &table);
+    let better_straight = light_hand_strength(better_straight, &table);
+    let trips = light_hand_strength(trips, &table);
+    let two_pair = light_hand_strength(two_pair, &table);
+    let better_two_pair = light_hand_strength(better_two_pair, &table);
+    let pair = light_hand_strength(pair, &table);
+    let ace_pair = light_hand_strength(ace_pair, &table);
+    let better_kicker = light_hand_strength(better_kicker, &table);
+    let high_card = light_hand_strength(high_card, &table);
+    let other_high_card = light_hand_strength(other_high_card, &table);
 
     // Test different hand type comparisons
     assert!(royal_flush > straight_flush);
@@ -158,6 +164,23 @@ fn hand_comparisons() {
     assert_eq!(same_full_house, full_house);
     assert_eq!(other_high_card, high_card);
     assert_eq!(same_flush, flush);
+}
+
+#[test]
+fn gradys_hand() {
+    let table = LightHandTable::new();
+
+    let human = vec!["Td", "Tc", "9c", "5s", "4d", "6h", "Jd"];
+    let cpu = vec!["As", "4s", "9c", "5s", "4d", "6h", "Jd"];
+    assert!(light_hand_strength(human, &table) > light_hand_strength(cpu, &table));
+
+    let human = vec!["Td", "Tc", "9c", "6h", "Jd"];
+    let cpu = vec!["As", "4s", "9c", "4d", "Jd"];
+    assert!(light_hand_strength(human, &table) > light_hand_strength(cpu, &table));
+
+    let human = vec!["9c", "Tc", "Td", "Jd", "6h"];
+    let cpu = vec!["4c", "Jc", "4d", "Ad", "9h"];
+    assert!(light_hand_strength(human, &table) > light_hand_strength(cpu, &table));
 }
 
 #[test]

@@ -3,14 +3,13 @@
 use serde::{Serialize, Deserialize};
 use toml;
 use std::fs;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    pub static ref CONFIG: Config = {
+pub static CONFIG: Lazy<Config> = Lazy::new(|| {
         let config_string = fs::read_to_string("../params.toml").unwrap();
         let parsed = toml::from_str(&config_string).expect("Could not parse TOML config file");
         parsed
-    };
-}
+});
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {

@@ -295,9 +295,11 @@ impl LightHandTable {
             let isomorphic = isomorphic_hand(&deepcopy(&five_card), false);
             let strength = self.strengths.get(&isomorphic).unwrap().clone();
             if strength > max_strength {
+                // println!("{}", cards2str(&deepcopy(&five_card)));
                 max_strength = strength;
             }
         }
+        // println!("{}", max_strength);
         max_strength
     }
 
@@ -608,8 +610,6 @@ fn river_equity(hand: Vec<Card>) -> f64 {
     equity
 }
 
-// For many applications (abstraction, hand strength, equity lookup) I need to
-// be able to store and lookup an integer corresponding to each hand
 // There are multiple places where I have to serialize a HashMap of cards->i32
 // with some sort of data such as hand strength or abstraction ID. This loads
 // that data from a file desciptor and returns the lookup table.

@@ -2,6 +2,11 @@
   text-align: center;
 }
 
+.app {
+  height: 100vh;
+  width: 100vw;
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;
@@ -37,112 +42,80 @@
   }
 }
 
-.table {
-  position: relative;
+.poker-table, .single-card {
+  background-color: green;
+}
+
+.poker-table {
+  border-radius: 25%;
+  margin: 5%;
+  width: 70%;
+  height: 70%;
+}
+
+.cards {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.human-cards, .cpu-cards {
+  display: grid;
+  justify-content: center;
+  align-content: center;
+  grid-auto-flow: column;
+  gap: 10px;
+  width: 35%;
+  height: 100%;
+  margin: 5%;
+}
+
+.board-cards {
+  display: grid;
+  justify-content: center;
+  align-content: center;
+  grid-auto-flow: column;
+  gap: 10px;
+}
+
+.single-card {
   display: inline-block;
-}
-
-.humanCard1 {
-  position: absolute;
-  top: 395px;
-  left: 300px;
-  height: 20%;
-  width: 20%;
-}
-
-.humanCard2 {
-  position: absolute;
-  top: 395px;
-  left: 400px;
-  height: 20%;
-  width: 20%;
-}
-
-.cpuCard1 {
-  position: absolute;
-  top: 25px;
-  left: 450px;
-  height: 116px;
-  width: 80px;
-}
-
-.cpuCard2 {
-  position: absolute;
-  top: 25px;
-  left: 550px;
-  height: 116px;
-  width: 80px;
-}
-
-.board1 {
-  position: absolute;
-  top: 200px;
-  left: 300px;
-  height: 116px;
-  width: 80px;
-}
-
-.board2 {
-  position: absolute;
-  top: 200px;
-  left: 400px;
-  height: 116px;
-  width: 80px;
-}
-
-.board3 {
-  position: absolute;
-  top: 200px;
-  left: 500px;
-  height: 116px;
-  width: 80px;
-}
-
-.board4 {
-  position: absolute;
-  top: 200px;
-  left: 600px;
-  height: 116px;
-  width: 80px;
-}
-
-.board5 {
-  position: absolute;
-  top: 200px;
-  left: 700px;
-  height: 116px;
-  width: 80px;
-}
-
-.table svg {
-   display: block;
-   max-width: 100%;
+  height: 100%;
+  width: 100%;
+  max-height: 15vh;
+  border: 0px;
 }
 
 .pot {
   position: absolute;
-  top: 400px;
-  left: 700px;
+  font-size: 3vh;
+  top: 60vh;
+  left: 80vw;
   font-family: "Courier New";
-  font-size: 36px;
 }
 
 .score {
   position: absolute;
-  top: 100px;
-  left: 1100px;
-}
-
-.buttons {
-  position: absolute;
-  top: 550px;
-  left: 140px;
+  font-size: 2vh;
+  top: 10vh;
+  left: 80vw;
 }
 
 .log {
   position: absolute;
-  top: 160px;
-  left: 1100px;
+  font-size: 2vh;
+  top: 20vh;
+  left: 80vw;
   white-space: pre-line;
 }
 
+/* .buttons {
+  position: absolute;
+  left: 5vw;
+  height: 200px;
+  width: 2000px;
+  border: 1px solid black;
+} */

@@ -5,12 +5,12 @@ use std::collections::HashMap;
 use actix_web::{web, App, HttpRequest, HttpServer, Responder};
 use actix_cors::Cors;
 use actix_files as fs;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    static ref HAND_STRENGTHS: LightHandTable = LightHandTable::new();
-}
+static HAND_STRENGTHS: Lazy<LightHandTable> = Lazy::new(|| LightHandTable::new());
 
 async fn compare_hands(req: HttpRequest) -> impl Responder {
+    println!("[INFO] Received HTTP request: {:#?}", req);
     let query = req.query_string();
     let query = qstring::QString::from(query);
     let human_hand = query.get("humanHand").unwrap();

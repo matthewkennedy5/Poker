@@ -12,8 +12,6 @@ extern crate bincode;
 extern crate bio;
 extern crate qstring;
 extern crate rayon;
-#[macro_use]
-extern crate lazy_static;
 extern crate actix_web;
 extern crate actix_rt;
 extern crate actix_files;
@@ -30,6 +28,6 @@ mod backend;
 mod bot;
 
 fn main() {
-    trainer::train(10_000_000);
+    // trainer::train(10_000_000);
     backend::main().expect("Could not launch server");
 }

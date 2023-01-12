@@ -8,7 +8,7 @@ import './App.css';
 
 const axios = require('axios');
 
-const URL = 'http://localhost'
+const URL = 'https://www.pokertrainer.info'
 
 class App extends Component {
 
@@ -161,10 +161,10 @@ class App extends Component {
 
   render() {
     return (
-      <div>
+      <div className="app">
         <Score className="score"
                score={this.state.score}
-               hands={this.state.hands}/>
+               hands={this.state.hands}/> 
         <Table pot={this.state.pot}
                humanCards={this.state.humanCards}
                cpuCards={this.state.cpuCards}

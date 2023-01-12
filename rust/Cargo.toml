@@ -18,7 +18,6 @@ bio = "*"
 bincode = "*"
 statistical = "*"
 qstring = "*"
-lazy_static = "*"
 once_cell = "*"
 actix-web = {version = "*", features = ["openssl"]}
 actix-rt = "*"

@@ -1,6 +1,6 @@
 import React, {Component} from 'react';
 
-const BUTTON_STYLE = "btn btn-outline-dark m-1"
+const BUTTON_STYLE = "btn btn-outline-dark btn-small m-1"
 
 class Buttons extends Component {
 
