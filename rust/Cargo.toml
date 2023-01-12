@@ -19,7 +19,8 @@ bincode = "*"
 statistical = "*"
 qstring = "*"
 once_cell = "*"
-actix-web = {version = "*", features = ["openssl"]}
+# actix-web = {version = "*", features = ["openssl"]}
+actix-web = "*"
 actix-rt = "*"
 actix-files = "*"
 actix-cors = "*"
