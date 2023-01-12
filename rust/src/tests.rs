@@ -98,7 +98,6 @@ fn hand_comparisons() {
     let royal_flush = vec!["Jd", "As", "Js", "Ks", "Qs", "Ts", "2c"];
     let royal_flush2 = vec!["Jd", "Ac", "Jc", "Kc", "Qc", "Tc", "2c"];
     let straight_flush = vec!["7d", "2c", "8d", "Jd", "9d", "3d", "Td"];
-    let four = vec!["2h", "2c", "3d", "5c", "7d", "2d", "2s"];
     let full_house = vec!["As", "Jd", "Qs", "Jc", "2c", "Ac", "Ah"];
     let same_full_house = vec!["As", "Js", "2s", "Jc", "2c", "Ac", "Ah"];
     let better_full_house = vec!["2d", "9s", "Qd", "Qs", "Ac", "Ah", "As"];
@@ -122,7 +121,6 @@ fn hand_comparisons() {
     let royal_flush = light_hand_strength(royal_flush, &table);
     let royal_flush2 = light_hand_strength(royal_flush2, &table);
     let straight_flush = light_hand_strength(straight_flush, &table);
-    let four = light_hand_strength(four, &table);
     let full_house = light_hand_strength(full_house, &table);
     let full_house2 = light_hand_strength(full_house2, &table);
     let full_house3 = light_hand_strength(full_house3, &table);
@@ -200,7 +198,7 @@ fn negative_bet_size() {
 // Test that there are no negative bet sizes in the blueprint strategy.
 #[test]
 fn blueprint_bets_positive() {
-    for (infoset, action) in BLUEPRINT.iter() {
+    for (_infoset, action) in BLUEPRINT.iter() {
         assert!(action.amount >= 0);
     }
 }

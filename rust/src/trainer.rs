@@ -142,7 +142,7 @@ fn iterate(
 
     // Update regrets
     for (action, utility) in &utilities {
-        let regret = utilities.get(&action).unwrap() - node_utility;
+        let regret = utility - node_utility;
         node.add_regret(&action, weights[opponent] * regret);
     }
 
