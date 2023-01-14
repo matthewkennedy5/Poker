@@ -4,16 +4,17 @@ use std::{
     thread,
     io::{BufRead, BufReader, Read, Write},
     collections::{HashMap, HashSet}, fs::{File, self}, 
-    path::Path
+    path::Path 
 };
 use std::sync::mpsc;
 use bio::stats::combinatorics::combinations;
 use serde::{Serialize, Deserialize};
 use serde_json;
 use once_cell::sync::Lazy;
+use rs_poker::core::{Hand, Rank, Rankable};
 
-const LIGHT_HAND_TABLE_PATH: &str = "products/strengths.json";
 const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.json";
+const LIGHT_HAND_TABLE_PATH: &str = "products/strengths.json";
 const EQUITY_TABLE_PATH: &str = "products/equity_table.txt";
 const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.txt";
@@ -275,6 +276,11 @@ impl FastHandTable {
     }
 }
 
+// Uses the rs_poker library to evaluate the strength of a hand
+fn evaluate_hand_strength(hand: &str) -> Rank {
+    return Hand::new_from_str(hand).unwrap().rank();
+}
+
 // Slower 5-card lookup table which uses a lot less memory than the normal fast
 // HandTable. This has the benefit of reducing startup time.
 pub struct LightHandTable {
@@ -295,17 +301,19 @@ impl LightHandTable {
             let isomorphic = isomorphic_hand(&deepcopy(&five_card), false);
             let strength = self.strengths.get(&isomorphic).unwrap().clone();
             if strength > max_strength {
-                // println!("{}", cards2str(&deepcopy(&five_card)));
                 max_strength = strength;
             }
         }
-        // println!("{}", max_strength);
         max_strength
     }
 
     fn load_hand_strengths() -> HashMap<Vec<Card>, i32> {
         let str_map: HashMap<String, i32> = match File::open(LIGHT_HAND_TABLE_PATH) {
-            Err(_e) => panic!("Hand table not found"),
+            Err(_e) => {
+                // TODO: Refactor to remove the duplicate logic here with EquityTable creation etc
+                println!("[INFO] Hand table not found. Creating new one.");
+                LightHandTable::create()
+            }
             Ok(mut file) => {
                 // Load up the hand table from the JSON
                 let mut buffer = String::new();
@@ -316,17 +324,48 @@ impl LightHandTable {
         // Translate the card strings to Vec<Card> keys
         let mut vec_map: HashMap<Vec<Card>, i32> = HashMap::new();
         for (hand, strength) in str_map {
-            let cards = vec![
-                &hand[0..2],
-                &hand[2..4],
-                &hand[4..6],
-                &hand[6..8],
-                &hand[8..10],
-            ];
-            let cards = strvec2cards(&cards);
+            let cards = str2cards(&hand);
             vec_map.insert(cards, strength);
         }
         vec_map
+    }
+
+
+    // 1. Deal isomorphic 5 card hands (no streets)
+    // 2. use rs_poker to get the hand strength? 
+    // 3. sort all the hand strengths
+    // 4. write the sorted vector to the json file, checking for equivalence as well. 
+    fn create() -> HashMap<String, i32> {
+        let mut hands: Vec<String> = deal_isomorphic(5, false)
+                                        .iter()
+                                        .map(|hand| hand2str(hand.clone()))
+                                        .collect();
+       
+        hands.sort_by(|a, b| {
+            let strength_a = Hand::new_from_str(&a).unwrap().rank();
+            let strength_b = Hand::new_from_str(&b).unwrap().rank();
+            strength_a.cmp(&strength_b)
+        });
+
+        // Create a map of hand to hand strength, where equal hands have the same strength value
+        let mut table: HashMap<String, i32> = HashMap::new();
+        let mut last_strength = 0;
+        let mut last_hand = String::new();
+        for (i, hand) in hands.iter().enumerate() {
+            if evaluate_hand_strength(hand) == evaluate_hand_strength(&last_hand) {
+                table.insert(hand.clone(), last_strength);
+            } else {
+                table.insert(hand.clone(), i as i32);
+                last_strength = i as i32;
+                last_hand = hand.clone();
+            }
+        }
+
+        // Write the hand strength table to a JSON file
+        let json: String = serde_json::to_string_pretty(&table).unwrap();
+        fs::write(LIGHT_HAND_TABLE_PATH, json).unwrap();
+
+        table
     }
 }
 
@@ -360,6 +399,16 @@ pub fn len(hand: u64) -> i32 {
         }
     }
     -1
+}
+
+fn str2cards(hand_str: &str) -> Vec<Card> {
+    let mut result: Vec<Card> = Vec::new();
+    let hand_str = hand_str.to_string();
+    for i in (0..hand_str.len()).step_by(2) {
+        let card = Card::new(&hand_str[i..i + 2]);
+        result.push(card);
+    }
+    result
 }
 
 pub fn str2hand(hand_str: &str) -> u64 {
@@ -540,7 +589,7 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
         bar.finish();
     } else {
         let bar = pbar(combinations(52, n_cards as u64) as u64);
-        let hands = deck.iter().combinations(7);
+        let hands = deck.iter().combinations(n_cards);
         for hand in hands {
             let cards = deepcopy(&hand);
             let hand = cards2hand(&isomorphic_hand(&cards, false));
