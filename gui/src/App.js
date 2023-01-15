@@ -138,7 +138,7 @@ class App extends Component {
                     addToScore: this.addToScore,
                     incrementHands: this.incrementHands,
                     getCPUAction: this.getCPUAction}),
-    log: "Welcome to Poker!",
+    log: "",
     pot: 0,
     humanCards: ["back", "back"],
     cpuCards: ["back", "back"],
@@ -158,6 +158,11 @@ class App extends Component {
         betCustom:false
     }
   };
+
+  // Have it push the next hand button on load
+  componentDidMount() {
+    this.state.game.nextHand();
+  }
 
   render() {
     return (
@@ -188,11 +193,4 @@ class App extends Component {
 
 };
 
-
 export default App;
-
-// Improvement ideas
-// TODO: Figure out how to change tab thumbnail and title
-// TODO: Make a display label for Slumbot's bets (and the user's bet)
-// TODO: The player's cards move in a weird way when the window gets resized.
-

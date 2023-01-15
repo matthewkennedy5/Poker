@@ -46,6 +46,7 @@ class Game extends Component {
     };
 
     nextHand = () => {
+        console.log('Next hand!');
         this.street = "preflop";
         if (this.dealer === "cpu") {
             this.dealer = "human";
@@ -347,7 +348,3 @@ class Game extends Component {
 };
 
 export default Game;
-
-// TODO: There may be a translation bug to take into account because if CPU
-// leads with $600 and the human follows with a "full pot" bet, the action
-// translation might not correctly register that as a call.

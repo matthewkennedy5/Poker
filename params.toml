@@ -4,7 +4,7 @@ big_blind = 100
 small_blind = 50
 
 # Bet abstractions, expressed as multiples of the pot size. The "all in" action 
-# is implicitly included for every street.
+# is implicitly included in every street.
 bet_abstraction = [
     [1.0, 2.5, 5.0, -1.0],
     [0.5, 1.0, -1.0],

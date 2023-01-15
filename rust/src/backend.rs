@@ -33,7 +33,6 @@ async fn get_cpu_action(req: HttpRequest) -> impl Responder {
     let query = req.query_string();
     let query = qstring::QString::from(query);
     let cpu_cards = query.get("cpuCards").unwrap();
-    println!("{}", cpu_cards);
     let board = query.get("board").unwrap();
     let history_json = query.get("history").unwrap();
 
