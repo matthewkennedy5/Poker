@@ -121,6 +121,10 @@ class App extends Component {
       return response;
   }
 
+  updateCustomBet = (amount) => {
+      this.setState({customBetAmount: amount});
+  }
+
   state = {
     game: new Game({
       logMessage: this.logMessage,
@@ -138,7 +142,8 @@ class App extends Component {
       addToPot: this.addToPot,
       addToScore: this.addToScore,
       incrementHands: this.incrementHands,
-      getCPUAction: this.getCPUAction
+      getCPUAction: this.getCPUAction,
+      updateCustomBet: this.updateCustomBet,
     }),
     log: "",
     pot: 0,
@@ -181,7 +186,10 @@ class App extends Component {
                  check={this.state.game.check}
                  call={this.state.game.call}
                  callAmount={this.state.game.getCallAmount()}
+                 minBetAmount={this.state.game.getMinBetAmount()}
+                 allInAmount={this.state.game.stacks["human"]}
                  betCustom={this.state.game.betCustom}
+                 customBetAmount={this.state.customBetAmount}
                  updateCustomBet={this.state.game.updateCustomBet}
                  enabledButtons={this.state.enabledButtons}/>
         <Log text={this.state.log}/>

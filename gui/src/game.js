@@ -42,7 +42,7 @@ class Game extends Component {
         this.score = 0;
         this.numHands = 0;
         this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
-        this.custBetAmount = 0;
+        this.customBetAmount = 0;
     };
 
     nextHand = () => {
@@ -144,11 +144,12 @@ class Game extends Component {
     };
 
     updateCustomBet = (event) => {
-        this.custBetAmount = event.target.value;
+        this.customBetAmount = event.target.value;
+        this.props.updateCustomBet(this.customBetAmount);
     };
 
     betCustom = () => {
-        const amount = parseInt(this.custBetAmount);
+        const amount = parseInt(this.customBetAmount);
         if (isNaN(amount)) {
             alert("Invalid bet amount")
         } else if (amount > this.stacks["human"]) {
@@ -215,6 +216,10 @@ class Game extends Component {
     getCallAmount() {
         // for the human
         return (this.stacks["human"] - this.stacks["cpu"])
+    }
+
+    getCustomBetAmount() {
+        return this.customBetAmount;
     }
 
     getMinBetAmount() {
