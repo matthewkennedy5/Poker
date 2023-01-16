@@ -94,7 +94,6 @@ class Game extends Component {
         this.props.setEnabledButtons(["nextHand"]);
     }
 
-    // TODO: for AIVAT, I may need to incorporate terminal_utility() into this.
     fold = () => {
         this.player_fold("human");
     };
@@ -122,7 +121,7 @@ class Game extends Component {
         } else if (this.street === "river") {
             this.street = "showdown"
         }
-        this.props.logMessage("--------------------------------");
+        this.props.logMessage("------------");
     }
 
     check = () => {
@@ -134,13 +133,6 @@ class Game extends Component {
         const action = {action: "call", amount: amount};
         this.registerAction(action);
     };
-    // TODO: Group public button methods
-
-    minBet = () => {
-        const amount = this.getMinBetAmount();
-        const action = {action: "bet", amount: amount};
-        this.registerAction(action);
-    };
 
     roundToSmallBlind(number) {
         return Math.round(number / SMALL_BLIND) * SMALL_BLIND;
@@ -149,14 +141,6 @@ class Game extends Component {
     betHalfPot = () => {
         const amount = this.roundToSmallBlind(this.props.getPot() / 2);
         this.registerAction({action: "bet", amount: amount})
-    };
-
-    betPot = () => {
-        this.registerAction({action: "bet", amount: this.props.getPot()});
-    };
-
-    allIn = () => {
-        this.registerAction({action: "bet", amount: this.stacks["human"]})
     };
 
     updateCustomBet = (event) => {
@@ -170,7 +154,7 @@ class Game extends Component {
         } else if (amount > this.stacks["human"]) {
             alert("Bet size is too large");
         } else if (amount < this.getMinBetAmount()) {
-            alert("Must bet at least " + this.getMinBetAmount());
+            alert("Must raise at least " + this.getMinBetAmount());
         } else {
             this.registerAction({action: "bet", amount: amount})
         }

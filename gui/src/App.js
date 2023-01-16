@@ -122,22 +122,24 @@ class App extends Component {
   }
 
   state = {
-    game: new Game({logMessage: this.logMessage,
-                    clearLog: this.clearLog,
-                    clearPot: this.clearPot,
-                    getPot: this.getPot,
-                    clearCards: this.clearCards,
-                    dealHumanCards: this.dealHumanCards,
-                    showCPUCards: this.showCPUCards,
-                    dealFlop: this.dealFlop,
-                    dealTurn: this.dealTurn,
-                    dealRiver: this.dealRiver,
-                    evaluateHands: this.evaluateHands,
-                    setEnabledButtons: this.setEnabledButtons,
-                    addToPot: this.addToPot,
-                    addToScore: this.addToScore,
-                    incrementHands: this.incrementHands,
-                    getCPUAction: this.getCPUAction}),
+    game: new Game({
+      logMessage: this.logMessage,
+      clearLog: this.clearLog,
+      clearPot: this.clearPot,
+      getPot: this.getPot,
+      clearCards: this.clearCards,
+      dealHumanCards: this.dealHumanCards,
+      showCPUCards: this.showCPUCards,
+      dealFlop: this.dealFlop,
+      dealTurn: this.dealTurn,
+      dealRiver: this.dealRiver,
+      evaluateHands: this.evaluateHands,
+      setEnabledButtons: this.setEnabledButtons,
+      addToPot: this.addToPot,
+      addToScore: this.addToScore,
+      incrementHands: this.incrementHands,
+      getCPUAction: this.getCPUAction
+    }),
     log: "",
     pot: 0,
     humanCards: ["back", "back"],
@@ -159,7 +161,7 @@ class App extends Component {
     }
   };
 
-  // Have it push the next hand button on load
+  // Automatically start the first hand when the app loads
   componentDidMount() {
     this.state.game.nextHand();
   }
@@ -174,18 +176,14 @@ class App extends Component {
                humanCards={this.state.humanCards}
                cpuCards={this.state.cpuCards}
                board={this.state.board}/>
-        <Buttons onNextHand={this.state.game.nextHand}
+        <Buttons nextHand={this.state.game.nextHand}
                  fold={this.state.game.fold}
                  check={this.state.game.check}
                  call={this.state.game.call}
-                 minBet={this.state.game.minBet}
-                 betHalfPot={this.state.game.betHalfPot}
-                 betPot={this.state.game.betPot}
-                 allIn={this.state.game.allIn}
+                 callAmount={this.state.game.getCallAmount()}
                  betCustom={this.state.game.betCustom}
                  updateCustomBet={this.state.game.updateCustomBet}
-                 enabledButtons={this.state.enabledButtons}
-          />
+                 enabledButtons={this.state.enabledButtons}/>
         <Log text={this.state.log}/>
       </div>
     );

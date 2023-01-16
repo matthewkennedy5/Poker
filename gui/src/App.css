@@ -106,16 +106,31 @@
 
 .log {
   position: absolute;
-  font-size: 2vh;
+  font-size: 1.5vh;
   top: 20vh;
   left: 80vw;
   white-space: pre-line;
 }
 
-/* .buttons {
-  position: absolute;
-  left: 5vw;
-  height: 200px;
-  width: 2000px;
-  border: 1px solid black;
-} */
+/* Buttons class to center the buttons below the table */
+.buttons {
+  display: flex;
+  margin: 5%;
+}
+
+/* Bootstrap button */
+.btn.btn-custom {
+  background-color: green;
+  border-radius: 10%;
+  border: none;
+  color: white;
+  font-size: 1rem;
+  padding: 4% 8%;
+  display: inline-block;
+  cursor: pointer;
+}
+
+
+
+
+
