@@ -35,19 +35,10 @@ class Buttons extends Component {
                         </button>)}
 
                     <button onClick={this.props.betCustom} className={BUTTON_STYLE} disabled={!enabled["betCustom"]}>
-                        Raise ${this.props.customBetAmount}
+                        Raise
                     </button>
 
-                {/* <input type="text" onChange={this.props.updateCustomBet} className="m-1" size="5"></input> */}
-
-                <input type="range" 
-                       className="m-1" 
-                       min={this.props.minBetAmount} 
-                       max={this.props.allInAmount} 
-                       disabled={!enabled["betCustom"]}
-                       step="1"
-                       onChange={this.props.updateCustomBet}
-                />
+                <input type="text" onChange={this.props.updateCustomBet} className="m-1" size="5"></input>
 
                 </div>
             );
