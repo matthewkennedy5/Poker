@@ -115,6 +115,8 @@
 /* Buttons class to center the buttons below the table */
 .buttons {
   display: flex;
+  align-items: stretch;
+  justify-content: center;
   margin: 5%;
 }
 
@@ -130,7 +132,11 @@
   cursor: pointer;
 }
 
-
+.dollar {
+  font-size: 2rem;
+  font-family: "Courier New";
+  align-self: center;
+}
 
 
 

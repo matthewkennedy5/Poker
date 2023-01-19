@@ -37,6 +37,8 @@ class Buttons extends Component {
                     <button onClick={this.props.betCustom} className={BUTTON_STYLE} disabled={!enabled["betCustom"]}>
                         Raise
                     </button>
+                
+                <h1 className="dollar">$</h1>
 
                 <input type="text" onChange={this.props.updateCustomBet} className="m-1" size="5"></input>
 
