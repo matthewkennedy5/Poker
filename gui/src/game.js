@@ -46,6 +46,7 @@ class Game extends Component {
     };
 
     nextHand = () => {
+        console.log('Next hand!');
         this.street = "preflop";
         if (this.dealer === "cpu") {
             this.dealer = "human";
