@@ -42,12 +42,10 @@ class Buttons extends Component {
 
                 <input type="range" 
                        className="m-1" 
-                    //    min={this.props.minBetAmount} 
-                    //    max={this.props.allInAmount} 
-                        min="0"
-                        max="1"
+                       min={this.props.minBetAmount} 
+                       max={this.props.allInAmount} 
                        disabled={!enabled["betCustom"]}
-                       step="0.01"
+                       step="1"
                        onChange={this.props.updateCustomBet}
                 />
 

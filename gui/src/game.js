@@ -142,8 +142,13 @@ class Game extends Component {
         this.registerAction({action: "bet", amount: amount})
     };
 
+    updateCustomBet = (event) => {
+        this.customBetAmount = event.target.value;
+        this.props.updateCustomBet(this.customBetAmount);
+    };
+
     betCustom = () => {
-        const amount = parseInt(this.props.getCustomBetAmount());
+        const amount = parseInt(this.customBetAmount);
         if (isNaN(amount)) {
             alert("Invalid bet amount")
         } else if (amount > this.stacks["human"]) {
@@ -226,11 +231,7 @@ class Game extends Component {
     }
 
     getPrevAction() {
-        try {
-            return this.history[this.street].slice(-1)[0];
-        } catch (e) {
-            return null;
-        }
+        return this.history[this.street].slice(-1)[0];
     }
 
     enableHumanButtons() {

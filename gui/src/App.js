@@ -121,17 +121,8 @@ class App extends Component {
       return response;
   }
 
-  updateCustomBet = (event) => {
-      // Interpolate the bet amount on a log scale between the min and max bet
-      const fraction = event.target.value;
-      const minBet = this.state.game.getMinBetAmount();
-      const maxBet = this.state.game.stacks["human"];
-      const amount = Math.round(minBet * Math.pow(maxBet / minBet, fraction));
+  updateCustomBet = (amount) => {
       this.setState({customBetAmount: amount});
-  }
-
-  getCustomBetAmount = () => {
-      return this.state.customBetAmount;
   }
 
   state = {
@@ -152,11 +143,10 @@ class App extends Component {
       addToScore: this.addToScore,
       incrementHands: this.incrementHands,
       getCPUAction: this.getCPUAction,
-      getCustomBetAmount: this.getCustomBetAmount,
+      updateCustomBet: this.updateCustomBet,
     }),
     log: "",
     pot: 0,
-    customBetAmount: 0,
     humanCards: ["back", "back"],
     cpuCards: ["back", "back"],
     board: ["back", "back", "back", "back", "back"], 
@@ -200,7 +190,7 @@ class App extends Component {
                  allInAmount={this.state.game.stacks["human"]}
                  betCustom={this.state.game.betCustom}
                  customBetAmount={this.state.customBetAmount}
-                 updateCustomBet={this.updateCustomBet}
+                 updateCustomBet={this.state.game.updateCustomBet}
                  enabledButtons={this.state.enabledButtons}/>
         <Log text={this.state.log}/>
       </div>
