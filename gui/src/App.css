@@ -1,3 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --button-color: #53d78b;
+  --fold-color: red;
+}
+
 .App {
   text-align: center;
 }
@@ -5,6 +14,7 @@
 .app {
   height: 100vh;
   width: 100vw;
+  background-color: #272727;
 }
 
 .App-logo {
@@ -123,14 +133,58 @@
 
 /* Bootstrap button */
 .btn.btn-custom {
-  background-color: green;
+  background-color: transparent;
+  border: 2px solid;
+  color: var(--button-color);
   border-radius: 10% / 20%;
-  border: none;
-  color: white;
   font-size: 1rem;
   padding: 4% 8%;
   display: inline-block;
+  font-family: Mulish,sans-serif;
+  font-weight: bold;
+}
+
+.btn.btn-custom:hover {
+  background-color: var(--button-color);  
+}
+
+.btn.fold {
+  color: var(--fold-color);
+}
+
+.btn.back {
+  color: white;
+}
+
+.btn.back:hover {
+  background-color: white;
+}
+
+.btn.fold:hover {
+  background-color: var(--fold-color);
+}
+
+.range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 10% / 50%;
+}
+
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 3vw;
+  height: 3vw;
+  border-radius: 100%;
+  background: orange;
+  transform: translateY(calc(-50% + 0.25vh));
+}
+
+.range-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 0.5vh;
   cursor: pointer;
+  background: gray;
 }
 
 .dollar {
