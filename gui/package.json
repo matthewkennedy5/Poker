@@ -18,6 +18,7 @@
   "scripts": {
     "start": "react-scripts --openssl-legacy-provider start",
     "build": "react-scripts --openssl-legacy-provider build",
+    "build-css": "tailwindcss build src/App.css -o src/tailwind.css",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

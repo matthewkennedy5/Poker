@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 :root {
   --button-color: #53d78b;
   --fold-color: red;
@@ -53,7 +49,7 @@
 }
 
 .poker-table, .single-card {
-  background-color: green;
+  background-color: rgb(16, 97, 34);
 }
 
 .poker-table {
@@ -164,10 +160,38 @@
   background-color: var(--fold-color);
 }
 
+.raise-controller {
+  display: flex;
+  flex-direction: column;
+  background-color: #2f2f2f;
+  border-radius: 1rem;
+  width: 40vw;
+}
+
+.default-buttons {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: space-evenly;
+  height: 50%;
+}
+
+.btn.default-bet {
+  color: white;
+  font-size: 0.8rem;
+  border-width: 0.01rem;
+  padding: 0px;
+  width: 25%;
+}
+
 .range-slider {
   -webkit-appearance: none;
   appearance: none;
-  border-radius: 10% / 50%;
+  width: 90%;
+  position: relative;
+  top: 50%;
+  left: 5%;
 }
 
 .range-slider::-webkit-slider-thumb {

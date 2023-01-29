@@ -41,20 +41,34 @@ class Buttons extends Component {
             // Display slider and options for betting
             return (
                 <div className="buttons">
-
-                    <div className="raise-ui">
-
-                        <input type="range"
-                            className="range-slider m-1"
-                            min={this.props.minBetAmount}
-                            max={this.props.allInAmount}
-                            onChange={this.props.updateCustomBet}/>
-
+                    <div className="raise-controller">
+                        <div className="default-buttons">
+                            <button className="btn btn-custom default-bet m-2" onClick={() => this.props.bet(this.props.minBetAmount)}>
+                                MIN RAISE
+                            </button>
+                            <button className="btn btn-custom default-bet m-2" onClick={() => this.props.bet(this.props.minBetAmount)}>
+                                1/2 POT
+                            </button>
+                            <button className="btn btn-custom default-bet m-2" onClick={() => this.props.bet(this.props.minBetAmount)}>
+                                3/4 POT
+                            </button>
+                            <button className="btn btn-custom default-bet m-2" onClick={() => this.props.bet(this.props.minBetAmount)}>
+                                POT
+                            </button>
+                            <button className="btn btn-custom default-bet m-2" onClick={() => this.props.bet(this.props.minBetAmount)}>
+                                ALL IN
+                            </button>
+                        </div>
+                        <div className="slider">
+                            <input type="range"
+                                className="range-slider m-1"
+                                min={this.props.minBetAmount}
+                                max={this.props.allInAmount}
+                                onChange={this.props.updateCustomBet}/>
+                        </div>
                     </div>
-
-
                     <button onClick={this.hideRaiseUI} className={BUTTON_STYLE + " back"}>BACK</button>
-
+                    <button onClick={this.props.bet} className={BUTTON_STYLE}>RAISE</button>
                 </div>
             );
         } else {
