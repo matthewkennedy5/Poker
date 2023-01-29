@@ -182,9 +182,9 @@ class App extends Component {
   render() {
     return (
       <div className="app">
-        <Score className="score"
+        {/* <Score className="score"
                score={this.state.score}
-               hands={this.state.hands}/> 
+               hands={this.state.hands}/>  */}
         <Table pot={this.state.pot}
                humanCards={this.state.humanCards}
                cpuCards={this.state.cpuCards}
