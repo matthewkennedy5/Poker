@@ -91,6 +91,18 @@ class App extends Component {
       return this.state.pot;
   }
 
+  updateBetAmountFromEvent = (event) => {
+    const amount = parseInt(event.target.value);
+    if (amount > 0) {
+        this.updateBetAmount(amount);
+    }
+  }
+
+  updateBetAmount = (amount) => {
+    this.setState({betAmount: amount});
+    console.log("Bet amount: " + amount);
+  }
+
   addToScore = (winnings) => {
       const score = this.state.score + winnings;
       this.state.score = score;
@@ -158,7 +170,8 @@ class App extends Component {
         allIn: false,
         peek: false,
         betCustom:false
-    }
+    },
+    betAmount: 0
   };
 
   // Automatically start the first hand when the app loads
@@ -181,10 +194,15 @@ class App extends Component {
                  check={this.state.game.check}
                  call={this.state.game.call}
                  callAmount={this.state.game.getCallAmount()}
-                 betCustom={this.state.game.betCustom}
-                 updateCustomBet={this.state.game.updateCustomBet}
+                 bet={() => this.state.game.bet(this.state.betAmount)}
+                 updateBetAmount={this.updateBetAmount}
+                 updateBetAmountFromEvent={this.updateBetAmountFromEvent}
+                 betAmount={this.state.betAmount}
+                 minBetAmount={this.state.game.getMinBetAmount()}
+                 allInAmount={this.state.game.getAllInAmount()}
+                 pot={this.state.pot}
                  enabledButtons={this.state.enabledButtons}/>
-        <Log text={this.state.log}/>
+        {/* <Log text={this.state.log}/> */}
       </div>
     );
   };

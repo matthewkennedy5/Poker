@@ -11,6 +11,10 @@
   height: 100vh;
   width: 100vw;
   background-color: #272727;
+  font-family: Mulish,sans-serif;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .App-logo {
@@ -53,9 +57,9 @@
 }
 
 .poker-table {
-  border-radius: 25%;
+  border-radius: 20vw;
   margin: 5%;
-  width: 70%;
+  width: 90%;
   height: 70%;
 }
 
@@ -117,14 +121,7 @@
   top: 20vh;
   left: 80vw;
   white-space: pre-line;
-}
-
-/* Buttons class to center the buttons below the table */
-.buttons {
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  margin: 5%;
+  color: white;
 }
 
 /* Bootstrap button */
@@ -132,11 +129,10 @@
   background-color: transparent;
   border: 2px solid;
   color: var(--button-color);
-  border-radius: 10% / 20%;
-  font-size: 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
   padding: 4% 8%;
   display: inline-block;
-  font-family: Mulish,sans-serif;
   font-weight: bold;
 }
 
@@ -160,12 +156,35 @@
   background-color: var(--fold-color);
 }
 
+.buttons {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  margin: 1%;
+  height: 8vh;
+}
+
 .raise-controller {
   display: flex;
   flex-direction: column;
   background-color: #2f2f2f;
-  border-radius: 1rem;
-  width: 40vw;
+  border-radius: 0.5rem;
+  flex-basis: 75%;
+}
+
+.back-raise-buttons {
+  flex-basis: 25%;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+#back-button {
+  flex-basis: 50%;
+}
+
+#raise-button {
+  flex-basis: 50%;
 }
 
 .default-buttons {
@@ -177,10 +196,15 @@
   height: 50%;
 }
 
+.slider {
+  height: 50%;
+}
+
 .btn.default-bet {
   color: white;
-  font-size: 0.8rem;
+  font-size: 50%;
   border-width: 0.01rem;
+  border-radius: 0.2rem;
   padding: 0px;
   width: 25%;
 }
@@ -190,18 +214,21 @@
   appearance: none;
   width: 90%;
   position: relative;
-  top: 50%;
   left: 5%;
 }
 
 .range-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 3vw;
-  height: 3vw;
+  width: 25px;
+  height: 25px;
   border-radius: 100%;
   background: orange;
   transform: translateY(calc(-50% + 0.25vh));
+}
+
+#slider {
+  background-color: gray;
 }
 
 .range-slider::-webkit-slider-runnable-track {
@@ -209,13 +236,39 @@
   height: 0.5vh;
   cursor: pointer;
   background: gray;
+  position: relative;
+  top: 0.25vh;
 }
 
-.dollar {
-  font-size: 2rem;
-  font-family: "Courier New";
-  align-self: center;
+#your-bet {
+  background-color: #2f2f2f;
+  border-radius: 0.5rem;
+  width: 30vw;
+  height: 8vh;
+  margin: 1%;
 }
 
+#label {
+  font-size: 0.8rem;
+  color: gray;
+  text-align: center;
+  height: 33%;
+  margin: 0; 
+  padding: 3%;
+}
 
-
+#betInput {
+  width: 90%;
+  text-align: center;
+  margin: 1%;
+  background: rgba(255,255,255,.04);
+  border-style: solid;
+  border-radius: 0.3rem;
+  border-width: 0.01rem;
+  color: white;
+  font-weight: bold; 
+  font-size: 1.8rem;
+  padding: 0;
+  margin: 0;
+  height: 50%;
+}

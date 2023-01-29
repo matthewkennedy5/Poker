@@ -40,35 +40,45 @@ class Buttons extends Component {
         } else if (this.state.raiseUIVisible) {
             // Display slider and options for betting
             return (
-                <div className="buttons">
-                    <div className="raise-controller">
-                        <div className="default-buttons">
-                            <button className="btn btn-custom default-bet m-2" onClick={() => this.props.bet(this.props.minBetAmount)}>
-                                MIN RAISE
-                            </button>
-                            <button className="btn btn-custom default-bet m-2" onClick={() => this.props.bet(this.props.minBetAmount)}>
-                                1/2 POT
-                            </button>
-                            <button className="btn btn-custom default-bet m-2" onClick={() => this.props.bet(this.props.minBetAmount)}>
-                                3/4 POT
-                            </button>
-                            <button className="btn btn-custom default-bet m-2" onClick={() => this.props.bet(this.props.minBetAmount)}>
-                                POT
-                            </button>
-                            <button className="btn btn-custom default-bet m-2" onClick={() => this.props.bet(this.props.minBetAmount)}>
-                                ALL IN
-                            </button>
+                <div>
+                    <div id="your-bet">
+                        <p id="label">Your bet</p>
+                        <input type="text" id="betInput" value={this.props.betAmount} onChange={this.props.updateBetAmountFromEvent} className="m-1"/>
+                    </div>
+                    <div className="buttons">
+                        <div className="raise-controller">
+                            <div className="default-buttons">
+                                <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.minBetAmount)}>
+                                    MIN RAISE
+                                </button>
+                                <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot / 2)}>
+                                    1/2 POT
+                                </button>
+                                <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot * 3/4)}>
+                                    3/4 POT
+                                </button>
+                                <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot)}>
+                                    POT
+                                </button>
+                                <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.allInAmount)}>
+                                    ALL IN
+                                </button>
+                            </div>
+                            <div className="slider">
+                                <input type="range"
+                                    className="range-slider m-1"
+                                    id="slider"
+                                    min={this.props.minBetAmount}
+                                    max={this.props.allInAmount}
+                                    value={this.props.betAmount}
+                                    onChange={this.props.updateBetAmountFromEvent}/>
+                            </div>
                         </div>
-                        <div className="slider">
-                            <input type="range"
-                                className="range-slider m-1"
-                                min={this.props.minBetAmount}
-                                max={this.props.allInAmount}
-                                onChange={this.props.updateCustomBet}/>
+                        <div className="back-raise-buttons">
+                            <button onClick={this.hideRaiseUI} id="back-button" className={BUTTON_STYLE + " back"}>BACK</button>
+                            <button onClick={this.props.bet} id="raise-button" className={BUTTON_STYLE}>RAISE</button>
                         </div>
                     </div>
-                    <button onClick={this.hideRaiseUI} className={BUTTON_STYLE + " back"}>BACK</button>
-                    <button onClick={this.props.bet} className={BUTTON_STYLE}>RAISE</button>
                 </div>
             );
         } else {

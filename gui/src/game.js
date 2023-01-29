@@ -143,22 +143,26 @@ class Game extends Component {
         this.registerAction({action: "bet", amount: amount})
     };
 
-    updateCustomBet = (event) => {
-        this.custBetAmount = event.target.value;
+    // updateCustomBet = (event) => {
+    //     this.custBetAmount = event.target.value;
+    // };
+
+    bet = (amount) => {
+        this.registerAction({action: "bet", amount: amount})
     };
 
-    betCustom = () => {
-        const amount = parseInt(this.custBetAmount);
-        if (isNaN(amount)) {
-            alert("Invalid bet amount")
-        } else if (amount > this.stacks["human"]) {
-            alert("Bet size is too large");
-        } else if (amount < this.getMinBetAmount()) {
-            alert("Must raise at least " + this.getMinBetAmount());
-        } else {
-            this.registerAction({action: "bet", amount: amount})
-        }
-    };
+    // betCustom = () => {
+    //     const amount = parseInt(this.custBetAmount);
+    //     if (isNaN(amount)) {
+    //         alert("Invalid bet amount")
+    //     } else if (amount > this.stacks["human"]) {
+    //         alert("Bet size is too large");
+    //     } else if (amount < this.getMinBetAmount()) {
+    //         alert("Must raise at least " + this.getMinBetAmount());
+    //     } else {
+    //         this.registerAction({action: "bet", amount: amount})
+    //     }
+    // };
 
     async cpuAction() {
         const result = await this.props.getCPUAction(this.cpuCards, this.history);
@@ -218,12 +222,20 @@ class Game extends Component {
     }
 
     getMinBetAmount() {
-        let minBetAmount = SMALL_BLIND;
         const prevAction = this.getPrevAction();
-        if (prevAction && prevAction["amount"] > 0) {
+        let minBetAmount = SMALL_BLIND;
+        if (prevAction === undefined) {
+            // On the first action of the preflop, the min bet is the big blind.
+            minBetAmount = BIG_BLIND;
+        } else if (prevAction && prevAction["amount"] > 0) {
+            // Otherwise the min bet is twice the previous bet. 
             minBetAmount = 2 * prevAction["amount"];
         }
         return minBetAmount;
+    }
+
+    getAllInAmount() {
+        return this.stacks["human"];
     }
 
     getPrevAction() {
