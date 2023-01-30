@@ -46,7 +46,6 @@ class Game extends Component {
     };
 
     nextHand = () => {
-        console.log('Next hand!');
         this.street = "preflop";
         if (this.dealer === "cpu") {
             this.dealer = "human";
@@ -61,7 +60,6 @@ class Game extends Component {
         };
         this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
         this.bets = [0, 0];
-        this.props.clearLog();
         this.props.clearPot();
         this.props.clearCards();
         const random = new Random();
@@ -85,7 +83,6 @@ class Game extends Component {
             }
         }
         if (player === "human") {
-            this.props.logMessage("HUMAN folds.");
             this.props.addToScore(-losings);
         } else {
             this.props.addToScore(losings);
@@ -102,7 +99,7 @@ class Game extends Component {
         this.props.addToPot(action["amount"]);
         this.history[this.street].push(action);
         this.stacks["human"] -= action["amount"];
-        this.updateLog("human", action);
+        // this.updateLog("human", action);
         if (this.bettingIsOver()) {
             this.advanceStreet();
             this.playStreet();
@@ -121,7 +118,6 @@ class Game extends Component {
         } else if (this.street === "river") {
             this.street = "showdown"
         }
-        this.props.logMessage("------------");
     }
 
     check = () => {
@@ -142,10 +138,6 @@ class Game extends Component {
         const amount = this.roundToSmallBlind(this.props.getPot() / 2);
         this.registerAction({action: "bet", amount: amount})
     };
-
-    // updateCustomBet = (event) => {
-    //     this.custBetAmount = event.target.value;
-    // };
 
     bet = (amount) => {
         this.registerAction({action: "bet", amount: amount})
@@ -168,7 +160,7 @@ class Game extends Component {
         const result = await this.props.getCPUAction(this.cpuCards, this.history);
         const action = result.data;
         this.stacks["cpu"] -= action["amount"];
-        this.updateLog("cpu", action);
+        // this.updateLog("cpu", action);
         if (action["action"] === "fold") {
             this.player_fold("cpu");
             return;
@@ -180,22 +172,6 @@ class Game extends Component {
             this.advanceStreet();
             this.playStreet();
         }
-    };
-
-    updateLog(player, action) {
-        let message = player.toUpperCase() + " ";
-        if (action["action"] === "bet") {
-            message += "bets $" + action["amount"];
-        } else if (action["action"] === "call") {
-            message += "calls $" + action["amount"];
-        } else if (action["action"] === "check") {
-            message += "checks"
-        } else if (action["action"] === "fold") {
-            message += "folds"
-        } else {
-            alert("Action not understood: " + action["action"]);
-        }
-        this.props.logMessage(message);
     };
 
     streetBets(streetActions) {
@@ -306,12 +282,9 @@ class Game extends Component {
         const pot = this.props.getPot();
         if (winner === "human") {
             this.props.addToScore(pot);
-            this.props.logMessage("HUMAN wins a pot of $" + pot);
         } else if (winner === "cpu") {
             this.props.addToScore(-pot);
-            this.props.logMessage("CPU wins a pot of $" + pot);
         } else if (winner === "tie") {
-            this.props.logMessage("Split pot");
         }
         this.props.incrementHands();
         this.props.setEnabledButtons(["nextHand"]);

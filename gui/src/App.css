@@ -101,7 +101,7 @@
   border: 0px;
 }
 
-.pot, .cpu-stack, .human-stack {
+label {
   position: absolute;
   width: 100%;
   left: 0;
@@ -294,4 +294,18 @@
 
 #label-and-buttons {
   display: flex;
+}
+
+.cpu-action {
+  top: 15vh;
+  left: 70vw;  
+  width: 30vw;
+  text-align: left;
+}
+
+.human-action {
+  top: 55vh;
+  left: 70vw;
+  width: 30vw;
+  text-align: left;
 }

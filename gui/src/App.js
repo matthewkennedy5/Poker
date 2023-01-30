@@ -12,22 +12,6 @@ const URL = 'http://localhost'
 
 class App extends Component {
 
-  clearLog = () => {
-    this.state.log = "";
-    this.setState({log: ""});
-  };
-
-  logMessage = (message) => {
-    let log = "";
-    if (this.state.log === "") {
-        log = message;
-    } else {
-        log = this.state.log + "\n" + message;
-    }
-    this.setState({log: log});
-    this.state.log = log;
-  };
-
   clearPot = () => {
       this.state.pot = 0;
       this.setState({pot: 0});
@@ -100,7 +84,6 @@ class App extends Component {
 
   updateBetAmount = (amount) => {
     this.setState({betAmount: amount});
-    console.log("Bet amount: " + amount);
   }
 
   addToScore = (winnings) => {
@@ -135,8 +118,8 @@ class App extends Component {
 
   state = {
     game: new Game({
-      logMessage: this.logMessage,
-      clearLog: this.clearLog,
+      // logMessage: this.logMessage,
+      // clearLog: this.clearLog,
       clearPot: this.clearPot,
       getPot: this.getPot,
       clearCards: this.clearCards,
@@ -152,7 +135,6 @@ class App extends Component {
       incrementHands: this.incrementHands,
       getCPUAction: this.getCPUAction
     }),
-    log: "",
     pot: 0,
     humanCards: ["back", "back"],
     cpuCards: ["back", "back"],
@@ -187,6 +169,8 @@ class App extends Component {
                hands={this.state.hands}/>  */}
         <Table pot={this.state.pot}
                stacks={this.state.game.getStacks()}
+               humanActionText="Human action placeholder"
+               cpuActionText="CPU action placeholder"
                humanCards={this.state.humanCards}
                cpuCards={this.state.cpuCards}
                board={this.state.board}/>
