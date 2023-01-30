@@ -23,6 +23,8 @@ class Table extends Component {
                     </div>
                 </div>
                 <label className="pot">pot: ${this.props.pot}</label>
+                <label className="cpu-stack">stack: ${this.props.stacks["cpu"]}</label>
+                <label className="human-stack">stack: ${this.props.stacks["human"]}</label>
             </div>
         );
     };

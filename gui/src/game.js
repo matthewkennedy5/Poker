@@ -238,6 +238,10 @@ class Game extends Component {
         return this.stacks["human"];
     }
 
+    getStacks() {
+        return this.stacks;
+    }
+
     getPrevAction() {
         return this.history[this.street].slice(-1)[0];
     }

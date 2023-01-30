@@ -186,6 +186,7 @@ class App extends Component {
                score={this.state.score}
                hands={this.state.hands}/>  */}
         <Table pot={this.state.pot}
+               stacks={this.state.game.getStacks()}
                humanCards={this.state.humanCards}
                cpuCards={this.state.cpuCards}
                board={this.state.board}/>
