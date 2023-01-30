@@ -156,24 +156,17 @@
   background-color: var(--fold-color);
 }
 
-.buttons {
-  display: flex;
-  align-items: stretch;
-  justify-content: stretch;
-  margin: 1%;
-  height: 8vh;
-}
-
 .raise-controller {
   display: flex;
   flex-direction: column;
   background-color: #2f2f2f;
   border-radius: 0.5rem;
-  flex-basis: 75%;
+  margin: 1%;
+  height: 8vh;
 }
 
 .back-raise-buttons {
-  flex-basis: 25%;
+  flex-basis: 50%;
   display: flex;
   align-items: stretch;
   justify-content: stretch;
@@ -246,6 +239,7 @@
   width: 30vw;
   height: 8vh;
   margin: 1%;
+  flex-basis: 50%;
 }
 
 #label {
@@ -271,4 +265,8 @@
   padding: 0;
   margin: 0;
   height: 50%;
+}
+
+#label-and-buttons {
+  display: flex;
 }
