@@ -252,7 +252,7 @@ class Game extends Component {
             enabled.push("betPot");
         }
         enabled.push("allIn");
-        enabled.push("betCustom");
+        enabled.push("raise");
         this.props.setEnabledButtons(enabled);
     };
 

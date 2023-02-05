@@ -93,7 +93,7 @@ class Buttons extends Component {
                             {call_text}
                         </button>)}
 
-                    <button onClick={this.showRaiseUI} className={BUTTON_STYLE} disabled={!enabled["betCustom"]}>
+                    <button onClick={this.showRaiseUI} className={BUTTON_STYLE} disabled={!enabled["raise"]}>
                         RAISE
                     </button>
 

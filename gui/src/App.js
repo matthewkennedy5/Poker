@@ -102,24 +102,19 @@ class App extends Component {
   state = {
     game: new Game({
       evaluateHands: this.evaluateHands,
-      setEnabledButtons: this.setEnabledButtons,  // game.js shouldn't know about the buttons or UI
       // addToScore: this.addToScore,
       incrementHands: this.incrementHands,
-      getCPUAction: this.getCPUAction
+      getCPUAction: this.getCPUAction,
+      setEnabledButtons: this.setEnabledButtons
     }),
     // score: 0,
     hands: 0,
-    enabledButtons: {  // TODO: I think enabledButtons is unused now
+    enabledButtons: {
         nextHand: true,
         fold: false,
         check: false,
         call: false,
-        minBet: false,
-        betHalfPot: false,
-        betPot: false,
-        allIn: false,
-        peek: false,
-        betCustom:false
+        raise: false
     },
     betAmount: 0
   };
