@@ -39,7 +39,7 @@ class Game extends Component {
             turn: [],
             river: []
         };
-        this.score = 0;
+        // this.score = 0;
         this.numHands = 0;
         this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
         this.pot = 0;
@@ -82,11 +82,11 @@ class Game extends Component {
                 losings = BIG_BLIND;
             }
         }
-        if (player === "human") {
-            this.props.addToScore(-losings);
-        } else {
-            this.props.addToScore(losings);
-        }
+        // if (player === "human") {
+        //     this.props.addToScore(-losings);
+        // } else {
+        //     this.props.addToScore(losings);
+        // }
         this.props.incrementHands();
         this.props.setEnabledButtons(["nextHand"]);
     }
@@ -276,12 +276,12 @@ class Game extends Component {
         const result = await this.props.evaluateHands(humanHand, cpuHand);
         const winner = result.data
 
-        if (winner === "human") {
-            this.props.addToScore(this.pot);
-        } else if (winner === "cpu") {
-            this.props.addToScore(-this.pot);
-        } else if (winner === "tie") {
-        }
+        // if (winner === "human") {
+        //     this.props.addToScore(this.pot);
+        // } else if (winner === "cpu") {
+        //     this.props.addToScore(-this.pot);
+        // } else if (winner === "tie") {
+        // }
         this.props.incrementHands();
         this.props.setEnabledButtons(["nextHand"]);
     };

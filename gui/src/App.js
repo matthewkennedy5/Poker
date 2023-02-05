@@ -68,11 +68,11 @@ class App extends Component {
     this.setState({betAmount: amount});
   }
 
-  addToScore = (winnings) => {
-      const score = this.state.score + winnings;
-      this.state.score = score;
-      this.setState({score: score});
-  }
+  // addToScore = (winnings) => {
+  //     const score = this.state.score + winnings;
+  //     this.state.score = score;
+  //     this.setState({score: score});
+  // }
 
   incrementHands = () => {
       const nHands = this.state.hands + 1;
@@ -100,7 +100,6 @@ class App extends Component {
 
   state = {
     game: new Game({
-      clearPot: this.clearPot,
       clearCards: this.clearCards,
       dealHumanCards: this.dealHumanCards,
       showCPUCards: this.showCPUCards,
@@ -109,14 +108,14 @@ class App extends Component {
       dealRiver: this.dealRiver,
       evaluateHands: this.evaluateHands,
       setEnabledButtons: this.setEnabledButtons,  // game.js shouldn't know about the buttons or UI
-      addToScore: this.addToScore,
+      // addToScore: this.addToScore,
       incrementHands: this.incrementHands,
       getCPUAction: this.getCPUAction
     }),
     humanCards: ["back", "back"],
     cpuCards: ["back", "back"],
     board: ["back", "back", "back", "back", "back"], 
-    score: 0,
+    // score: 0,
     hands: 0,
     enabledButtons: {
         nextHand: true,
