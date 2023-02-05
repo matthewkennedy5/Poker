@@ -205,16 +205,19 @@ class Game extends Component {
     }
 
     getPrevAction() {
-        return this.history[this.street].slice(-1)[0];
+        try {
+            return this.history[this.street].slice(-1)[0];
+        } catch (e) {
+            return undefined;
+        }
     }
 
     getPrevHumanAction() {
-        // return this.getPrevAction();
-        return "placeholder";
+        return JSON.stringify(this.getPrevAction());
     }
 
     getPrevCPUAction() {
-        return "placeholder";
+        return JSON.stringify(this.getPrevAction());
     }
 
     enableHumanButtons() {
