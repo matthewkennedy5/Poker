@@ -39,15 +39,6 @@ class App extends Component {
       this.setState({board: board});
   };
 
-  clearCards = () => {
-      const board = ["back", "back", "back", "back", "back"];
-      const hand = ["back", "back"];
-      this.setState({board: board, humanCards: hand, cpuCards: hand});
-      this.state.board = board;
-      this.state.humanCards = hand;
-      this.state.cpuCards = hand;
-  }
-
   setEnabledButtons = (buttons) => {
       let enabled = {}
       for (let button of buttons) {
@@ -137,7 +128,6 @@ class App extends Component {
 
   state = {
     game: new Game({
-      clearCards: this.clearCards,
       dealHumanCards: this.dealHumanCards,
       showCPUCards: this.showCPUCards,
       dealFlop: this.dealFlop,
