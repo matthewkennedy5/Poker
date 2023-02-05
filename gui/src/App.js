@@ -95,7 +95,7 @@ class App extends Component {
       const response = await axios.get(URL + '/api/bot', {
           params: {
               cpuCards: cpuCards.join(),
-              board: this.state.board.join(),
+              board: this.getDisplayedBoardCards().join(),
               history: history
           }
       });
