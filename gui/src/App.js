@@ -118,10 +118,8 @@ class App extends Component {
 
   state = {
     game: new Game({
-      // logMessage: this.logMessage,
-      // clearLog: this.clearLog,
       clearPot: this.clearPot,
-      getPot: this.getPot,
+      // getPot: this.getPot,      // TODO: have game.js store the pot amount
       clearCards: this.clearCards,
       dealHumanCards: this.dealHumanCards,
       showCPUCards: this.showCPUCards,
@@ -129,13 +127,13 @@ class App extends Component {
       dealTurn: this.dealTurn,
       dealRiver: this.dealRiver,
       evaluateHands: this.evaluateHands,
-      setEnabledButtons: this.setEnabledButtons,
-      addToPot: this.addToPot,
+      setEnabledButtons: this.setEnabledButtons,  // game.js shouldn't know about the buttons or UI
+      // addToPot: this.addToPot,
       addToScore: this.addToScore,
       incrementHands: this.incrementHands,
       getCPUAction: this.getCPUAction
     }),
-    pot: 0,
+    // pot: 0,
     humanCards: ["back", "back"],
     cpuCards: ["back", "back"],
     board: ["back", "back", "back", "back", "back"], 
@@ -185,7 +183,7 @@ class App extends Component {
                  betAmount={this.state.betAmount}
                  minBetAmount={this.state.game.getMinBetAmount()}
                  allInAmount={this.state.game.getAllInAmount()}
-                 pot={this.state.pot}
+                 pot={this.state.game.pot}
                  enabledButtons={this.state.enabledButtons}/>
         {/* <Log text={this.state.log}/> */}
       </div>

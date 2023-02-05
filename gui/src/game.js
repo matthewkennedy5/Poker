@@ -42,7 +42,7 @@ class Game extends Component {
         this.score = 0;
         this.numHands = 0;
         this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
-        this.custBetAmount = 0;
+        this.pot = 0;
     };
 
     nextHand = () => {
@@ -95,12 +95,8 @@ class Game extends Component {
         this.player_fold("human");
     };
 
-    // TODO: Change this to a MVC architecture. game.js should not know 
-    // about any of the specific UI components. game.js should just have getter 
-    // methods to get whatever info the UI needs, and methods to make things happen in the game state.
-    // The game logic should be orthogonal from the UI. 
     registerAction(action) {
-        this.props.addToPot(action["amount"]);
+        this.pot += action["amount"];
         this.history[this.street].push(action);
         this.stacks["human"] -= action["amount"];
         if (this.bettingIsOver()) {
@@ -138,7 +134,7 @@ class Game extends Component {
     };
 
     betHalfPot = () => {
-        const amount = this.roundToSmallBlind(this.props.getPot() / 2);
+        const amount = this.roundToSmallBlind(this.pot / 2);
         this.registerAction({action: "bet", amount: amount})
     };
 
@@ -155,7 +151,7 @@ class Game extends Component {
             this.player_fold("cpu");
             return;
         }
-        this.props.addToPot(action["amount"]);
+        this.pot += action["amount"];
         this.history[this.street].push(action);
         this.enableHumanButtons();
         if (this.bettingIsOver()) {
@@ -244,11 +240,10 @@ class Game extends Component {
         if (this.getMinBetAmount() <= stack) {
             enabled.push("minBet");
         }
-        const pot = this.props.getPot();
-        if (stack >= pot/2 && pot/2 > this.getCallAmount()) {
+        if (stack >= this.pot/2 && this.pot/2 > this.getCallAmount()) {
             enabled.push("betHalfPot");
         }
-        if (stack >= pot) {
+        if (stack >= this.pot) {
             enabled.push("betPot");
         }
         enabled.push("allIn");
