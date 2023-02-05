@@ -87,7 +87,6 @@ class Game extends Component {
         //     this.props.addToScore(losings);
         // }
         this.props.incrementHands();
-        this.props.setEnabledButtons(["nextHand"]);
     }
 
     fold = () => {
@@ -155,13 +154,13 @@ class Game extends Component {
         }
         this.pot += action["amount"];
         this.history[this.street].push(action);
-        this.enableHumanButtons();
         if (this.bettingIsOver()) {
             this.advanceStreet();
             this.playStreet();
         }
     };
 
+    // Returns the total amount of money bet by each player on the current street
     streetBets(streetActions) {
         // We know the previous bet was from the CPU, so we use that fact to know
         // which player is which in the action history.
@@ -222,40 +221,6 @@ class Game extends Component {
         return JSON.stringify(this.getPrevAction());
     }
 
-    enableHumanButtons() {
-        const history = this.history[this.street]
-        const firstAction = history.length === 0;
-        const bets = this.streetBets(history);
-        const totalHumanBet = bets[0];
-        const totalCPUBet = bets[1];
-        let prevAction = "";
-        if (!firstAction) {
-            prevAction = history[history.length - 1]
-        }
-
-        let enabled = ["fold"];
-
-        if (this.street !== "preflop" && (firstAction || prevAction["action"] === "check")) {
-            enabled.push("check");
-        }
-        if (totalHumanBet < totalCPUBet) {
-            enabled.push("call");
-        }
-        const stack = this.stacks["human"];
-        if (this.getMinBetAmount() <= stack) {
-            enabled.push("minBet");
-        }
-        if (stack >= this.pot/2 && this.pot/2 > this.getCallAmount()) {
-            enabled.push("betHalfPot");
-        }
-        if (stack >= this.pot) {
-            enabled.push("betPot");
-        }
-        enabled.push("allIn");
-        enabled.push("raise");
-        this.props.setEnabledButtons(enabled);
-    };
-
     bettingIsOver() {
         const prevAction = this.getPrevAction()["action"];
         if (prevAction === "check") {
@@ -279,7 +244,6 @@ class Game extends Component {
         // } else if (winner === "tie") {
         // }
         this.props.incrementHands();
-        this.props.setEnabledButtons(["nextHand"]);
     };
 
     playStreet() {
@@ -291,13 +255,11 @@ class Game extends Component {
 
         if (this.street === "preflop") {
             if (this.dealer === "human") {
-                this.enableHumanButtons();
             } else {
                 this.cpuAction();
             }
         } else {
             if (this.dealer === "cpu") {
-                this.enableHumanButtons();
             } else {
                 this.cpuAction();
             }

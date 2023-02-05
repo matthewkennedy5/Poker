@@ -12,13 +12,23 @@ const URL = 'http://localhost'
 
 class App extends Component {
 
-  setEnabledButtons = (buttons) => {
-      let enabled = {}
-      for (let button of buttons) {
-          enabled[button] = true;
-          this.state.enabledButtons[button] = true;
+  getEnabledButtons = () => {
+      const street = this.state.game.street;
+      const prevAction = this.state.game.getPrevAction();
+
+      if (prevAction === "fold" || street === "showdown") {
+          return ["nextHand"];
       }
-      this.setState({enabledButtons: enabled})
+
+      let enabled = ["fold"];
+      if (street !== "preflop" && (prevAction === undefined || prevAction["action"] === "check")) {
+          enabled.push("check");
+      }
+      if (this.state.game.getCallAmount() > 0) {
+          enabled.push("call");
+      }
+      enabled.push("raise");
+      return enabled;
   }
 
   updateBetAmountFromEvent = (event) => {
@@ -105,7 +115,6 @@ class App extends Component {
       // addToScore: this.addToScore,
       incrementHands: this.incrementHands,
       getCPUAction: this.getCPUAction,
-      setEnabledButtons: this.setEnabledButtons
     }),
     // score: 0,
     hands: 0,
@@ -149,7 +158,7 @@ class App extends Component {
                  minBetAmount={this.state.game.getMinBetAmount()}
                  allInAmount={this.state.game.getAllInAmount()}
                  pot={this.state.game.pot}
-                 enabledButtons={this.state.enabledButtons}/>
+                 enabledButtons={this.getEnabledButtons()}/>
       </div>
     );
   };

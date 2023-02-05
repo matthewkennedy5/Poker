@@ -29,7 +29,7 @@ class Buttons extends Component {
             call_text += " $" + this.props.callAmount;
         }
 
-        if (enabled["nextHand"]) {
+        if (enabled.includes("nextHand")) {
             return (
                 <div className="buttons">
                     <button onClick={this.props.nextHand} className={BUTTON_STYLE}>
@@ -85,19 +85,19 @@ class Buttons extends Component {
             // Normal row of buttons: Call Raise Fold
             return (
                 <div className="buttons">
-                    {enabled["check"] ?
-                        (<button onClick={this.props.check} className={BUTTON_STYLE} disabled={!enabled["check"]}>
+                    {enabled.includes("check") ?
+                        (<button onClick={this.props.check} className={BUTTON_STYLE} disabled={!enabled.includes("check")}>
                             CHECK
                         </button>)
-                        : (<button onClick={this.props.call} className={BUTTON_STYLE} disabled={!enabled["call"]}>
+                        : (<button onClick={this.props.call} className={BUTTON_STYLE} disabled={!enabled.includes("call")}>
                             {call_text}
                         </button>)}
 
-                    <button onClick={this.showRaiseUI} className={BUTTON_STYLE} disabled={!enabled["raise"]}>
+                    <button onClick={this.showRaiseUI} className={BUTTON_STYLE} disabled={!enabled.includes("raise")}>
                         RAISE
                     </button>
 
-                    <button onClick={this.props.fold} className={BUTTON_STYLE + " fold"} disabled={!enabled["fold"]}>
+                    <button onClick={this.props.fold} className={BUTTON_STYLE + " fold"} disabled={!enabled.includes("fold")}>
                         FOLD
                     </button>
                 </div>
