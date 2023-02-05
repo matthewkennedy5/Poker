@@ -296,13 +296,6 @@ class Game extends Component {
                 this.cpuAction();
             }
         } else {
-            if (this.street === "flop") {
-                this.props.dealFlop(this.board.slice(0, 3));
-            } else if (this.street === "turn") {
-                this.props.dealTurn(this.board[3]);
-            } else if (this.street === "river") {
-                this.props.dealRiver(this.board[4]);
-            }
             if (this.dealer === "cpu") {
                 this.enableHumanButtons();
             } else {

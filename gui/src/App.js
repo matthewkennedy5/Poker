@@ -12,25 +12,6 @@ const URL = 'http://localhost'
 
 class App extends Component {
 
-  dealFlop = (flopCards) => {
-      flopCards.push("back");
-      flopCards.push("back");
-      this.setState({board: flopCards})
-      this.state.board = flopCards;
-  };
-
-  dealTurn = (card) => {
-      let board = this.state.board;
-      board[3] = card;
-      this.setState({board: board});
-  };
-
-  dealRiver = (card) => {
-      let board = this.state.board;
-      board[4] = card;
-      this.setState({board: board});
-  };
-
   setEnabledButtons = (buttons) => {
       let enabled = {}
       for (let button of buttons) {
@@ -120,9 +101,6 @@ class App extends Component {
 
   state = {
     game: new Game({
-      dealFlop: this.dealFlop,
-      dealTurn: this.dealTurn,
-      dealRiver: this.dealRiver,
       evaluateHands: this.evaluateHands,
       setEnabledButtons: this.setEnabledButtons,  // game.js shouldn't know about the buttons or UI
       // addToScore: this.addToScore,
