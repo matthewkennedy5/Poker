@@ -12,10 +12,6 @@ const URL = 'http://localhost'
 
 class App extends Component {
 
-  showCPUCards = (cpuCards) => {
-      this.setState({cpuCards: cpuCards});
-  };
-
   dealFlop = (flopCards) => {
       flopCards.push("back");
       flopCards.push("back");
@@ -124,7 +120,6 @@ class App extends Component {
 
   state = {
     game: new Game({
-      showCPUCards: this.showCPUCards,
       dealFlop: this.dealFlop,
       dealTurn: this.dealTurn,
       dealRiver: this.dealRiver,
