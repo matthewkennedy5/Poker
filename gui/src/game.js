@@ -108,7 +108,10 @@ class Game extends Component {
     }
 
     advanceStreet() {
-        if (this.street === "preflop") {
+        if (this.stacks["human"] + this.stacks["cpu"] === 0) {
+            // Both players are all-in, so skip to the showdown
+            this.street = "showdown";
+        } else if (this.street === "preflop") {
             this.street = "flop";
         } else if (this.street === "flop") {
             this.street = "turn";
@@ -265,12 +268,6 @@ class Game extends Component {
     };
 
     async showdown() {
-        // show all cards
-        this.props.showCPUCards(this.cpuCards);
-        this.props.dealFlop(this.board.slice(0, 3));
-        this.props.dealTurn(this.board[3]);
-        this.props.dealRiver(this.board[4]);
-
         const humanHand = this.humanCards.concat(this.board);
         const cpuHand = this.cpuCards.concat(this.board);
         const result = await this.props.evaluateHands(humanHand, cpuHand);
@@ -287,7 +284,8 @@ class Game extends Component {
     };
 
     playStreet() {
-        if (this.street === "showdown" || this.stacks["human"] + this.stacks["cpu"] === 0) {
+
+        if (this.street === "showdown") {
             this.showdown();
             return;
         }

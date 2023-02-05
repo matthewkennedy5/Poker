@@ -85,7 +85,6 @@ class Buttons extends Component {
             // Normal row of buttons: Call Raise Fold
             return (
                 <div className="buttons">
-
                     {enabled["check"] ?
                         (<button onClick={this.props.check} className={BUTTON_STYLE} disabled={!enabled["check"]}>
                             CHECK
@@ -101,9 +100,6 @@ class Buttons extends Component {
                     <button onClick={this.props.fold} className={BUTTON_STYLE + " fold"} disabled={!enabled["fold"]}>
                         FOLD
                     </button>
-
-                {/* <input type="text" onChange={this.props.updateCustomBet} className="m-1" size="5"></input> */}
-
                 </div>
             );
         }

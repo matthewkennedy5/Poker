@@ -80,6 +80,10 @@ class App extends Component {
       this.setState({hands: nHands});
   }
 
+  // The backend API has 2 endpoints:
+  // 1. /api/compare - Evaluates which player's hand is better
+  // 2. /api/bot - gets the bot's action at a given spot
+
   evaluateHands = async(humanHand, cpuHand) => {
       humanHand = humanHand.join();
       cpuHand = cpuHand.join();
@@ -98,6 +102,39 @@ class App extends Component {
       return response;
   }
 
+  getDisplayedHumanCards = () => {
+      // The human's cards are always visible
+      const humanCards = this.state.game.humanCards;
+      if (humanCards.empty) {
+          return ["back", "back"];
+      } else {
+          return humanCards;
+      }
+  }
+
+  getDisplayedCPUCards = () => {
+      // The CPU's cards are only visible on showdown
+      if (this.state.game.street === "showdown") {
+          return this.state.game.cpuCards;
+      } else {
+          return ["back", "back"];
+      }
+  }
+
+  getDisplayedBoardCards = () => {
+      const boardCards = this.state.game.board;
+      const street = this.state.game.street;
+      if (street === "preflop") {
+        return ["back", "back", "back", "back", "back"];
+      } else if (street === "flop") {
+        return [boardCards[0], boardCards[1], boardCards[2], "back", "back"];
+      } else if (street === "turn") {
+        return [boardCards[0], boardCards[1], boardCards[2], boardCards[3], "back"];
+      } else {
+        return boardCards;
+      }
+  }
+
   state = {
     game: new Game({
       clearCards: this.clearCards,
@@ -112,12 +149,9 @@ class App extends Component {
       incrementHands: this.incrementHands,
       getCPUAction: this.getCPUAction
     }),
-    humanCards: ["back", "back"],
-    cpuCards: ["back", "back"],
-    board: ["back", "back", "back", "back", "back"], 
     // score: 0,
     hands: 0,
-    enabledButtons: {
+    enabledButtons: {  // TODO: I think enabledButtons is unused now
         nextHand: true,
         fold: false,
         check: false,
@@ -147,9 +181,9 @@ class App extends Component {
                stacks={this.state.game.getStacks()}
                humanActionText={this.state.game.getPrevHumanAction()}
                cpuActionText={this.state.game.getPrevCPUAction()}
-               humanCards={this.state.humanCards}
-               cpuCards={this.state.cpuCards}
-               board={this.state.board}/>
+               humanCards={this.getDisplayedHumanCards()}
+               cpuCards={this.getDisplayedCPUCards()}
+               board={this.getDisplayedBoardCards()}/>
         <Buttons nextHand={this.state.game.nextHand}
                  fold={this.state.game.fold}
                  check={this.state.game.check}
