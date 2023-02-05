@@ -273,11 +273,10 @@ class Game extends Component {
         const result = await this.props.evaluateHands(humanHand, cpuHand);
         const winner = result.data
 
-        const pot = this.props.getPot();
         if (winner === "human") {
-            this.props.addToScore(pot);
+            this.props.addToScore(this.pot);
         } else if (winner === "cpu") {
-            this.props.addToScore(-pot);
+            this.props.addToScore(-this.pot);
         } else if (winner === "tie") {
         }
         this.props.incrementHands();

@@ -137,15 +137,6 @@ label {
   text-align: center;
 }
 
-.log {
-  position: absolute;
-  font-size: 1.5vh;
-  top: 20vh;
-  left: 80vw;
-  white-space: pre-line;
-  color: white;
-}
-
 .buttons {
   display: flex;
   justify-content: center;

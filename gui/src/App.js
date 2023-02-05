@@ -164,7 +164,6 @@ class App extends Component {
                  allInAmount={this.state.game.getAllInAmount()}
                  pot={this.state.game.pot}
                  enabledButtons={this.state.enabledButtons}/>
-        {/* <Log text={this.state.log}/> */}
       </div>
     );
   };
