@@ -12,11 +12,6 @@ const URL = 'http://localhost'
 
 class App extends Component {
 
-  clearPot = () => {
-      this.state.pot = 0;
-      this.setState({pot: 0});
-  };
-
   dealHumanCards = (humanCards) => {
       this.setState({humanCards: humanCards});
   };
@@ -60,19 +55,6 @@ class App extends Component {
           this.state.enabledButtons[button] = true;
       }
       this.setState({enabledButtons: enabled})
-  }
-
-  addToPot = (amount) => {
-    let newPot = this.state.pot + amount;
-    this.state.pot = newPot;
-    this.setState({pot: newPot});
-  }
-
-  getPot = () => {
-      if (this.state.pot === 0) {
-        return this.state.game.BIG_BLIND + this.state.game.SMALL_BLIND;
-      }
-      return this.state.pot;
   }
 
   updateBetAmountFromEvent = (event) => {
@@ -119,7 +101,6 @@ class App extends Component {
   state = {
     game: new Game({
       clearPot: this.clearPot,
-      // getPot: this.getPot,      // TODO: have game.js store the pot amount
       clearCards: this.clearCards,
       dealHumanCards: this.dealHumanCards,
       showCPUCards: this.showCPUCards,
@@ -128,12 +109,10 @@ class App extends Component {
       dealRiver: this.dealRiver,
       evaluateHands: this.evaluateHands,
       setEnabledButtons: this.setEnabledButtons,  // game.js shouldn't know about the buttons or UI
-      // addToPot: this.addToPot,
       addToScore: this.addToScore,
       incrementHands: this.incrementHands,
       getCPUAction: this.getCPUAction
     }),
-    // pot: 0,
     humanCards: ["back", "back"],
     cpuCards: ["back", "back"],
     board: ["back", "back", "back", "back", "back"], 
@@ -165,7 +144,7 @@ class App extends Component {
         {/* <Score className="score"
                score={this.state.score}
                hands={this.state.hands}/>  */}
-        <Table pot={this.state.pot}
+        <Table pot={this.state.game.pot}
                stacks={this.state.game.getStacks()}
                humanActionText={this.state.game.getPrevHumanAction()}
                cpuActionText={this.state.game.getPrevCPUAction()}

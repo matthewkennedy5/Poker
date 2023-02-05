@@ -60,7 +60,7 @@ class Game extends Component {
         };
         this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
         this.bets = [0, 0];
-        this.props.clearPot();
+        this.pot = 0;
         this.props.clearCards();
         const random = new Random();
         random.shuffle(this.deck);
