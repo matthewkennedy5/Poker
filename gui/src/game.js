@@ -213,6 +213,7 @@ class Game extends Component {
     }
 
     getPrevHumanAction() {
+        // return this.getPrevAction();
         return "placeholder";
     }
 

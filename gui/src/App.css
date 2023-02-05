@@ -111,8 +111,10 @@ label {
 }
 
 .pot {
+  position: relative;
+  top: -37.5%;
   font-size: 3vh;
-  top: 45vh;
+  /* background-color: red; */
 }
 
 .cpu-stack, .human-stack {

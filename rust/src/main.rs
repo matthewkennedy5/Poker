@@ -30,6 +30,6 @@ mod bot;
 fn main() {
     // let nodes = trainer::load_nodes(&config::CONFIG.nodes_path);
     // exploiter::exploitability(&nodes);
-    trainer::train(10_000_000);
-    // backend::main().expect("Could not launch server");
+    // trainer::train(10_000_000);
+    backend::main().expect("Could not launch server");
 }
