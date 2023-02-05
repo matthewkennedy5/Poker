@@ -27,4 +27,4 @@ nodes_path = "products/nodes.bin"
 # Training
 train_iters = 10000000
 lbr_iters = 10000
-eval_every = 1000000
+eval_every = 100000

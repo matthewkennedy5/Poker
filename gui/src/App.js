@@ -169,8 +169,8 @@ class App extends Component {
                hands={this.state.hands}/>  */}
         <Table pot={this.state.pot}
                stacks={this.state.game.getStacks()}
-               humanActionText="Human action placeholder"
-               cpuActionText="CPU action placeholder"
+               humanActionText={this.state.game.getPrevHumanAction()}
+               cpuActionText={this.state.game.getPrevCPUAction()}
                humanCards={this.state.humanCards}
                cpuCards={this.state.cpuCards}
                board={this.state.board}/>

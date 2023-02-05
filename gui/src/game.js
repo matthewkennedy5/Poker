@@ -95,11 +95,14 @@ class Game extends Component {
         this.player_fold("human");
     };
 
+    // TODO: Change this to a MVC architecture. game.js should not know 
+    // about any of the specific UI components. game.js should just have getter 
+    // methods to get whatever info the UI needs, and methods to make things happen in the game state.
+    // The game logic should be orthogonal from the UI. 
     registerAction(action) {
         this.props.addToPot(action["amount"]);
         this.history[this.street].push(action);
         this.stacks["human"] -= action["amount"];
-        // this.updateLog("human", action);
         if (this.bettingIsOver()) {
             this.advanceStreet();
             this.playStreet();
@@ -142,19 +145,6 @@ class Game extends Component {
     bet = (amount) => {
         this.registerAction({action: "bet", amount: amount})
     };
-
-    // betCustom = () => {
-    //     const amount = parseInt(this.custBetAmount);
-    //     if (isNaN(amount)) {
-    //         alert("Invalid bet amount")
-    //     } else if (amount > this.stacks["human"]) {
-    //         alert("Bet size is too large");
-    //     } else if (amount < this.getMinBetAmount()) {
-    //         alert("Must raise at least " + this.getMinBetAmount());
-    //     } else {
-    //         this.registerAction({action: "bet", amount: amount})
-    //     }
-    // };
 
     async cpuAction() {
         const result = await this.props.getCPUAction(this.cpuCards, this.history);
@@ -220,6 +210,14 @@ class Game extends Component {
 
     getPrevAction() {
         return this.history[this.street].slice(-1)[0];
+    }
+
+    getPrevHumanAction() {
+        return "placeholder";
+    }
+
+    getPrevCPUAction() {
+        return "placeholder";
     }
 
     enableHumanButtons() {
