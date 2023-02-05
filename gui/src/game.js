@@ -290,7 +290,6 @@ class Game extends Component {
         }
 
         if (this.street === "preflop") {
-            this.props.dealHumanCards(this.humanCards);
             if (this.dealer === "human") {
                 this.enableHumanButtons();
             } else {

@@ -12,10 +12,6 @@ const URL = 'http://localhost'
 
 class App extends Component {
 
-  dealHumanCards = (humanCards) => {
-      this.setState({humanCards: humanCards});
-  };
-
   showCPUCards = (cpuCards) => {
       this.setState({cpuCards: cpuCards});
   };
@@ -128,7 +124,6 @@ class App extends Component {
 
   state = {
     game: new Game({
-      dealHumanCards: this.dealHumanCards,
       showCPUCards: this.showCPUCards,
       dealFlop: this.dealFlop,
       dealTurn: this.dealTurn,
