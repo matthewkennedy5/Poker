@@ -71,39 +71,27 @@ class Game extends Component {
         this.playStreet();
     };
 
-    player_fold(player) {
-        // Update score with losings from this hand
-        let losings = STACK_SIZE - this.stacks[player];
-        if (losings === 0) {
-            if (this.dealer === player) {
-                losings = SMALL_BLIND;
-            } else {
-                losings = BIG_BLIND;
-            }
-        }
-        // if (player === "human") {
-        //     this.props.addToScore(-losings);
-        // } else {
-        //     this.props.addToScore(losings);
-        // }
-        this.props.incrementHands();
-    }
+    // player_fold(player) {
+    //     // Update score with losings from this hand
+    //     // let losings = STACK_SIZE - this.stacks[player];
+    //     // if (losings === 0) {
+    //     //     if (this.dealer === player) {
+    //     //         losings = SMALL_BLIND;
+    //     //     } else {
+    //     //         losings = BIG_BLIND;
+    //     //     }
+    //     // }
+    //     // if (player === "human") {
+    //     //     this.props.addToScore(-losings);
+    //     // } else {
+    //     //     this.props.addToScore(losings);
+    //     // }
+    //     this.nextHand();
+    // }
 
     fold = () => {
-        this.player_fold("human");
+        this.playerAction("human", {action: "fold", amount: 0});
     };
-
-    registerAction(action) {
-        this.pot += action["amount"];
-        this.history[this.street].push(action);
-        this.stacks["human"] -= action["amount"];
-        if (this.bettingIsOver()) {
-            this.advanceStreet();
-            this.playStreet();
-        } else {
-            this.cpuAction();
-        }
-    }
 
     advanceStreet() {
         if (this.stacks["human"] + this.stacks["cpu"] === 0) {
@@ -121,43 +109,47 @@ class Game extends Component {
     }
 
     check = () => {
-        this.registerAction({action: "check", amount: 0})
+        this.playerAction("human", {action: "check", amount: 0})
     };
 
     call = () => {
         const amount = this.getCallAmount();
-        const action = {action: "call", amount: amount};
-        this.registerAction(action);
+        this.playerAction("human", {action: "call", amount: amount});
     };
 
-    roundToSmallBlind(number) {
-        return Math.round(number / SMALL_BLIND) * SMALL_BLIND;
-    };
-
-    betHalfPot = () => {
-        const amount = this.roundToSmallBlind(this.pot / 2);
-        this.registerAction({action: "bet", amount: amount})
-    };
+    // roundToSmallBlind(number) {
+    //     return Math.round(number / SMALL_BLIND) * SMALL_BLIND;
+    // };
 
     bet = (amount) => {
-        this.registerAction({action: "bet", amount: amount})
+        this.playerAction("human", {action: "bet", amount: amount})
     };
+
+    playerAction(player, action) {
+        this.pot += action["amount"];
+        this.stacks[player] -= action["amount"];
+        this.history[this.street].push(action);
+        if (action["action"] === "fold") {
+            console.log("Fold");
+            this.props.incrementHands();
+            this.props.listenForHumanAction();
+        } else if (this.bettingIsOver()) {
+            this.advanceStreet();
+            this.playStreet();
+        } else {
+            if (player === "human") {
+                this.cpuAction();
+            } else {
+                this.props.listenForHumanAction();
+            }
+        }
+    }
 
     async cpuAction() {
         const result = await this.props.getCPUAction(this.cpuCards, this.history);
         const action = result.data;
-        this.stacks["cpu"] -= action["amount"];
-        // this.updateLog("cpu", action);
-        if (action["action"] === "fold") {
-            this.player_fold("cpu");
-            return;
-        }
-        this.pot += action["amount"];
-        this.history[this.street].push(action);
-        if (this.bettingIsOver()) {
-            this.advanceStreet();
-            this.playStreet();
-        }
+        console.log("CPU action: " + JSON.stringify(action));
+        this.playerAction("cpu", action);
     };
 
     // Returns the total amount of money bet by each player on the current street
@@ -205,6 +197,7 @@ class Game extends Component {
         return this.stacks;
     }
 
+    // TODO: refactor this prevAction undefined situation
     getPrevAction() {
         try {
             return this.history[this.street].slice(-1)[0];
@@ -243,23 +236,25 @@ class Game extends Component {
         //     this.props.addToScore(-this.pot);
         // } else if (winner === "tie") {
         // }
-        this.props.incrementHands();
+        this.nextHand();
     };
 
     playStreet() {
-
         if (this.street === "showdown") {
             this.showdown();
             return;
         }
 
+        // TODO: simplify this if statement logic
         if (this.street === "preflop") {
             if (this.dealer === "human") {
+                this.props.listenForHumanAction();
             } else {
                 this.cpuAction();
             }
         } else {
             if (this.dealer === "cpu") {
+                this.props.listenForHumanAction();
             } else {
                 this.cpuAction();
             }

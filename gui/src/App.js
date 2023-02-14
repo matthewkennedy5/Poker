@@ -16,10 +16,9 @@ class App extends Component {
       const street = this.state.game.street;
       const prevAction = this.state.game.getPrevAction();
 
-      if (prevAction === "fold" || street === "showdown") {
+      if (prevAction !== undefined && prevAction["action"] === "fold" || street === "showdown") {
           return ["nextHand"];
       }
-
       let enabled = ["fold"];
       if (street !== "preflop" && (prevAction === undefined || prevAction["action"] === "check")) {
           enabled.push("check");
@@ -63,6 +62,11 @@ class App extends Component {
       cpuHand = cpuHand.join();
       const response = await axios.get(URL + '/api/compare?humanHand=' + humanHand + '&cpuHand=' + cpuHand);
       return response;
+  }
+
+  listenForHumanAction = () => {
+      const enabled = this.getEnabledButtons();
+      this.setState({enabledButtons: enabled});
   }
 
   getCPUAction = async(cpuCards, history) => {
@@ -115,16 +119,11 @@ class App extends Component {
       // addToScore: this.addToScore,
       incrementHands: this.incrementHands,
       getCPUAction: this.getCPUAction,
+      listenForHumanAction: this.listenForHumanAction
     }),
     // score: 0,
     hands: 0,
-    enabledButtons: {
-        nextHand: true,
-        fold: false,
-        check: false,
-        call: false,
-        raise: false
-    },
+    enabledButtons: [],
     betAmount: 0
   };
 
@@ -158,7 +157,7 @@ class App extends Component {
                  minBetAmount={this.state.game.getMinBetAmount()}
                  allInAmount={this.state.game.getAllInAmount()}
                  pot={this.state.game.pot}
-                 enabledButtons={this.getEnabledButtons()}/>
+                 enabledButtons={this.state.enabledButtons}/>
       </div>
     );
   };
