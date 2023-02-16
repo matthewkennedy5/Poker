@@ -124,11 +124,12 @@ label {
 }
 
 .score {
-  position: absolute;
   font-size: 2vh;
-  top: 2vh;
-  left: 75vw;
   text-align: center;
+  color: white;
+  padding: 10%;
+  width: 100%;
+  height: 100%;
 }
 
 .buttons {

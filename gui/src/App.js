@@ -117,7 +117,7 @@ class App extends Component {
           // If we're at the showdown, display who won
           if (this.state.game.winner === "human") {
               return "Human wins $" + this.state.game.pot;
-          } else {
+          } else if (this.state.game.winner === "cpu") {
               return "CPU wins $" + this.state.game.pot;
           }
       }
@@ -141,13 +141,10 @@ class App extends Component {
   state = {
     game: new Game({
       evaluateHands: this.evaluateHands,
-      // addToScore: this.addToScore,
       incrementHands: this.incrementHands,
       getCPUAction: this.getCPUAction,
       listenForHumanAction: this.listenForHumanAction
     }),
-    // score: 0,
-    hands: 0,
     enabledButtons: [],
     betAmount: 0
   };
@@ -160,9 +157,6 @@ class App extends Component {
   render() {
     return (
       <div className="app">
-        {/* <Score className="score"
-               score={this.state.score}
-               hands={this.state.hands}/>  */}
         <Table pot={this.state.game.pot}
                stacks={this.state.game.getStacks()}
                cpuActionText={this.getCPUActionText()}
@@ -182,6 +176,9 @@ class App extends Component {
                  allInAmount={this.state.game.getAllInAmount()}
                  pot={this.state.game.pot}
                  enabledButtons={this.state.enabledButtons}/>
+        <Score className="score"
+               score={this.state.game.score}
+               hands={this.state.game.numHands}/> 
       </div>
     );
   };

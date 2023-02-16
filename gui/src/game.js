@@ -39,11 +39,12 @@ class Game extends Component {
             turn: [],
             river: []
         };
-        // this.score = 0;
-        this.numHands = 0;
         this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
         this.pot = 0;
         this.winner = "";
+
+        this.score = 0;     // Human's cumulative score across all hands in the session
+        this.numHands = 0;  // Total hands played in the session
     };
 
     nextHand = () => {
@@ -72,24 +73,6 @@ class Game extends Component {
         this.playStreet();
     };
 
-    // player_fold(player) {
-    //     // Update score with losings from this hand
-    //     // let losings = STACK_SIZE - this.stacks[player];
-    //     // if (losings === 0) {
-    //     //     if (this.dealer === player) {
-    //     //         losings = SMALL_BLIND;
-    //     //     } else {
-    //     //         losings = BIG_BLIND;
-    //     //     }
-    //     // }
-    //     // if (player === "human") {
-    //     //     this.props.addToScore(-losings);
-    //     // } else {
-    //     //     this.props.addToScore(losings);
-    //     // }
-    //     this.nextHand();
-    // }
-
     fold = () => {
         this.playerAction("human", {action: "fold", amount: 0});
     };
@@ -105,7 +88,7 @@ class Game extends Component {
         } else if (this.street === "turn") {
             this.street = "river";
         } else if (this.street === "river") {
-            this.street = "showdown"
+            this.street = "showdown";
         }
     }
 
@@ -126,8 +109,26 @@ class Game extends Component {
         this.pot += action["amount"];
         this.stacks[player] -= action["amount"];
         this.history[this.street].push(action);
+
         if (action["action"] === "fold") {
-            this.handOver();
+            let losings = STACK_SIZE - this.stacks[player];
+            if (losings === 0) {
+                // Player folded before betting, so has to post their blind
+                if (this.dealer === player) {
+                    losings = SMALL_BLIND;
+                } else {
+                    losings = BIG_BLIND;
+                }
+            }
+            if (player === "human") {
+                // Human folded so they lose money
+                this.winner = "cpu";
+                this.handOver(-losings);
+            } else {
+                // CPU folded so human wins money
+                this.winner = "human";
+                this.handOver(losings);
+            }
         } else if (this.bettingIsOver()) {
             this.advanceStreet();
             this.playStreet();
@@ -140,8 +141,9 @@ class Game extends Component {
         }
     }
 
-    handOver() {
-        this.props.incrementHands();
+    handOver(score) {
+        this.score += score;
+        this.numHands += 1;
         this.props.listenForHumanAction();
     }
 
@@ -249,8 +251,14 @@ class Game extends Component {
         const humanHand = this.humanCards.concat(this.board);
         const cpuHand = this.cpuCards.concat(this.board);
         const result = await this.props.evaluateHands(humanHand, cpuHand);
-        const winner = result.data
-        this.handOver();
+        this.winner = result.data
+        let winnings = 0;
+        if (this.winner === "human") {
+            winnings = this.pot / 2;
+        } else if (this.winner == "cpu") {
+            winnings = -this.pot / 2;
+        }
+        this.handOver(winnings);
     };
 
     playStreet() {
