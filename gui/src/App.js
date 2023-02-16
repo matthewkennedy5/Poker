@@ -114,6 +114,15 @@ class App extends Component {
   }
 
   getCPUActionText = () => {
+      if (this.state.game.street === "showdown") {
+          // If we're at the showdown, display who won
+          if (this.state.game.winner === "human") {
+              return "Human wins $" + this.state.game.pot;
+          } else {
+              return "CPU wins $" + this.state.game.pot;
+          }
+      }
+
       let action = this.state.game.getPrevCPUAction();
       let text = "CPU ";
       if (action === undefined) {

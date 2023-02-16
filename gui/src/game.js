@@ -43,6 +43,7 @@ class Game extends Component {
         this.numHands = 0;
         this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
         this.pot = 0;
+        this.winner = "";
     };
 
     nextHand = () => {
