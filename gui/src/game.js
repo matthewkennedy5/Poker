@@ -117,10 +117,6 @@ class Game extends Component {
         this.playerAction("human", {action: "call", amount: amount});
     };
 
-    // roundToSmallBlind(number) {
-    //     return Math.round(number / SMALL_BLIND) * SMALL_BLIND;
-    // };
-
     bet = (amount) => {
         this.playerAction("human", {action: "bet", amount: amount})
     };
@@ -130,7 +126,6 @@ class Game extends Component {
         this.stacks[player] -= action["amount"];
         this.history[this.street].push(action);
         if (action["action"] === "fold") {
-            console.log("Fold");
             this.props.incrementHands();
             this.props.listenForHumanAction();
         } else if (this.bettingIsOver()) {
@@ -148,7 +143,6 @@ class Game extends Component {
     async cpuAction() {
         const result = await this.props.getCPUAction(this.cpuCards, this.history);
         const action = result.data;
-        console.log("CPU action: " + JSON.stringify(action));
         this.playerAction("cpu", action);
     };
 
@@ -206,12 +200,34 @@ class Game extends Component {
         }
     }
 
-    getPrevHumanAction() {
-        return JSON.stringify(this.getPrevAction());
+    getPrevCPUAction() {
+        if (this.whoseTurnIsIt() === "human") {
+            // Last action is the CPUs
+            return this.getPrevAction();
+        } else {
+            // Last action is the humans
+            try {
+                return this.history[this.street].slice(-2)[0];
+            } catch {
+                return undefined;
+            }
+        }
     }
 
-    getPrevCPUAction() {
-        return JSON.stringify(this.getPrevAction());
+    whoseTurnIsIt() {
+        if (this.street === "preflop") {
+            if (this.dealer === "human") {
+                return "human";
+            } else {
+                return "cpu";
+            }
+        } else {
+            if (this.dealer === "cpu") {
+                return "human";
+            } else {
+                return "cpu";
+            }
+        }
     }
 
     bettingIsOver() {
@@ -242,24 +258,12 @@ class Game extends Component {
     playStreet() {
         if (this.street === "showdown") {
             this.showdown();
-            return;
-        }
-
-        // TODO: simplify this if statement logic
-        if (this.street === "preflop") {
-            if (this.dealer === "human") {
-                this.props.listenForHumanAction();
-            } else {
-                this.cpuAction();
-            }
+        } else if (this.whoseTurnIsIt() === "human") {
+            this.props.listenForHumanAction();
         } else {
-            if (this.dealer === "cpu") {
-                this.props.listenForHumanAction();
-            } else {
-                this.cpuAction();
-            }
+            this.cpuAction();
         }
-    };
+    }
 };
 
 export default Game;

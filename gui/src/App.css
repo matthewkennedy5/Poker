@@ -95,6 +95,12 @@
   border: 0px;
 }
 
+.cpu-action {
+  flex: 0.2;
+  font-size: 2vh;
+  font-weight: bold;
+}
+
 .pot {
   flex: 0.2;
   font-size: 3vh;
@@ -277,18 +283,4 @@ label {
 
 #label-and-buttons {
   display: flex;
-}
-
-.cpu-action {
-  top: 15vh;
-  left: 70vw;  
-  width: 30vw;
-  text-align: left;
-}
-
-.human-action {
-  top: 55vh;
-  left: 70vw;
-  width: 30vw;
-  text-align: left;
 }

@@ -113,6 +113,23 @@ class App extends Component {
       }
   }
 
+  getCPUActionText = () => {
+      let action = this.state.game.getPrevCPUAction();
+      let text = "CPU ";
+      if (action === undefined) {
+          return "";
+      } else if (action["action"] === "fold") {
+          text +=  "folds.";
+      } else if (action["action"] === "check") {
+          text +=  "checks";
+      } else if (action["action"] === "call") {
+          text +=  "calls $" + action["amount"];
+      } else if (action["action"] === "bet") {  
+          text += "bets $" + action["amount"];
+      }
+      return text;
+  }
+
   state = {
     game: new Game({
       evaluateHands: this.evaluateHands,
@@ -140,8 +157,7 @@ class App extends Component {
                hands={this.state.hands}/>  */}
         <Table pot={this.state.game.pot}
                stacks={this.state.game.getStacks()}
-               humanActionText={this.state.game.getPrevHumanAction()}
-               cpuActionText={this.state.game.getPrevCPUAction()}
+               cpuActionText={this.getCPUActionText()}
                humanCards={this.getDisplayedHumanCards()}
                cpuCards={this.getDisplayedCPUCards()}
                board={this.getDisplayedBoardCards()}/>

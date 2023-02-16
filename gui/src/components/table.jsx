@@ -12,6 +12,9 @@ class Table extends Component {
                     <img className="single-card" src={"/cards/" + this.props.cpuCards[0] + ".svg"} alt=""></img>
                     <img className="single-card" src={"/cards/" + this.props.cpuCards[1] + ".svg"} alt=""></img>
                 </div>
+                <div className="cpu-action">
+                    <label>{this.props.cpuActionText}</label>
+                </div>
                 <div className="board-cards">
                     <img className="single-card" src={"/cards/" + this.props.board[0] + ".svg"} alt=""></img>
                     <img className="single-card" src={"/cards/" + this.props.board[1] + ".svg"} alt=""></img>
@@ -29,8 +32,6 @@ class Table extends Component {
                 <div className="human-stack">
                     <label>stack: ${this.props.stacks["human"]}</label>
                 </div>
-                <label className="cpu-action">{this.props.cpuActionText}</label>
-                <label className="human-action">{this.props.humanActionText}</label>
             </div>
         );
     };
