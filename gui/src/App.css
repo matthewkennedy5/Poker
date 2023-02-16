@@ -131,7 +131,7 @@ label {
 }
 
 /* Bootstrap button */
-.btn.btn-custom {
+.btn.btn-custom, .btn.btn-custom:focus {
   background-color: transparent;
   border: 2px solid;
   color: var(--button-color);
@@ -142,8 +142,10 @@ label {
   font-weight: bold;
 }
 
-.btn.btn-custom:hover {
-  background-color: var(--button-color);  
+@media (hover: hover) {
+  .btn.btn-custom:hover {
+    background-color: var(--button-color);  
+  }
 }
 
 .btn.fold {
