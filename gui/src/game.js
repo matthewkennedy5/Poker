@@ -126,8 +126,7 @@ class Game extends Component {
         this.stacks[player] -= action["amount"];
         this.history[this.street].push(action);
         if (action["action"] === "fold") {
-            this.props.incrementHands();
-            this.props.listenForHumanAction();
+            this.handOver();
         } else if (this.bettingIsOver()) {
             this.advanceStreet();
             this.playStreet();
@@ -138,6 +137,11 @@ class Game extends Component {
                 this.props.listenForHumanAction();
             }
         }
+    }
+
+    handOver() {
+        this.props.incrementHands();
+        this.props.listenForHumanAction();
     }
 
     async cpuAction() {
@@ -245,14 +249,7 @@ class Game extends Component {
         const cpuHand = this.cpuCards.concat(this.board);
         const result = await this.props.evaluateHands(humanHand, cpuHand);
         const winner = result.data
-
-        // if (winner === "human") {
-        //     this.props.addToScore(this.pot);
-        // } else if (winner === "cpu") {
-        //     this.props.addToScore(-this.pot);
-        // } else if (winner === "tie") {
-        // }
-        this.nextHand();
+        this.handOver();
     };
 
     playStreet() {
