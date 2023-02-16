@@ -81,9 +81,8 @@ class App extends Component {
   }
 
   getDisplayedHumanCards = () => {
-      // The human's cards are always visible
       const humanCards = this.state.game.humanCards;
-      if (humanCards.empty) {
+      if (humanCards === undefined || humanCards.length === 0) {
           return ["back", "back"];
       } else {
           return humanCards;
