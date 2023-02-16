@@ -207,7 +207,7 @@ label {
   height: 50%;
 }
 
-.btn.default-bet {
+.btn.default-bet, .btn.default-bet:focus {
   color: white;
   font-size: 50%;
   border-width: 0.01rem;
