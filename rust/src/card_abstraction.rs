@@ -45,7 +45,6 @@ impl Abstraction {
         let rank_bin = (if suited { bin - 1 } else { bin }) / 2;
         let rank1 = rank_bin / 100;
         let rank2 = rank_bin % 100;
-        println!("{}", bin);
         let hand = format!(
             "{}{}{}",
             rank_str(rank1 as u8),

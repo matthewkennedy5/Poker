@@ -1,7 +1,7 @@
 use crate::card_abstraction::Abstraction;
 use crate::card_utils::*;
 use crate::config::CONFIG;
-use std::{fmt, fs::File, hash::Hash, io::Write, cmp::Eq, collections::HashMap};
+use std::{fmt, fs::File, hash::Hash, io::Write, cmp::Eq, collections::HashMap, collections::HashSet};
 use rand::{prelude::SliceRandom, thread_rng};
 use once_cell::sync::Lazy;
 
@@ -508,16 +508,48 @@ pub fn preflop_chart(nodes: &HashMap<CompactInfoSet, Node>) {
     // 1. extract all first-action preflop nodes from nodes
     // 2. for each node, print the strategy in a sorted order
     let mut preflop_nodes: HashMap<CompactInfoSet, Node> = HashMap::new();
+    // let mut preflop_actions: HashSet<Action> = HashSet::new();
     for (infoset, node) in nodes {
         // let history = infoset.uncompress().history;
         if infoset.history.len() == 0 {
             preflop_nodes.insert(infoset.clone(), node.clone());
+            // for action in node.cumulative_strategy().keys() {
+            //     preflop_actions.insert(action.clone());
+            // }
         }
     }
-    for (infoset, node) in preflop_nodes {
-        let hand = Abstraction::preflop_hand(infoset.card_bucket);
-        let strategy = node.cumulative_strategy();
-        // Get the preflop hand from the card bucket. Inverse of preflop_bin() function
-        println!("{}: {:?}", hand, strategy);
-    }
+
+    println!("{}", serde_json::to_string(&preflop_nodes).unwrap());
+
+    // let mut chart: HashMap<String, HashMap<String, f64>> = HashMap::new();
+    // for (infoset, node) in preflop_nodes.clone() {
+    //     let hand = Abstraction::preflop_hand(infoset.card_bucket);
+    //     let strategy = node.cumulative_strategy();
+    //     for action in strategy.keys() {
+    //         let prob = strategy.get(&action).unwrap().clone();
+    //         let mut hand_strategy = chart.get(&hand).unwrap();
+
+    //         hand_strategy.insert(action.to_string(), prob);
+    //     }
+    // }
+
+    // For each opening action, print each hand's probability of making that action
+    // for action in preflop_actions {
+    //     let mut hand_probs: HashMap<String, f64> = HashMap::new();
+    //     for (infoset, node) in preflop_nodes.clone() {
+    //         let hand = Abstraction::preflop_hand(infoset.card_bucket);
+    //         let strategy = node.cumulative_strategy();
+    //         let prob = strategy.get(&action).unwrap().clone();
+    //         hand_probs.insert(hand, prob);
+    //     }
+
+    //     // Print hand_probs sorted by probability
+    //     let mut hand_probs: Vec<(String, f64)> = hand_probs.into_iter().collect();
+    //     hand_probs.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+    //     println!("\n{:?}", action);
+    //     for (hand, prob) in hand_probs.iter() {
+    //         println!("\t{}: {}", hand, prob);
+    //     }
+    // }
 }

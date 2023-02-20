@@ -28,6 +28,7 @@ mod backend;
 mod bot;
 
 fn main() {
+    // trainer::train(10_000);
     let nodes = trainer::load_nodes(&config::CONFIG.nodes_path);
     trainer_utils::preflop_chart(&nodes);
 }
