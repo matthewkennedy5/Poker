@@ -263,7 +263,7 @@ pub fn get_hand(deck: &[Card], player: usize, street: usize) -> Vec<Card> {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub struct InfoSet {
     pub history: ActionHistory,
-    card_bucket: i32,
+    pub card_bucket: i32,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
@@ -502,4 +502,22 @@ pub fn write_compact_blueprint(nodes: &HashMap<CompactInfoSet, Node>) {
     let mut file = File::create(&CONFIG.blueprint_strategy_path).unwrap();
     file.write_all(&bincode).unwrap();
     println!("[INFO] Wrote compressed blueprint strategy to {}", CONFIG.blueprint_strategy_path);
+}
+
+pub fn preflop_chart(nodes: &HashMap<CompactInfoSet, Node>) {
+    // 1. extract all first-action preflop nodes from nodes
+    // 2. for each node, print the strategy in a sorted order
+    let mut preflop_nodes: HashMap<CompactInfoSet, Node> = HashMap::new();
+    for (infoset, node) in nodes {
+        // let history = infoset.uncompress().history;
+        if infoset.history.len() == 0 {
+            preflop_nodes.insert(infoset.clone(), node.clone());
+        }
+    }
+    for (infoset, node) in preflop_nodes {
+        let hand = Abstraction::preflop_hand(infoset.card_bucket);
+        let strategy = node.cumulative_strategy();
+        // Get the preflop hand from the card bucket. Inverse of preflop_bin() function
+        println!("{}: {:?}", hand, strategy);
+    }
 }

@@ -28,8 +28,10 @@ mod backend;
 mod bot;
 
 fn main() {
-    // let nodes = trainer::load_nodes(&config::CONFIG.nodes_path);
-    // exploiter::exploitability(&nodes);
-    // trainer::train(10_000_000);
+    let nodes = trainer::load_nodes(&config::CONFIG.nodes_path);
+    trainer_utils::preflop_chart(&nodes);
+}
+
+fn launch_server() {
     backend::main().expect("Could not launch server");
 }

@@ -39,15 +39,32 @@ impl Abstraction {
         }
     }
 
+    // Inverse lookup - returns a hand in the given bin. Inverse of preflop_bin
+    pub fn preflop_hand(bin: i32) -> String {
+        let suited: bool = bin % 2 == 1;
+        let rank_bin = (if suited { bin - 1 } else { bin }) / 2;
+        let rank1 = rank_bin / 100;
+        let rank2 = rank_bin % 100;
+        println!("{}", bin);
+        let hand = format!(
+            "{}{}{}",
+            rank_str(rank1 as u8),
+            rank_str(rank2 as u8),
+            if suited { "s" } else { "o" }
+        );
+        return hand;
+    }
+
     fn preflop_bin(cards: &[Card]) -> i32 {
         let mut cards = cards.to_vec();
         cards.sort_by_key(|c| c.rank);
-        let rank1 = cards[0].rank;
-        let rank2 = cards[1].rank;
+        let rank1 = cards[0].rank as i32;
+        let rank2 = cards[1].rank as i32;
         let mut bin = 2 * (rank1 * 100 + rank2);
         if cards[0].suit == cards[1].suit {
             bin += 1;
         }
+        assert!(bin >= 404 && bin <= 2829);
         return bin as i32;
     }
 

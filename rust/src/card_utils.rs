@@ -83,24 +83,28 @@ impl Ord for Card {
     }
 }
 
+pub fn rank_str(rank: u8) -> String {
+    match rank {
+        2 => "2",
+        3 => "3",
+        4 => "4",
+        5 => "5",
+        6 => "6",
+        7 => "7",
+        8 => "8",
+        9 => "9",
+        10 => "T",
+        11 => "J",
+        12 => "Q",
+        13 => "K",
+        14 => "A",
+        _ => panic!("Bad rank value: {}", rank),
+    }.to_string()
+}
+
 impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let rank = match self.rank {
-            2 => "2",
-            3 => "3",
-            4 => "4",
-            5 => "5",
-            6 => "6",
-            7 => "7",
-            8 => "8",
-            9 => "9",
-            10 => "T",
-            11 => "J",
-            12 => "Q",
-            13 => "K",
-            14 => "A",
-            _ => panic!("Bad rank value: {}", self.rank),
-        };
+        let rank = rank_str(self.rank);
         let suit = match self.suit as i32 {
             CLUBS => "c",
             DIAMONDS => "d",

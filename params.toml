@@ -3,8 +3,7 @@ stack_size = 20000
 big_blind = 100
 small_blind = 50
 
-# Bet abstractions, expressed as multiples of the pot size. The "all in" action 
-# is implicitly included in every street.
+# Bet abstractions, expressed as multiples of the pot size. -1 means "all-in".
 bet_abstraction = [
     [1.0, 2.5, 5.0, -1.0],
     [0.5, 1.0, -1.0],
