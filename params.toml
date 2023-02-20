@@ -27,3 +27,6 @@ nodes_path = "products/nodes.bin"
 train_iters = 10000000
 lbr_iters = 10000
 eval_every = 100000
+
+# Preflop chart
+preflop_strategy_path = "products/preflop_strategy.json"

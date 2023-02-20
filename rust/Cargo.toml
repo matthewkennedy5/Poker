@@ -32,3 +32,7 @@ debug = 1
 [profile.dev]
 opt-level = 1
 debug = true
+
+[[bin]]
+name = "preflop-chart"
+path="src/preflop_chart.rs"

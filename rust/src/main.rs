@@ -30,7 +30,7 @@ mod bot;
 fn main() {
     // trainer::train(10_000);
     let nodes = trainer::load_nodes(&config::CONFIG.nodes_path);
-    trainer_utils::preflop_chart(&nodes);
+    trainer_utils::write_preflop_strategy(&nodes, &config::CONFIG.preflop_strategy_path);
 }
 
 fn launch_server() {

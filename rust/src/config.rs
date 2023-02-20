@@ -37,4 +37,7 @@ pub struct Config {
     pub train_iters: u64,
     pub lbr_iters: u64,
     pub eval_every: u64,
+
+    // Preflop chart
+    pub preflop_strategy_path: String,
 }
