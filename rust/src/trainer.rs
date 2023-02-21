@@ -47,7 +47,6 @@ pub fn train(iters: u64) {
 
     serialize_nodes(&nodes);
     write_compact_blueprint(&nodes);
-    // println!("Exploitability: {}", exploitability(&nodes));
 }
 
 pub fn load_nodes(path: &str) -> HashMap<CompactInfoSet, Node> {
@@ -138,7 +137,6 @@ fn iterate(
         utilities.insert(action, utility);
         node_utility += prob * utility;
     }
-    // TODO: multithread here -- maybe just on the flop. Return a Vec<Node> of updated nodes
 
     // Update regrets
     for (action, utility) in &utilities {
