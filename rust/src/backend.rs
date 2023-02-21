@@ -1,4 +1,4 @@
-use crate::bot::bot_action;
+use crate::bot::Bot;
 use crate::card_utils::{strvec2cards, Card, LightHandTable};
 use crate::trainer_utils::{Action, ActionHistory, ActionType};
 use std::collections::HashMap;
@@ -8,6 +8,7 @@ use actix_files as fs;
 use once_cell::sync::Lazy;
 
 static HAND_STRENGTHS: Lazy<LightHandTable> = Lazy::new(|| LightHandTable::new());
+static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
 
 async fn compare_hands(req: HttpRequest) -> impl Responder {
     println!("[INFO] Received HTTP request: {:#?}", req);
@@ -39,7 +40,7 @@ async fn get_cpu_action(req: HttpRequest) -> impl Responder {
     let cpu_cards = parse_cards(cpu_cards);
     let board = parse_cards(board);
     let history = parse_history(history_json);
-    let action = bot_action(&cpu_cards, &board, &history);
+    let action = BOT.get_action(&cpu_cards, &board, &history);
     let is_check = action == Action {
             action: ActionType::Call,
             amount: 0,

@@ -1,12 +1,13 @@
 #[cfg(test)]
 
+use crate::bot::Bot;
 use crate::card_utils::*;
 use crate::trainer_utils::*;
-use crate::bot::*;
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
 
 static BLUEPRINT: Lazy<HashMap<CompactInfoSet, Action>> = Lazy::new(|| crate::trainer::load_blueprint());
+static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
 
 #[test]
 fn card_bitmap() {
@@ -191,7 +192,7 @@ fn negative_bet_size() {
     history.add(&Action {action: ActionType::Bet, amount: 200});
     let hand = hand2cards(str2hand("Ts8s"));
     let board = hand2cards(str2hand("Js5sQc"));
-    let response = bot_action(&hand, &board, &history);
+    let response = BOT.get_action(&hand, &board, &history);
     assert!(response.amount != 19834);
 }
 
@@ -220,7 +221,7 @@ fn cpu_bets_more_than_stack() {
     let hand = hand2cards(str2hand("QdQs"));
     let board = hand2cards(str2hand("6dTcJd"));
 
-    let response = bot_action(&hand, &board, &history);
+    let response = BOT.get_action(&hand, &board, &history);
     assert!(response.amount != 18750);
 }
 

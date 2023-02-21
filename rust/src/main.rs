@@ -30,10 +30,10 @@ mod bot;
 use crate::config::CONFIG;
 
 fn main() {
+    let bot = bot::Bot::new();
+    exploiter::exploitability(&bot, CONFIG.lbr_iters);
     trainer::train(CONFIG.train_iters);
-    let nodes = trainer::load_nodes(&config::CONFIG.nodes_path);
-    exploiter::exploitability(&nodes);
-    trainer_utils::write_preflop_strategy(&nodes, &config::CONFIG.preflop_strategy_path);
+    launch_server();
 }
 
 fn launch_server() {

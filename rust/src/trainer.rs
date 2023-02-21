@@ -30,7 +30,7 @@ pub fn train(iters: u64) {
         );
         if i % CONFIG.eval_every == 0 {
             serialize_nodes(&nodes);
-            exploitability(&nodes);
+            // exploitability(&nodes);
         }
         bar.inc(1);
     }

@@ -207,6 +207,23 @@ impl ActionHistory {
         translated
     }
 
+    pub fn adjust_action(&self, action: &Action) -> Action {
+        // The translated action is based off a misunderstanding off the true bet
+        // sizes, so we may have to adjust our call amount to line up with what's
+        // actually in the pot as opposed to our approximation.
+        let mut adjusted = action.clone();
+        if action.action == ActionType::Call {
+            adjusted.amount = self.to_call();
+        } else if action.action == ActionType::Bet {
+            if action.amount > self.max_bet() {
+                adjusted.amount = self.max_bet();
+            } else if action.amount < self.min_bet() {
+                adjusted.amount = self.min_bet();
+            }
+        }
+        adjusted
+    }
+
     pub fn compress(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<u8> {
         let mut compressed = Vec::new();
         let mut builder = ActionHistory::new();

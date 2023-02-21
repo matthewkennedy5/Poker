@@ -68,8 +68,6 @@ impl Abstraction {
     }
 
     // Lookup methods: Translate the card to its isomorphic version and return
-    // the ID stored in the corresponding abstraction lookup table
-
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
         let isomorphic = isomorphic_hand(cards, true);
         let hand = cards2hand(&isomorphic);
