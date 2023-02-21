@@ -27,9 +27,12 @@ mod tests;
 mod backend;
 mod bot;
 
+use crate::config::CONFIG;
+
 fn main() {
-    // trainer::train(10_000);
+    trainer::train(CONFIG.train_iters);
     let nodes = trainer::load_nodes(&config::CONFIG.nodes_path);
+    exploiter::exploitability(&nodes);
     trainer_utils::write_preflop_strategy(&nodes, &config::CONFIG.preflop_strategy_path);
 }
 

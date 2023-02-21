@@ -359,20 +359,25 @@ impl Node {
         }
     }
 
+    // Returns the current strategy for this node, and updates the cumulative strategy
+    // as a side effect.
+    // Input: prob is the probability of reaching this node
     pub fn current_strategy(&mut self, prob: f64) -> HashMap<Action, f64> {
-        let mut strat: HashMap<Action, f64> = HashMap::new();
+        // Normalize the regrets for this iteration of CFR
+        let mut regret_norm: HashMap<Action, f64> = HashMap::new();
         for (action, regret) in self.regrets.clone() {
             if regret > 0.0 {
-                strat.insert(action, regret);
+                regret_norm.insert(action, regret);
             } else {
-                strat.insert(action, 0.0);
+                regret_norm.insert(action, 0.0);
             }
         }
-        strat = normalize(&strat);
-        for action in strat.keys() {
+        regret_norm = normalize(&regret_norm);
+
+        for action in regret_norm.keys() {
             // Add this action's probability to the cumulative strategy sum
             let sum_prob = self.strategy_sum.get(action).unwrap().clone();
-            let new_prob = strat.get(action).unwrap() * prob;
+            let new_prob = regret_norm.get(action).unwrap() * prob;
             let mut cumulative_strategy = sum_prob + new_prob;
             // Multiply the cumulative strategy sum according to Discounted
             // Counterfactual Regret Minimization
@@ -383,7 +388,7 @@ impl Node {
         if prob > 0.0 {
             self.t += 1.0;
         }
-        strat
+        regret_norm
     }
 
     pub fn cumulative_strategy(&self) -> HashMap<Action, f64> {
