@@ -17,6 +17,7 @@ extern crate actix_rt;
 extern crate actix_files;
 
 mod config;
+mod ranges;
 mod trainer;
 mod trainer_utils;
 mod card_abstraction;
@@ -33,7 +34,6 @@ fn main() {
     let bot = bot::Bot::new();
     exploiter::exploitability(&bot, CONFIG.lbr_iters);
     trainer::train(CONFIG.train_iters);
-    launch_server();
 }
 
 fn launch_server() {

@@ -83,7 +83,7 @@ pub fn load_blueprint() -> HashMap<CompactInfoSet, Action> {
     blueprint
 }
 
-fn iterate(
+pub fn iterate(
     player: usize,
     deck: &[Card],
     history: ActionHistory,

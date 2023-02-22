@@ -5,13 +5,16 @@ use std::{fmt, fs::File, hash::Hash, io::Write, cmp::Eq, collections::HashMap};
 use rand::{prelude::SliceRandom, thread_rng};
 use once_cell::sync::Lazy;
 
+// TODO: Change this to an enum
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
 pub const TURN: usize = 2;
 pub const RIVER: usize = 3;
 
+// TODO: Chance to enum
 pub const DEALER: usize = 0;
 pub const OPPONENT: usize = 1;
+
 pub const FOLD: Action = Action {
     action: ActionType::Fold,
     amount: 0,
@@ -176,6 +179,40 @@ impl ActionHistory {
         }
 
         actions
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.history[PREFLOP].len() == 0
+    }
+
+    pub fn without_last_action(&self) -> ActionHistory {
+        if self.is_empty() {
+            panic!("Can't remove last action from empty history");
+        }
+        // Remove the last action from the history
+        let mut prev_history = self.clone();
+        if prev_history.history[self.street].len() == 0 {
+            prev_history.street -= 1;
+        }
+        prev_history.history[prev_history.street].pop();
+
+        // There's a lot of complex rules, so just create a new history and add all the actions 
+        // in prev_history.
+        let mut history = ActionHistory::new();
+        for street in prev_history.history {
+            for action in street {
+                history.add(&action);
+            }
+        }
+
+        // Check that we recover the original history when we add back the last action
+        let mut added = history.clone();
+        added.add(&self.last_action().unwrap());
+        println!("added: {:?}", added);
+        println!("self.clone(): {:?}", self.clone());
+        assert!(added == self.clone());
+
+        history
     }
 
     // Performs action translation and returns a translated version of the
@@ -545,3 +582,4 @@ pub fn write_preflop_strategy(nodes: &HashMap<CompactInfoSet, Node>, path: &str)
     let mut file = File::create(&path).unwrap();
     file.write(json.as_bytes()).unwrap();
 }
+
