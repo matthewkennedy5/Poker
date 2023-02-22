@@ -95,7 +95,7 @@ impl Bot {
         // let infoset: CompactInfoSet = InfoSet::from_hand(&hand, &this_history).compress();
         // let node = nodes.get(&infoset).expect("Infoset not in subgame");
         // node.cumulative_strategy()
-        panic!("Not implemented yet");
+        panic!("Not implemented yet")
     }
 
     // Use unsafe subgame solving to return the Nash equilibrium strategy for the current spot, 
