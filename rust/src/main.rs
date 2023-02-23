@@ -30,10 +30,12 @@ mod bot;
 
 use crate::config::CONFIG;
 
+// TODO: Separate executable targets for server, trainer, and exploiter
 fn main() {
-    let bot = bot::Bot::new();
-    exploiter::exploitability(&bot, CONFIG.lbr_iters);
+    // let bot = bot::Bot::new();
+    // exploiter::exploitability(&bot, CONFIG.lbr_iters);
     // trainer::train(CONFIG.train_iters);
+    launch_server();
 }
 
 fn launch_server() {
