@@ -3,6 +3,7 @@
 
 extern crate itertools;
 extern crate rayon;
+extern crate indicatif;
 #[macro_use(c)]
 extern crate cute;
 

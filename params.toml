@@ -24,8 +24,8 @@ blueprint_strategy_path = "products/blueprint.bin"
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 10000000
-lbr_iters = 10000
+train_iters = 1000
+lbr_iters = 100
 eval_every = 1000000
 
 # Preflop chart

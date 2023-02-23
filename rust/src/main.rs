@@ -33,7 +33,7 @@ use crate::config::CONFIG;
 fn main() {
     let bot = bot::Bot::new();
     exploiter::exploitability(&bot, CONFIG.lbr_iters);
-    trainer::train(CONFIG.train_iters);
+    // trainer::train(CONFIG.train_iters);
 }
 
 fn launch_server() {

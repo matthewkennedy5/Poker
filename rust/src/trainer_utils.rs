@@ -24,6 +24,8 @@ pub const ALL_IN: f64 = -1.0;
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(|| Abstraction::new());
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
+
+// TODO: Can you remove Call and just have checking be a Bet of 0?
 pub enum ActionType {
     Fold,
     Call,
@@ -199,17 +201,13 @@ impl ActionHistory {
         // There's a lot of complex rules, so just create a new history and add all the actions 
         // in prev_history.
         let mut history = ActionHistory::new();
-        for street in prev_history.history {
-            for action in street {
-                history.add(&action);
-            }
+        for action in prev_history.get_actions() {
+            history.add(&action);
         }
 
         // Check that we recover the original history when we add back the last action
         let mut added = history.clone();
         added.add(&self.last_action().unwrap());
-        println!("added: {:?}", added);
-        println!("self.clone(): {:?}", self.clone());
         assert!(added == self.clone());
 
         history
@@ -221,24 +219,22 @@ impl ActionHistory {
     // allowed in the abstraction.
     pub fn translate(&self, bet_abstraction: &Vec<Vec<f64>>) -> ActionHistory {
         let mut translated = ActionHistory::new();
-        for street in self.history.clone() {
-            for action in street {
-                let next = translated.next_actions(bet_abstraction);
-                if next.contains(&action) {
-                    translated.add(&action);
-                } else {
-                    // The action is not in the abstraction--time to perform
-                    // action translation by finding the closest action.
-                    let mut closest_action = next[0].clone();
-                    for candidate_action in next {
-                        if (candidate_action.amount - action.amount).abs()
-                            < (closest_action.amount - action.amount).abs()
-                        {
-                            closest_action = candidate_action;
-                        }
+        for action in self.get_actions() {
+            let next = translated.next_actions(bet_abstraction);
+            if next.contains(&action) {
+                translated.add(&action);
+            } else {
+                // The action is not in the abstraction--time to perform
+                // action translation by finding the closest action.
+                let mut closest_action = next[0].clone();
+                for candidate_action in next {
+                    if (candidate_action.amount - action.amount).abs()
+                        < (closest_action.amount - action.amount).abs()
+                    {
+                        closest_action = candidate_action;
                     }
-                    translated.add(&closest_action);
                 }
+                translated.add(&closest_action);
             }
         }
         translated
@@ -261,21 +257,29 @@ impl ActionHistory {
         adjusted
     }
 
+    pub fn get_actions(&self) -> Vec<Action> {
+        let mut actions = Vec::new();
+        for street in self.history.clone() {
+            for action in street {
+                actions.push(action);
+            }
+        }
+        actions
+    }
+
     pub fn compress(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<u8> {
         let mut compressed = Vec::new();
         let mut builder = ActionHistory::new();
-        for street in self.history.clone() {
-            for action in street {
-                for (i, candidate) in builder.next_actions(bet_abstraction)
-                                             .iter()
-                                             .enumerate() {
-                    if action == candidate.clone() {
-                        compressed.push(i as u8);
-                        break;
-                    }
+        for action in self.get_actions() {
+            for (i, candidate) in builder.next_actions(bet_abstraction)
+                                            .iter()
+                                            .enumerate() {
+                if action == candidate.clone() {
+                    compressed.push(i as u8);
+                    break;
                 }
-                builder.add(&action);
             }
+            builder.add(&action);
         }
         compressed
     }
@@ -314,6 +318,16 @@ pub fn get_hand(deck: &[Card], player: usize, street: usize) -> Vec<Card> {
     cards
 }
 
+fn board_length(street: usize) -> usize {
+    match street {
+        PREFLOP => 0,
+        FLOP => 3,
+        TURN => 4,
+        RIVER => 5,
+        _ => panic!("Bad street")
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub struct InfoSet {
     pub history: ActionHistory,
@@ -338,12 +352,12 @@ impl InfoSet {
         }
     }
 
-    pub fn from_hand(hand: &[Card], history: &ActionHistory) -> InfoSet {
-        // hand should contain the exact right number of cards for the current
-        // street of the history. Maybe do error checking for this in the future.
+    pub fn from_hand(hole: &[Card], board: &[Card], history: &ActionHistory) -> InfoSet {
+        assert!(board.len() == board_length(history.street));
+        let hand = [hole, board].concat();
         InfoSet {
             history: history.clone(),
-            card_bucket: ABSTRACTION.bin(hand),
+            card_bucket: ABSTRACTION.bin(&hand),
         }
     }
 

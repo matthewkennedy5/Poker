@@ -19,12 +19,12 @@ pub fn train(iters: u64) {
     let bar = card_utils::pbar(iters);
     for i in 0..iters {
         deck.shuffle(&mut rng);
-        p0_util += iterate(DEALER, &deck, ActionHistory::new(), [1.0, 1.0], &mut nodes);
+        p0_util += iterate(DEALER, &deck, &ActionHistory::new(), [1.0, 1.0], &mut nodes);
         deck.shuffle(&mut rng);
         p1_util += iterate(
             OPPONENT,
             &deck,
-            ActionHistory::new(),
+            &ActionHistory::new(),
             [1.0, 1.0],
             &mut nodes,
         );
@@ -86,12 +86,12 @@ pub fn load_blueprint() -> HashMap<CompactInfoSet, Action> {
 pub fn iterate(
     player: usize,
     deck: &[Card],
-    history: ActionHistory,
+    history: &ActionHistory,
     weights: [f64; 2],
     nodes: &mut HashMap<CompactInfoSet, Node>,
 ) -> f64 {
     if history.hand_over() {
-        return terminal_utility(&deck, history, player);
+        return terminal_utility(&deck, history.clone(), player);
     }
 
     // Look up the DCFR node for this information set, or make a new one if it
@@ -133,7 +133,7 @@ pub fn iterate(
             1 => [p0, p1 * prob],
             _ => panic!("Bad player value"),
         };
-        let utility = iterate(player, &deck, next_history, new_weights, nodes);
+        let utility = iterate(player, &deck, &next_history, new_weights, nodes);
         utilities.insert(action, utility);
         node_utility += prob * utility;
     }

@@ -27,11 +27,11 @@ toml = "*"
 rs_poker = "1.0.0"
 
 [profile.release]
-debug = 1
+debug = true
+debug-assertions = true
 
 [profile.dev]
-opt-level = 1
-debug = true
+opt-level = 2
 
 [[bin]]
 name = "preflop-chart"
