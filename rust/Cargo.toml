@@ -10,7 +10,7 @@ edition = "2018"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "*"
 itertools = "*"
-indicatif = "0.16.2"
+indicatif = "0.16.2"   # Using 0.16 because 0.17 has a non-backwards-compatible change
 cute = "*"
 rand = "*"
 rayon = "*"
