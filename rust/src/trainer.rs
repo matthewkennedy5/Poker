@@ -46,7 +46,6 @@ pub fn train(iters: u64) {
     );
 
     serialize_nodes(&nodes);
-    write_compact_blueprint(&nodes);
 }
 
 pub fn load_nodes(path: &str) -> HashMap<InfoSet, Node> {
@@ -64,23 +63,6 @@ fn serialize_nodes(nodes: &HashMap<InfoSet, Node>) {
     file.write_all(&bincode).unwrap();
     println!("[INFO] Saved strategy.");
 
-}
-
-// The blueprint strategy has pre-sampled actions (rather than probability distributions)
-// to save space (at the cost of increased worst-case exploitability). 
-pub fn load_blueprint() -> HashMap<InfoSet, Action> {
-    println!("[INFO] Loading blueprint strategy...");
-    let file = match File::open(&CONFIG.blueprint_strategy_path) {
-        Err(_e) => {
-            write_compact_blueprint(&load_nodes(&CONFIG.nodes_path));
-            File::open(&CONFIG.blueprint_strategy_path).unwrap()
-        }
-        Ok(f) => f,
-    };
-    let reader = BufReader::new(file);
-    let blueprint = bincode::deserialize_from(reader).expect("Failed to deserialize blueprint");
-    println!("[INFO] Done loading blueprint strategy");
-    blueprint
 }
 
 pub fn iterate(

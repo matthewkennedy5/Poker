@@ -30,7 +30,6 @@ pub struct Config {
     pub gamma: f64,
 
     // File paths
-    pub blueprint_strategy_path: String,
     pub nodes_path: String,
 
     // Training

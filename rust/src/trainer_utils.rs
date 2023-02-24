@@ -545,24 +545,7 @@ pub fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) ->
     }
 }
 
-// Presamples actions and represents the blueprint strategy in a much more
-// compact format.
-pub fn write_compact_blueprint(nodes: &HashMap<InfoSet, Node>) {
-    let mut compressed: HashMap<InfoSet, Action> = HashMap::new();
-    println!("[INFO] Compressing the blueprint strategy");
-    let bar = pbar(nodes.len() as u64);
-    for (infoset, node) in nodes {
-        let action = sample_action_from_node(&node);
-        compressed.insert(infoset.clone(), action);
-        bar.inc(1);
-    }
-    bar.finish();
-    let bincode: Vec<u8> = bincode::serialize(&compressed).unwrap();
-    let mut file = File::create(&CONFIG.blueprint_strategy_path).unwrap();
-    file.write_all(&bincode).unwrap();
-    println!("[INFO] Wrote compressed blueprint strategy to {}", CONFIG.blueprint_strategy_path);
-}
-
+// For making preflop charts
 pub fn write_preflop_strategy(nodes: &HashMap<InfoSet, Node>, path: &str) {
     let mut preflop_strategy: HashMap<String, HashMap<String, f64>> = HashMap::new();
     for (infoset, node) in nodes {
