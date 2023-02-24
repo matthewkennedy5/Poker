@@ -12,7 +12,7 @@ use std::collections::HashMap;
 pub struct Bot {
     // Right now the blueprint stores the mixed strategy for each infoset. To reduce
     // memory usage, we could pre-sample actions and just store a mapping of infoset -> action.
-    blueprint: HashMap<CompactInfoSet, Node>,
+    blueprint: HashMap<InfoSet, Node>,
 }
 
 impl Bot {
@@ -53,7 +53,7 @@ impl Bot {
         assert!(hole.len() == 2);
         assert!(board.len() <= 5);
         let translated = history.translate(&CONFIG.bet_abstraction);
-        let infoset = InfoSet::from_hand(hole, board, &translated).compress();
+        let infoset = InfoSet::from_hand(hole, board, &translated);
 
         let node = self
             .blueprint
@@ -91,11 +91,11 @@ impl Bot {
         // 3. That gives us our strategy in response to their action. 
         let mut this_history = subgame_root.clone();
         this_history.add(&history.last_action().unwrap());
-        let infoset: CompactInfoSet = InfoSet::from_hand(hole, board, &this_history).compress();
-        // let node = nodes.get(&infoset).expect(&format!("Infoset {} not in subgame {}", infoset.uncompress(), subgame_root));
+        let infoset = InfoSet::from_hand(hole, board, &this_history);
+        // TODO: let node = nodes.get(&infoset).expect(&format!("Infoset {} not in subgame {}", infoset.uncompress(), subgame_root));
         let node = match nodes.get(&infoset) {
             Some(n) => n.clone(),
-            None => Node::new(&infoset.uncompress())
+            None => Node::new(&infoset),
         };
         node.cumulative_strategy()
     }
@@ -117,8 +117,8 @@ impl Bot {
         opp_range: &Range,
         opp_action: Action,
         iters: u32,
-    ) -> HashMap<CompactInfoSet, Node> {
-        let mut nodes: HashMap<CompactInfoSet, Node> = HashMap::new();
+    ) -> HashMap<InfoSet, Node> {
+        let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
         let mut rng = rand::thread_rng();
         for _i in 0..iters {
             let opp_hand = opp_range.sample_hand();

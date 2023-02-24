@@ -12,7 +12,7 @@ use std::io::{Write, BufReader};
 pub fn train(iters: u64) {
     let mut rng = thread_rng();
     let mut deck = card_utils::deck();
-    let mut nodes: HashMap<CompactInfoSet, Node> = HashMap::new();
+    let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
     println!("[INFO] Beginning training.");
     let mut p0_util = 0.0;
     let mut p1_util = 0.0;
@@ -49,7 +49,7 @@ pub fn train(iters: u64) {
     write_compact_blueprint(&nodes);
 }
 
-pub fn load_nodes(path: &str) -> HashMap<CompactInfoSet, Node> {
+pub fn load_nodes(path: &str) -> HashMap<InfoSet, Node> {
     println!("[INFO] Loading strategy at {} ...", path);
     let file = File::open(path).expect("Nodes file not found");
     let reader = BufReader::new(file);
@@ -58,7 +58,7 @@ pub fn load_nodes(path: &str) -> HashMap<CompactInfoSet, Node> {
     nodes
 }
 
-fn serialize_nodes(nodes: &HashMap<CompactInfoSet, Node>) {
+fn serialize_nodes(nodes: &HashMap<InfoSet, Node>) {
     let bincode: Vec<u8> = bincode::serialize(nodes).unwrap();
     let mut file = File::create(&CONFIG.nodes_path).unwrap();
     file.write_all(&bincode).unwrap();
@@ -68,7 +68,7 @@ fn serialize_nodes(nodes: &HashMap<CompactInfoSet, Node>) {
 
 // The blueprint strategy has pre-sampled actions (rather than probability distributions)
 // to save space (at the cost of increased worst-case exploitability). 
-pub fn load_blueprint() -> HashMap<CompactInfoSet, Action> {
+pub fn load_blueprint() -> HashMap<InfoSet, Action> {
     println!("[INFO] Loading blueprint strategy...");
     let file = match File::open(&CONFIG.blueprint_strategy_path) {
         Err(_e) => {
@@ -88,7 +88,7 @@ pub fn iterate(
     deck: &[Card],
     history: &ActionHistory,
     weights: [f64; 2],
-    nodes: &mut HashMap<CompactInfoSet, Node>,
+    nodes: &mut HashMap<InfoSet, Node>,
 ) -> f64 {
     if history.hand_over() {
         return terminal_utility(&deck, history.clone(), player);
@@ -98,7 +98,7 @@ pub fn iterate(
     // doesn't exist
     let mut history = history.clone();
     let mut infoset = InfoSet::from_deck(&deck, &history);
-    let mut node: Node = match nodes.get(&infoset.compress()) {
+    let mut node: Node = match nodes.get(&infoset) {
         Some(n) => n.clone(),
         None => Node::new(&infoset),
     };
@@ -112,7 +112,7 @@ pub fn iterate(
             return terminal_utility(&deck, history, player);
         }
         infoset = InfoSet::from_deck(&deck, &history);
-        node = match nodes.get(&infoset.compress()) {
+        node = match nodes.get(&infoset) {
             Some(n) => n.clone(),
             None => Node::new(&infoset),
         };
@@ -145,6 +145,6 @@ pub fn iterate(
     }
 
     let updated = node.clone();
-    nodes.insert(infoset.compress(), updated);
+    nodes.insert(infoset, updated);
     node_utility
 }

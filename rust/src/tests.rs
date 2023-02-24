@@ -6,7 +6,7 @@ use crate::trainer_utils::*;
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
 
-static BLUEPRINT: Lazy<HashMap<CompactInfoSet, Action>> = Lazy::new(|| crate::trainer::load_blueprint());
+static BLUEPRINT: Lazy<HashMap<InfoSet, Action>> = Lazy::new(|| crate::trainer::load_blueprint());
 static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
 
 #[test]

@@ -330,14 +330,8 @@ fn board_length(street: usize) -> usize {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub struct InfoSet {
-    pub history: ActionHistory,
+    pub history: Vec<u8>,
     pub card_bucket: i32,
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
-pub struct CompactInfoSet {
-    history: Vec<u8>,
-    card_bucket: i32,
 }
 
 impl InfoSet {
@@ -347,7 +341,7 @@ impl InfoSet {
         let cards = get_hand(&deck, history.player, history.street);
         let card_bucket = ABSTRACTION.bin(&cards);
         InfoSet {
-            history: history.clone(),
+            history: history.compress(&CONFIG.bet_abstraction).clone(),
             card_bucket: card_bucket,
         }
     }
@@ -357,39 +351,30 @@ impl InfoSet {
         assert!(board.len() == board_length(history.street));
         let hand = [hole, board].concat();
         InfoSet {
-            history: history.clone(),
+            history: history.compress(&CONFIG.bet_abstraction).clone(),
             card_bucket: ABSTRACTION.bin(&hand),
         }
     }
 
     pub fn next_actions(&self) -> Vec<Action> {
-        self.history.next_actions(&CONFIG.bet_abstraction)
+        self.get_history().next_actions(&CONFIG.bet_abstraction)
     }
 
-    pub fn compress(&self) -> CompactInfoSet {
-        CompactInfoSet {
-            history: self.history.compress(&CONFIG.bet_abstraction),
-            card_bucket: self.card_bucket,
-        }
-    }
-}
-
-impl fmt::Display for InfoSet {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let card_display = hand_with_bucket(self.card_bucket, self.history.street);
-        write!(f, "{}|{}", card_display, self.history.to_string())
-    }
-}
-
-impl CompactInfoSet {
-    pub fn uncompress(&self) -> InfoSet {
+    fn get_history(&self) -> ActionHistory {
         let mut full_history = ActionHistory::new();
         for action in &self.history {
             let next_actions = full_history.next_actions(&CONFIG.bet_abstraction);
             let next_action = &next_actions[action.clone() as usize];
             full_history.add(next_action);
         }
-        InfoSet { history: full_history, card_bucket: self.card_bucket}
+        full_history
+    }
+}
+
+impl fmt::Display for InfoSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let card_display = hand_with_bucket(self.card_bucket, self.get_history().street);
+        write!(f, "{}|{}", card_display, self.get_history().to_string())
     }
 }
 
@@ -562,8 +547,8 @@ pub fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) ->
 
 // Presamples actions and represents the blueprint strategy in a much more
 // compact format.
-pub fn write_compact_blueprint(nodes: &HashMap<CompactInfoSet, Node>) {
-    let mut compressed: HashMap<CompactInfoSet, Action> = HashMap::new();
+pub fn write_compact_blueprint(nodes: &HashMap<InfoSet, Node>) {
+    let mut compressed: HashMap<InfoSet, Action> = HashMap::new();
     println!("[INFO] Compressing the blueprint strategy");
     let bar = pbar(nodes.len() as u64);
     for (infoset, node) in nodes {
@@ -578,7 +563,7 @@ pub fn write_compact_blueprint(nodes: &HashMap<CompactInfoSet, Node>) {
     println!("[INFO] Wrote compressed blueprint strategy to {}", CONFIG.blueprint_strategy_path);
 }
 
-pub fn write_preflop_strategy(nodes: &HashMap<CompactInfoSet, Node>, path: &str) {
+pub fn write_preflop_strategy(nodes: &HashMap<InfoSet, Node>, path: &str) {
     let mut preflop_strategy: HashMap<String, HashMap<String, f64>> = HashMap::new();
     for (infoset, node) in nodes {
         if infoset.history.len() == 0 {
