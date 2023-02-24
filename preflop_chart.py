@@ -12,7 +12,6 @@ from matplotlib import pyplot as plt
 os.chdir('rust')
 os.system('cargo run --release --bin preflop-chart')
 
-
 with open('products/preflop_strategy.json', 'r') as f:
     strategy = json.load(f)
 
@@ -26,6 +25,7 @@ cards = 'A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'
 shape = (len(cards), len(cards))
 fold_chart = np.zeros(shape)
 raise_chart = np.zeros(shape)
+all_in_chart = np.zeros(shape)
 hand_labels = np.empty(shape, dtype=object)
 for i, card1 in enumerate(cards):
     for j, card2 in enumerate(cards):
@@ -43,6 +43,7 @@ for i, card1 in enumerate(cards):
         hand_labels[i, j] = hand[:-1] if i == j else hand
 
         fold_chart[i, j] = hand_strat['fold 0']
+        all_in_chart[i, j] = hand_strat['bet 20000']
         for key in hand_strat:
             if 'bet' in key or 'call' in key:
                 raise_chart[i, j] += hand_strat[key]
@@ -50,15 +51,19 @@ for i, card1 in enumerate(cards):
 
 assert(np.allclose(fold_chart + raise_chart, 1))
 
-# Draw and save the charts
-sns.set(font_scale=1.2)
-fig, ax = plt.subplots(figsize=(10, 7))
-sns.heatmap(fold_chart, annot=hand_labels, fmt='', linewidths=.5, ax=ax, xticklabels=[], yticklabels=[], cmap='coolwarm')
-ax.set_title('Opening fold probabilities - Dealer')
-plt.savefig("products/preflop_charts/fold_chart.png")
 
-sns.set(font_scale=1.2)
-fig, ax = plt.subplots(figsize=(10, 7))
-sns.heatmap(raise_chart, annot=hand_labels, fmt='', linewidths=.5, ax=ax, xticklabels=[], yticklabels=[], cmap='coolwarm')
-ax.set_title('Opening raise probabilities - Dealer')
-plt.savefig("products/preflop_charts/raise_chart.png")
+# Draw and save the charts
+def draw_chart(data, label):
+    sns.set(font_scale=1.2)
+    fig, ax = plt.subplots(figsize=(10, 7))
+    sns.heatmap(data, annot=hand_labels, fmt='', linewidths=.5, ax=ax, xticklabels=[], yticklabels=[], cmap='coolwarm')
+    ax.set_title(f'Opening {label} probabilities - Dealer')
+    path = f"products/preflop_charts/{label}_chart.png"
+    plt.savefig(path)
+    os.system(f'open {path} &')
+
+
+charts = fold_chart, raise_chart, all_in_chart
+labels = 'fold', 'raise', 'all_in'
+for c, l in zip(charts, labels):
+    draw_chart(c, l)

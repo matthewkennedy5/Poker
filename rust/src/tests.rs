@@ -204,6 +204,12 @@ fn blueprint_bets_positive() {
     }
 }
 
+// Test that the blueprint contains CFR nodes for every infoset in the game tree.
+#[test]
+fn blueprint_contains_all_nodes() {
+    
+}
+
 #[test]
 fn cpu_bets_more_than_stack() {
     let mut history = ActionHistory::new();

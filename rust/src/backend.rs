@@ -11,7 +11,6 @@ static HAND_STRENGTHS: Lazy<LightHandTable> = Lazy::new(|| LightHandTable::new()
 static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
 
 async fn compare_hands(req: HttpRequest) -> impl Responder {
-    println!("[INFO] Received HTTP request: {:#?}", req);
     let query = req.query_string();
     let query = qstring::QString::from(query);
     let human_hand = query.get("humanHand").unwrap();
@@ -30,9 +29,9 @@ async fn compare_hands(req: HttpRequest) -> impl Responder {
 }
 
 async fn get_cpu_action(req: HttpRequest) -> impl Responder {
-    println!("[INFO] Received HTTP request: {:#?}", req);
     let query = req.query_string();
     let query = qstring::QString::from(query);
+    println!("[INFO] Received HTTP request: {}", query);
     let cpu_cards = query.get("cpuCards").unwrap();
     let board = query.get("board").unwrap();
     let history_json = query.get("history").unwrap();

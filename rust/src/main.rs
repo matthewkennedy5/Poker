@@ -28,6 +28,8 @@ mod tests;
 mod backend;
 mod bot;
 
+use card_utils::strvec2cards;
+
 use crate::config::CONFIG;
 
 // TODO: Separate executable targets for server, trainer, and exploiter
@@ -36,6 +38,18 @@ fn main() {
     // exploiter::exploitability(&bot, CONFIG.lbr_iters);
     // trainer::train(CONFIG.train_iters);
     launch_server();
+
+    // Load the 27o preflop node to see what it looks like. Why is it raising so often?
+    // It should be folding 100% of the time. (Maybe it just needs to train for longer)
+    // let nodes = trainer::load_nodes(&CONFIG.nodes_path);
+    // let infoset = trainer_utils::InfoSet::from_hand(
+    //     &strvec2cards(&["2d", "8d"]),
+    //     &Vec::new(),
+    //     &trainer_utils::ActionHistory::new()
+    // );
+    // let node = nodes.get(&infoset.compress()).unwrap();
+    // println!("{:#?}", node);
+    // println!("\n{:#?}", node.cumulative_strategy());
 }
 
 fn launch_server() {
