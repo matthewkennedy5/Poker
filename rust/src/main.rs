@@ -25,7 +25,6 @@ mod card_utils;
 mod exploiter;
 #[cfg(test)]
 mod tests;
-mod backend;
 mod bot;
 
 use card_utils::strvec2cards;
@@ -37,7 +36,6 @@ fn main() {
     // let bot = bot::Bot::new();
     // exploiter::exploitability(&bot, CONFIG.lbr_iters);
     // trainer::train(CONFIG.train_iters);
-    launch_server();
 
     // Load the 27o preflop node to see what it looks like. Why is it raising so often?
     // It should be folding 100% of the time. (Maybe it just needs to train for longer)
@@ -50,8 +48,4 @@ fn main() {
     // let node = nodes.get(&infoset.compress()).unwrap();
     // println!("{:#?}", node);
     // println!("\n{:#?}", node.cumulative_strategy());
-}
-
-fn launch_server() {
-    backend::main().expect("Could not launch server");
 }

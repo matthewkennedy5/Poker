@@ -1,7 +1,7 @@
 [package]
 name = "rust"
 version = "0.1.0"
-authors = ["Matthew Kennedy <MatthewKennedy2021@u.northwestern.edu>"]
+authors = ["Matthew Kennedy <mtthwknnd4@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -34,5 +34,18 @@ debug-assertions = true
 opt-level = 2
 
 [[bin]]
+name="server"
+path="src/backend.rs"
+
+# [[bin]]
+# name="trainer"
+# path="src/trainer.rs"
+
+# [[bin]]
+# name="exploiter"
+# path="src/exploiter.rs"
+
+[[bin]]
 name = "preflop-chart"
 path="src/preflop_chart.rs"
+
