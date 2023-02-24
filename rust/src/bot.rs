@@ -5,7 +5,6 @@ use crate::config::CONFIG;
 use crate::trainer;
 use crate::trainer_utils::*;
 use crate::ranges::*;
-use crate::indicatif::ProgressIterator;
 use rand::prelude::*;
 use std::collections::HashMap;
 

@@ -1,5 +1,5 @@
 [package]
-name = "rust"
+name = "optimus"
 version = "0.1.0"
 authors = ["Matthew Kennedy <mtthwknnd4@gmail.com>"]
 edition = "2018"
@@ -35,17 +35,17 @@ opt-level = 2
 
 [[bin]]
 name="server"
-path="src/backend.rs"
+path="src/bin/server.rs"
 
-# [[bin]]
-# name="trainer"
-# path="src/trainer.rs"
+[[bin]]
+name="train"
+path="src/bin/train.rs"
 
-# [[bin]]
-# name="exploiter"
-# path="src/exploiter.rs"
+[[bin]]
+name="exploit"
+path="src/bin/exploit.rs"
 
 [[bin]]
 name = "preflop-chart"
-path="src/preflop_chart.rs"
+path="src/bin/preflop_chart.rs"
 

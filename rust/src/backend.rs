@@ -1,21 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
-extern crate itertools;
-extern crate indicatif;
-extern crate rayon;
-
-mod bot;
-mod card_utils;
-mod trainer_utils;
-mod ranges;
-mod trainer;
-mod config;
-mod exploiter;
-mod card_abstraction;
-#[macro_use(c)]
-extern crate cute;
-
 use crate::bot::Bot;
 use crate::card_utils::{strvec2cards, Card, LightHandTable};
 use crate::trainer_utils::{Action, ActionHistory, ActionType};
@@ -120,5 +102,3 @@ pub async fn start_server() -> std::io::Result<()> {
     .run()
     .await
 }
-
-fn main() {}
