@@ -178,23 +178,33 @@ fn high_pair_beats_low_pair() {
     assert!(light_hand_strength(human, &table) > light_hand_strength(cpu, &table));
 }
 
+// Helper function for tests that get the bot's response at a certain spot
+fn bot_strategy_countains_amount(amount: i32, hole: &str, board: &str, actions: Vec<Action>) -> bool {
+    let mut history = ActionHistory::new();
+    for a in actions {
+        history.add(&a);
+    }
+    let hole = hand2cards(str2hand(hole));
+    let board = hand2cards(str2hand(board));
+    let strategy = BOT.get_strategy(&hole, &board, &history);
+    let amounts: Vec<i32> = strategy.keys().map(|action| action.amount).collect();
+    return amounts.contains(&amount);
+}
+
 #[test]
 fn negative_bet_size() {
-    let mut history = ActionHistory::new();
-    history.add(&Action {action: ActionType::Call, amount: 100});
-    history.add(&Action {action: ActionType::Call, amount: 100});
-    history.add(&Action {action: ActionType::Bet, amount: 50});
-    history.add(&Action {action: ActionType::Bet, amount: 100});
-    history.add(&Action {action: ActionType::Bet, amount: 200});
-    let hand = hand2cards(str2hand("Ts8s"));
-    let board = hand2cards(str2hand("Js5sQc"));
-    let response = BOT.get_action(&hand, &board, &history);
-    assert!(response.amount != 19834);
+    let actions = vec![
+        Action {action: ActionType::Call, amount: 100},
+        Action {action: ActionType::Call, amount: 100},
+        Action {action: ActionType::Bet, amount: 50},
+        Action {action: ActionType::Bet, amount: 100},
+        Action {action: ActionType::Bet, amount: 200}
+    ];
+    assert!(!bot_strategy_countains_amount(19834, "Ts8s", "Js5sQc", actions));
 }
 
 #[test]
 fn cpu_bets_more_than_stack() {
-    let mut history = ActionHistory::new();
     let actions = vec![
         Action {action: ActionType::Bet, amount: 50},
         Action {action: ActionType::Bet, amount: 250},
@@ -203,18 +213,5 @@ fn cpu_bets_more_than_stack() {
         Action {action: ActionType::Bet, amount: 1000},
         Action {action: ActionType::Bet, amount: 2000},
     ];
-    for a in actions {
-        history.add(&a);
-    }
-    let hand = hand2cards(str2hand("QdQs"));
-    let board = hand2cards(str2hand("6dTcJd"));
-
-    let response = BOT.get_action(&hand, &board, &history);
-    assert!(response.amount != 18750);
+    assert!(!bot_strategy_countains_amount(18750, "QdQs", "6dTcJd", actions));
 }
-
-// TODO: Add a test that none of the actions in the blueprint strategy involve
-// illegal bet sizes. This might require adding a function ActionHistory to return
-// whether a given action is a legal next move. Then you might want to dedupe that
-// with the frontend code. 
-
