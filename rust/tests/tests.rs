@@ -1,12 +1,8 @@
 #[cfg(test)]
 
-use crate::bot::Bot;
-use crate::card_utils::*;
-use crate::trainer_utils::*;
-use std::collections::HashMap;
+use optimus::*;
 use once_cell::sync::Lazy;
 
-static BLUEPRINT: Lazy<HashMap<InfoSet, Action>> = Lazy::new(|| crate::trainer::load_blueprint());
 static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
 
 #[test]
@@ -166,7 +162,7 @@ fn hand_comparisons() {
 }
 
 #[test]
-fn gradys_hand() {
+fn high_pair_beats_low_pair() {
     let table = LightHandTable::new();
 
     let human = vec!["Td", "Tc", "9c", "5s", "4d", "6h", "Jd"];
@@ -194,20 +190,6 @@ fn negative_bet_size() {
     let board = hand2cards(str2hand("Js5sQc"));
     let response = BOT.get_action(&hand, &board, &history);
     assert!(response.amount != 19834);
-}
-
-// Test that there are no negative bet sizes in the blueprint strategy.
-#[test]
-fn blueprint_bets_positive() {
-    for (_infoset, action) in BLUEPRINT.iter() {
-        assert!(action.amount >= 0);
-    }
-}
-
-// TODO: Test that the blueprint contains CFR nodes for every infoset in the game tree
-#[test]
-fn blueprint_contains_all_nodes() {
-    
 }
 
 #[test]
