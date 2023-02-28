@@ -193,6 +193,7 @@ fn bot_strategy_countains_amount(amount: i32, hole: &str, board: &str, actions: 
 
 #[test]
 fn negative_bet_size() {
+    // start here: this is giving a stack overflow error for some reason
     let actions = vec![
         Action {action: ActionType::Call, amount: 100},
         Action {action: ActionType::Call, amount: 100},
@@ -203,6 +204,8 @@ fn negative_bet_size() {
     assert!(!bot_strategy_countains_amount(19834, "Ts8s", "Js5sQc", actions));
 }
 
+// Due to a bug in action translation, the out of position player's "all in" size (18750) bigger 
+// can be bigger than its remaining stack (18450)
 #[test]
 fn cpu_bets_more_than_stack() {
     let actions = vec![

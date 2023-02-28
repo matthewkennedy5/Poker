@@ -1,5 +1,3 @@
-// Real-time bot logic. Right now this just does action translation, but this
-// is where I will add depth-limited solving.
 use crate::card_utils::{self, Card};
 use crate::config::CONFIG;
 use crate::trainer;
@@ -28,7 +26,7 @@ impl Bot {
 
     // Wrapper for the real time solving for the bot's strategy
     // TODO: Refactor this to maybe just input an infoset, or just a hand. The hole and board inputs add complexity
-    // sine it's different than the rest of the codebase. 
+    // since it's different than the rest of the codebase. 
     pub fn get_strategy(
         &self,
         hole: &[Card],
@@ -73,21 +71,22 @@ impl Bot {
         board: &[Card],
         history: &ActionHistory,
     ) -> HashMap<Action, f64> {
-        // 1. Perform action translation for all actions except the last one
-        let subgame_root: ActionHistory = history.without_last_action()
-                                                 .translate(&CONFIG.bet_abstraction);
 
-        // 2. Get our beliefs of the opponent's range given their actions (not including the last
-        // action, which might be off-tree)
+        let subgame_root: ActionHistory = history.without_last_action();
+        let translated = subgame_root.translate(&CONFIG.bet_abstraction);
+
+        // Get our beliefs of the opponent's range given their actions up to the subgame root.
+        // Use action translation to map the actions so far to infosets in the blueprint strategy.
         let get_strategy = |hole: &[Card], board: &[Card], history: &ActionHistory| {
             self.get_strategy_action_translation(hole, board, &history)
         };
-        let opp_range = Range::get_opponent_range(hole, board, &subgame_root, get_strategy);
+        let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
+        println!("{:?}", opp_range);
 
-        // 2. Solve the opponent's subgame, including their action in the abstraction 
+        // Solve the opponent's subgame, including their action in the abstraction 
         let nodes = self.solve_subgame(&subgame_root, &opp_range, history.last_action().unwrap(), 1000);
 
-        // 3. That gives us our strategy in response to their action. 
+        // That gives us our strategy in response to their action. 
         let mut this_history = subgame_root.clone();
         this_history.add(&history.last_action().unwrap());
         let infoset = InfoSet::from_hand(hole, board, &this_history);
