@@ -12,9 +12,9 @@ use std::{
     fs::File,
 };
 
-const FLOP_PATH: &str = "products/flop_abstraction.txt";
-const TURN_PATH: &str = "products/turn_abstraction.txt";
-const RIVER_PATH: &str = "products/river_abstraction.txt";
+const FLOP_PATH: &str = "products/flop_abstraction.bin";
+const TURN_PATH: &str = "products/turn_abstraction.bin";
+const RIVER_PATH: &str = "products/river_abstraction.bin";
 
 pub struct Abstraction {
     flop: HashMap<u64, i32>,

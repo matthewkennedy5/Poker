@@ -667,26 +667,13 @@ fn river_equity(hand: Vec<Card>) -> f64 {
 // with some sort of data such as hand strength or abstraction ID. This loads
 // that data from a file desciptor and returns the lookup table.
 pub fn read_serialized(file: File) -> HashMap<u64, i32> {
-    let mut table: HashMap<u64, i32> = HashMap::new();
     let reader = BufReader::new(file);
-    for line in reader.lines() {
-        let line_str = line.unwrap();
-        let mut data = line_str.split_whitespace();
-        let hand = data.next().unwrap();
-        let bucket = data.next().unwrap();
-        let hand = str2hand(hand);
-        let bucket = bucket.to_string().parse().unwrap();
-        table.insert(hand, bucket);
-    }
-    table
+    bincode::deserialize_from(reader).unwrap()
 }
 
 pub fn serialize(hand_data: HashMap<u64, i32>, path: &str) {
-    let mut buffer = File::create(path).unwrap();
-    for (hand, data) in hand_data {
-        let to_write = format!("{} {}\n", hand2str(hand), data);
-        buffer.write(to_write.as_bytes()).unwrap();
-    }
+    let buffer = File::create(path).unwrap();
+    bincode::serialize_into(buffer, &hand_data).unwrap();
 }
 
 struct EquityTable {

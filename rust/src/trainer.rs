@@ -2,7 +2,6 @@ use crate::config::CONFIG;
 use crate::card_utils;
 use crate::card_utils::Card;
 use crate::trainer_utils::*;
-use crate::exploiter::*;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
