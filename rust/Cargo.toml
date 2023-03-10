@@ -29,6 +29,8 @@ rs_poker = "1.0.0"
 [profile.release]
 debug = true
 debug-assertions = true
+incremental = true
+# lto = true
 
 [profile.dev]
 opt-level = 2

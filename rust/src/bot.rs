@@ -81,7 +81,6 @@ impl Bot {
             self.get_strategy_action_translation(hole, board, &history)
         };
         let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
-        println!("{:?}", opp_range);
 
         // Solve the opponent's subgame, including their action in the abstraction 
         let nodes = self.solve_subgame(&subgame_root, &opp_range, history.last_action().unwrap(), 1000);

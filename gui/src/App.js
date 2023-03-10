@@ -26,7 +26,9 @@ class App extends Component {
       if (this.state.game.getCallAmount() > 0) {
           enabled.push("call");
       }
-      enabled.push("raise");
+      if (this.state.game.getMinBetAmount() < this.state.game.getAllInAmount()) {
+        enabled.push("raise");
+      }
       return enabled;
   }
 
