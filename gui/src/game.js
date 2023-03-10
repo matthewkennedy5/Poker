@@ -255,7 +255,7 @@ class Game extends Component {
         let winnings = 0;
         if (this.winner === "human") {
             winnings = this.pot / 2;
-        } else if (this.winner == "cpu") {
+        } else if (this.winner === "cpu") {
             winnings = -this.pot / 2;
         }
         this.handOver(winnings);
