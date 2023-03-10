@@ -21,6 +21,11 @@ class Buttons extends Component {
         this.setState({raiseUIVisible: false});
     }
 
+    raiseButtonPressed = () => {
+        this.hideRaiseUI();
+        this.props.bet();
+    }
+
     render() {
         const enabled = this.props.enabledButtons;
 
@@ -47,7 +52,7 @@ class Buttons extends Component {
                             <input type="text" id="betInput" value={this.props.betAmount} onChange={this.props.updateBetAmountFromEvent} className="m-1"/>
                         </div>
                         <div className="back-raise-buttons">
-                            <button onClick={this.props.bet} id="raise-button" className={BUTTON_STYLE}>RAISE</button>
+                            <button onClick={this.raiseButtonPressed} id="raise-button" className={BUTTON_STYLE} disabled={this.props.betAmount < this.props.minBetAmount || this.props.betAmount > this.props.allInAmount}>RAISE</button>
                             <button onClick={this.hideRaiseUI} id="back-button" className={BUTTON_STYLE + " back"}>BACK</button>
                         </div>
                     </div>
@@ -56,13 +61,13 @@ class Buttons extends Component {
                             <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.minBetAmount)}>
                                 MIN RAISE
                             </button>
-                            <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot / 2)}>
+                            <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot / 2)} disabled={this.props.pot / 2 < this.props.minBetAmount}>
                                 1/2 POT
                             </button>
-                            <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot * 3/4)}>
+                            <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot * 3/4)} disabled={this.props.pot * 3/4 < this.props.minBetAmount}>
                                 3/4 POT
                             </button>
-                            <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot)}>
+                            <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot)} disabled={this.props.pot < this.props.minBetAmount}>
                                 POT
                             </button>
                             <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.allInAmount)}>
