@@ -1,7 +1,9 @@
 #[cfg(test)]
 
 use optimus::*;
+use rand::prelude::*;
 use once_cell::sync::Lazy;
+use rayon::iter::*;
 
 static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
 
@@ -217,4 +219,46 @@ fn cpu_bets_more_than_stack() {
         Action {action: ActionType::Bet, amount: 2000},
     ];
     assert!(!bot_strategy_countains_amount(18750, "QdQs", "6dTcJd", actions));
+}
+
+
+fn play_hand_always_call() -> f64 {
+    let mut deck: Vec<Card> = deck();
+    let mut rng = &mut rand::thread_rng();
+    deck.shuffle(&mut rng);
+    let bot = [DEALER, OPPONENT].choose(&mut rng).unwrap().clone();
+    let mut history = ActionHistory::new();
+    while !history.hand_over() {
+        let action = if history.player == bot {
+            let hand = get_hand(&deck, bot, history.street);
+            let hole = &hand[..2];
+            let board = &hand[2..];
+            BOT.get_action(hole, board, &history)
+        } else {
+            // Opponent only uses check/call actions
+            Action { action: ActionType::Call, amount: history.to_call() }
+        };
+        history.add(&action);
+    }
+    terminal_utility(&deck, history, bot)
+}
+
+#[test]
+fn bot_beats_always_call() {
+    println!("[INFO] Starting game against always call bot...");
+    let iters = 10_000;
+    let bar = pbar(iters);
+    let winnings: Vec<f64> = (0..iters)
+        .into_par_iter()
+        .map(|_i| {
+            let score = play_hand_always_call() / (CONFIG.big_blind as f64);
+            bar.inc(1);
+            score
+        })
+        .collect();
+    bar.finish();
+    let mean = statistical::mean(&winnings);
+    let std = statistical::standard_deviation(&winnings, Some(mean));
+    let confidence = 1.96 * std / (iters as f64).sqrt();
+    println!("Score against check/call bot: {} +/- {} BB/h\n", mean, confidence);
 }

@@ -43,12 +43,6 @@ class App extends Component {
     this.setState({betAmount: amount});
   }
 
-  // addToScore = (winnings) => {
-  //     const score = this.state.score + winnings;
-  //     this.state.score = score;
-  //     this.setState({score: score});
-  // }
-
   incrementHands = () => {
       const nHands = this.state.hands + 1;
       this.state.hands = nHands;
@@ -60,9 +54,10 @@ class App extends Component {
   // 2. /api/bot - gets the bot's action at a given spot
 
   evaluateHands = async(humanHand, cpuHand) => {
-      humanHand = humanHand.join();
-      cpuHand = cpuHand.join();
-      const response = await axios.get(URL + '/api/compare?humanHand=' + humanHand + '&cpuHand=' + cpuHand);
+      const response = await axios.post(URL + '/api/compare', {
+          humanHand: humanHand,
+          cpuHand: cpuHand
+      });
       return response;
   }
 
@@ -72,12 +67,10 @@ class App extends Component {
   }
 
   getCPUAction = async(cpuCards, history) => {
-      const response = await axios.get(URL + '/api/bot', {
-          params: {
-              cpuCards: cpuCards.join(),
-              board: this.getDisplayedBoardCards().join(),
-              history: history
-          }
+      const response = await axios.post(URL + '/api/bot', {
+          cpuCards: cpuCards,
+          board: this.getDisplayedBoardCards(),
+          history: history
       });
       return response;
   }
