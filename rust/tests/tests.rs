@@ -181,7 +181,7 @@ fn high_pair_beats_low_pair() {
 }
 
 // Helper function for tests that get the bot's response at a certain spot
-fn bot_strategy_countains_amount(amount: i32, hole: &str, board: &str, actions: Vec<Action>) -> bool {
+fn bot_strategy_contains_amount(amount: i32, hole: &str, board: &str, actions: Vec<Action>) -> bool {
     let mut history = ActionHistory::new();
     for a in actions {
         history.add(&a);
@@ -195,7 +195,7 @@ fn bot_strategy_countains_amount(amount: i32, hole: &str, board: &str, actions: 
 
 #[test]
 fn negative_bet_size() {
-    // start here: this is giving a stack overflow error for some reason
+    // TODO: this is giving a stack overflow error for some reason
     let actions = vec![
         Action {action: ActionType::Call, amount: 100},
         Action {action: ActionType::Call, amount: 100},
@@ -203,7 +203,7 @@ fn negative_bet_size() {
         Action {action: ActionType::Bet, amount: 100},
         Action {action: ActionType::Bet, amount: 200}
     ];
-    assert!(!bot_strategy_countains_amount(19834, "Ts8s", "Js5sQc", actions));
+    assert!(!bot_strategy_contains_amount(19834, "Ts8s", "Js5sQc", actions));
 }
 
 // Due to a bug in action translation, the out of position player's "all in" size (18750) bigger 
@@ -218,9 +218,16 @@ fn cpu_bets_more_than_stack() {
         Action {action: ActionType::Bet, amount: 1000},
         Action {action: ActionType::Bet, amount: 2000},
     ];
-    assert!(!bot_strategy_countains_amount(18750, "QdQs", "6dTcJd", actions));
+    assert!(!bot_strategy_contains_amount(18750, "QdQs", "6dTcJd", actions));
 }
 
+#[test]
+fn min_bet_at_least_double() {
+    let actions: Vec<Action> = vec![
+        Action {action: ActionType::Bet, amount: 200}
+    ];
+    assert!(!bot_strategy_contains_amount(250, "Ah8h", "", actions));
+}
 
 fn play_hand_always_call() -> f64 {
     let mut deck: Vec<Card> = deck();

@@ -83,7 +83,7 @@ impl Bot {
         let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
 
         // Solve the opponent's subgame, including their action in the abstraction 
-        let nodes = self.solve_subgame(&subgame_root, &opp_range, history.last_action().unwrap(), 1000);
+        let nodes = self.solve_subgame(&subgame_root, &opp_range, history.last_action().unwrap(), CONFIG.subgame_iters);
 
         // That gives us our strategy in response to their action. 
         let mut this_history = subgame_root.clone();
@@ -113,10 +113,11 @@ impl Bot {
         history: &ActionHistory,
         opp_range: &Range,
         opp_action: Action,
-        iters: u32,
+        iters: u64,
     ) -> HashMap<InfoSet, Node> {
         let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
         let mut rng = rand::thread_rng();
+        let bar = card_utils::pbar(iters);   // TODO: use .progress() instead of this
         for _i in 0..iters {
             let opp_hand = opp_range.sample_hand();
             let mut deck = card_utils::deck();
@@ -128,7 +129,9 @@ impl Bot {
             trainer::iterate(DEALER, &deck, history, [1.0, 1.0], &mut nodes);
             deck.shuffle(&mut rng);
             trainer::iterate(OPPONENT, &deck, history, [1.0, 1.0], &mut nodes);
+            bar.inc(1);
         }
+        bar.finish();
         nodes
     }
 }

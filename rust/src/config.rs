@@ -37,6 +37,9 @@ pub struct Config {
     pub lbr_iters: u64,
     pub eval_every: u64,
 
+    // Real time solving
+    pub subgame_iters: u64,
+
     // Preflop chart
     pub preflop_strategy_path: String,
 }

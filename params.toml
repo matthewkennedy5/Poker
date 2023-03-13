@@ -28,5 +28,8 @@ train_iters = 1000
 lbr_iters = 100
 eval_every = 1000000
 
+# Realtime solving
+subgame_iters = 1000
+
 # Preflop chart
 preflop_strategy_path = "products/preflop_strategy.json"
