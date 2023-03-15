@@ -143,11 +143,6 @@ impl ActionHistory {
     // allowed in our action abstraction.
     pub fn next_actions(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<Action> {
         let mut actions = Vec::new();
-        let min_bet = match &self.last_action {
-            Some(action) => 2 * action.amount,
-            None => CONFIG.big_blind,
-        };
-        let max_bet = self.stacks[self.player];
         let pot = self.pot();
         for fraction in bet_abstraction[self.street].iter() {
             let bet = if fraction == &ALL_IN {
@@ -157,7 +152,7 @@ impl ActionHistory {
             };
             // Add the bet if the amount is legal and it's distinct from the
             // call amount.
-            if min_bet <= bet && bet <= max_bet && bet != self.to_call() {
+            if self.min_bet() <= bet && bet <= self.max_bet() && bet != self.to_call() {
                 actions.push(Action {
                     action: ActionType::Bet,
                     amount: bet,
