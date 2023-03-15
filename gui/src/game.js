@@ -74,7 +74,7 @@ class Game extends Component {
     };
 
     fold = () => {
-        this.playerAction("human", {action: "fold", amount: 0});
+        this.playerAction("human", {action: "Fold", amount: 0});
     };
 
     advanceStreet() {
@@ -93,16 +93,16 @@ class Game extends Component {
     }
 
     check = () => {
-        this.playerAction("human", {action: "check", amount: 0})
+        this.playerAction("human", {action: "Check", amount: 0})
     };
 
     call = () => {
         const amount = this.getCallAmount();
-        this.playerAction("human", {action: "call", amount: amount});
+        this.playerAction("human", {action: "Call", amount: amount});
     };
 
     bet = (amount) => {
-        this.playerAction("human", {action: "bet", amount: amount})
+        this.playerAction("human", {action: "Bet", amount: amount})
     };
 
     playerAction(player, action) {
@@ -110,7 +110,7 @@ class Game extends Component {
         this.stacks[player] -= action["amount"];
         this.history[this.street].push(action);
 
-        if (action["action"] === "fold") {
+        if (action["action"] === "Fold") {
             let losings = STACK_SIZE - this.stacks[player];
             if (losings === 0) {
                 // Player folded before betting, so has to post their blind
@@ -239,7 +239,7 @@ class Game extends Component {
 
     bettingIsOver() {
         const prevAction = this.getPrevAction()["action"];
-        if (prevAction === "check") {
+        if (prevAction === "Check") {
             // If the second player to go checks, we're done with betting.
             return (this.history[this.street].length === 2);
         } else {

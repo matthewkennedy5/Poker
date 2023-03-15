@@ -5,13 +5,11 @@ use std::{fmt, fs::File, hash::Hash, io::Write, cmp::Eq, collections::HashMap};
 use rand::{prelude::SliceRandom, thread_rng};
 use once_cell::sync::Lazy;
 
-// TODO: Change this to an enum
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
 pub const TURN: usize = 2;
 pub const RIVER: usize = 3;
 
-// TODO: Chance to enum
 pub const DEALER: usize = 0;
 pub const OPPONENT: usize = 1;
 
@@ -24,8 +22,6 @@ pub const ALL_IN: f64 = -1.0;
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(|| Abstraction::new());
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
-
-// TODO: Can you remove Call and just have checking be a Bet of 0?
 pub enum ActionType {
     Fold,
     Call,

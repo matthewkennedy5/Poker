@@ -16,18 +16,18 @@ class App extends Component {
       const street = this.state.game.street;
       const prevAction = this.state.game.getPrevAction();
 
-      if (prevAction !== undefined && prevAction["action"] === "fold" || street === "showdown") {
+      if (prevAction !== undefined && prevAction["action"] === "Fold" || street === "showdown") {
           return ["nextHand"];
       }
-      let enabled = ["fold"];
-      if (street !== "preflop" && (prevAction === undefined || prevAction["action"] === "check")) {
-          enabled.push("check");
+      let enabled = ["Fold"];
+      if (street !== "preflop" && (prevAction === undefined || prevAction["action"] === "Check")) {
+          enabled.push("Check");
       }
       if (this.state.game.getCallAmount() > 0) {
-          enabled.push("call");
+          enabled.push("Call");
       }
       if (this.state.game.getMinBetAmount() < this.state.game.getAllInAmount()) {
-        enabled.push("raise");
+        enabled.push("Raise");
       }
       return enabled;
   }
@@ -121,13 +121,13 @@ class App extends Component {
       let text = "CPU ";
       if (action === undefined) {
           return "";
-      } else if (action["action"] === "fold") {
+      } else if (action["action"] === "Fold") {
           text +=  "folds.";
-      } else if (action["action"] === "check") {
+      } else if (action["action"] === "Check") {
           text +=  "checks";
-      } else if (action["action"] === "call") {
+      } else if (action["action"] === "Call") {
           text +=  "calls $" + action["amount"];
-      } else if (action["action"] === "bet") {  
+      } else if (action["action"] === "Bet") {  
           text += "bets $" + action["amount"];
       }
       return text;

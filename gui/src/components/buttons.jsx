@@ -90,19 +90,19 @@ class Buttons extends Component {
             // Normal row of buttons: Call Raise Fold
             return (
                 <div className="buttons">
-                    {enabled.includes("check") ?
-                        (<button onClick={this.props.check} className={BUTTON_STYLE} disabled={!enabled.includes("check")}>
+                    {enabled.includes("Check") ?
+                        (<button onClick={this.props.check} className={BUTTON_STYLE} disabled={!enabled.includes("Check")}>
                             CHECK
                         </button>)
-                        : (<button onClick={this.props.call} className={BUTTON_STYLE} disabled={!enabled.includes("call")}>
+                        : (<button onClick={this.props.call} className={BUTTON_STYLE} disabled={!enabled.includes("Call")}>
                             {call_text}
                         </button>)}
 
-                    <button onClick={this.showRaiseUI} className={BUTTON_STYLE} disabled={!enabled.includes("raise")}>
+                    <button onClick={this.showRaiseUI} className={BUTTON_STYLE} disabled={!enabled.includes("Raise")}>
                         RAISE
                     </button>
 
-                    <button onClick={this.props.fold} className={BUTTON_STYLE + " fold"} disabled={!enabled.includes("fold")}>
+                    <button onClick={this.props.fold} className={BUTTON_STYLE + " fold"} disabled={!enabled.includes("Fold")}>
                         FOLD
                     </button>
                 </div>
