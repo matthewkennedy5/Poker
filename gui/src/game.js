@@ -93,7 +93,7 @@ class Game extends Component {
     }
 
     check = () => {
-        this.playerAction("human", {action: "Check", amount: 0})
+        this.playerAction("human", {action: "Call", amount: 0})
     };
 
     call = () => {
@@ -172,6 +172,9 @@ class Game extends Component {
         return [humanTotal, cpuTotal];
     }
 
+    // TODO: Delete a lot of this code and replace it with an API call to the backend, which
+    // uses ActionHistory::next_actions to answer these questions. DRY 
+
     getCallAmount() {
         // for the human
         return (this.stacks["human"] - this.stacks["cpu"])
@@ -238,13 +241,9 @@ class Game extends Component {
     }
 
     bettingIsOver() {
-        const prevAction = this.getPrevAction()["action"];
-        if (prevAction === "Check") {
-            // If the second player to go checks, we're done with betting.
-            return (this.history[this.street].length === 2);
-        } else {
-            return (this.stacks["human"] === this.stacks["cpu"]);
-        }
+        let betsEqual = this.stacks["human"] === this.stacks["cpu"];
+        let bothPlayersBet = this.history[this.street].length >= 2;
+        return (betsEqual && bothPlayersBet);
     };
 
     async showdown() {

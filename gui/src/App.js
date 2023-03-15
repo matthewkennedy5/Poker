@@ -20,7 +20,7 @@ class App extends Component {
           return ["nextHand"];
       }
       let enabled = ["Fold"];
-      if (street !== "preflop" && (prevAction === undefined || prevAction["action"] === "Check")) {
+      if (street !== "preflop" && (prevAction === undefined || prevAction["action"] === "Call")) {
           enabled.push("Check");
       }
       if (this.state.game.getCallAmount() > 0) {
@@ -123,7 +123,7 @@ class App extends Component {
           return "";
       } else if (action["action"] === "Fold") {
           text +=  "folds.";
-      } else if (action["action"] === "Check") {
+      } else if (action["action"] === "Check") {  // TODO: remove
           text +=  "checks";
       } else if (action["action"] === "Call") {
           text +=  "calls $" + action["amount"];
