@@ -74,15 +74,21 @@ class Game extends Component {
     };
 
     clearHistory() {
+        this.winner = "";
         this.history = [];
     }
 
     async nextMove() {
         await this.updateGameState();
-        if (this.whoseTurn === this.humanPosition) {
-            this.props.listenForHumanAction();
+        if (this.winnings !== 0) {
+            this.handOver()
         } else {
-            this.cpuAction();
+            console.log(this.whoseTurn + "'s turn");
+            if (this.whoseTurn === this.humanPosition) {
+                this.props.listenForHumanAction();
+            } else {
+                this.cpuAction();
+            }
         }
     }
 
@@ -91,8 +97,28 @@ class Game extends Component {
         this.nextMove();
     }
 
-    handOver(score) {
-        this.score += score;
+    handOver() {
+        if (this.humanPosition == "dealer") {
+            if (this.winnings > 0) {
+                this.winner = "human";
+            } else {
+                this.winner = "cpu";
+            }
+        } else {
+            if (this.winnings > 0) {
+                this.winner = "cpu";
+            } else {
+                this.winner = "human";
+            }
+        }
+        if (this.winner === "human") {
+            this.score += this.winnings;
+        } else {
+            this.score -= this.winnings;
+        }
+        if (this.history[this.history.length-1].action !== "Fold") {
+            this.street = "showdown";
+        }
         this.numHands += 1;
         this.props.listenForHumanAction();
     }
@@ -128,9 +154,9 @@ class Game extends Component {
     }
 
     getPrevCPUAction() {
-        if (this.whoseTurn === "human" && this.history.length >= 1) {
+        if (this.whoseTurn === this.humanPosition && this.history.length >= 1) {
             return this.history[this.history.length - 1];
-        } else if (this.whoseTurn === "cpu" && this.history.length >= 2) {
+        } else if (this.whoseTurn !== this.humanPosition && this.history.length >= 2) {
             return this.history[this.history.length - 2];
         }
         return undefined;
@@ -153,29 +179,16 @@ class Game extends Component {
         }
         const result = await this.props.getHistoryInfo(this.history, dealerCards, opponentCards, this.board);
         console.log("game state:", result);
+        console.log(this.history);
         this.pot = result.pot;
         this.street = result.street;
+        this.callAmount = result.callAmount;
         this.minBetAmount = result.minBetAmount;
         this.allInAmount = result.allInAmount;
         this.whoseTurn = result.whoseTurn;
         this.stacks = result.stacks;
+        this.winnings = result.winnings;
 
-        if (result.winnings !== 0) {
-            if (this.humanPosition == "dealer") {
-                if (result.winnings > 0) {
-                    this.winner = "human";
-                } else {
-                    this.winner = "cpu";
-                }
-            } else {
-                if (result.winnings > 0) {
-                    this.winner = "cpu";
-                } else {
-                    this.winner = "human";
-                }
-            }
-            this.handOver(result.winnings);
-        }
     }
 };
 

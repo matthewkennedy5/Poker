@@ -25,6 +25,7 @@ class App extends Component {
       if (street !== "preflop" && (prevAction === undefined || prevAction["action"] === "Call")) {
           enabled.push("Check");
       }
+      console.log("Call amount:", this.state.game.get)
       if (this.state.game.getCallAmount() > 0) {
           enabled.push("Call");
       }
@@ -96,47 +97,44 @@ class App extends Component {
       }
   }
 
-  getDisplayedCPUCards = () => {
-      // The CPU's cards are only visible on showdown
-      if (this.state.game.street === "showdown") {
-          return this.state.game.cpuCards;
-      } else {
-          return ["back", "back"];
-      }
-  }
+    getDisplayedCPUCards = () => {
+        // The CPU's cards are only visible on showdown
+        if (this.state.game.street === "showdown") {
+            return this.state.game.cpuCards;
+        } else {
+            return ["back", "back"];
+        }
+    }
 
-  getDisplayedBoardCards = () => {
-      const boardCards = this.state.game.board;
-      const street = this.state.game.street;
-      if (street === "preflop") {
-        return ["back", "back", "back", "back", "back"];
-      } else if (street === "flop") {
-        return [boardCards[0], boardCards[1], boardCards[2], "back", "back"];
-      } else if (street === "turn") {
-        return [boardCards[0], boardCards[1], boardCards[2], boardCards[3], "back"];
-      } else {
-        return boardCards;
-      }
-  }
+    getDisplayedBoardCards = () => {
+        const boardCards = this.state.game.board;
+        const street = this.state.game.street;
+        if (street === "preflop") {
+            return ["back", "back", "back", "back", "back"];
+        } else if (street === "flop") {
+            return [boardCards[0], boardCards[1], boardCards[2], "back", "back"];
+        } else if (street === "turn") {
+            return [boardCards[0], boardCards[1], boardCards[2], boardCards[3], "back"];
+        } else if (street === "river" || street === "showdown") {
+            return boardCards;
+        } else {
+            throw new Error("Bad street value");
+        }
+    }
 
   getCPUActionText = () => {
-      if (this.state.game.street === "showdown") {
-          // If we're at the showdown, display who won
-          if (this.state.game.winner === "human") {
-              return "Human wins $" + this.state.game.pot;
-          } else if (this.state.game.winner === "cpu") {
-              return "CPU wins $" + this.state.game.pot;
-          }
+      if (this.state.game.winner === "human") {
+          return "Human wins $" + this.state.game.pot;
+      } else if (this.state.game.winner === "cpu") {
+          return "CPU wins $" + this.state.game.pot;
       }
-
       let action = this.state.game.getPrevCPUAction();
+      console.log("Prev CPU Action:", action);
       let text = "CPU ";
       if (action === undefined) {
           return "";
       } else if (action["action"] === "Fold") {
           text += "folds.";
-      } else if (action["action"] === "Check") {  // TODO: remove
-          text += "checks";
       } else if (action["action"] === "Call") {
           text += "calls $" + action["amount"];
       } else if (action["action"] === "Bet") {  

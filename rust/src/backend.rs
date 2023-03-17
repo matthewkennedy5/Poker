@@ -60,7 +60,7 @@ async fn get_cpu_action(infoset: web::Json<InfoSetJSON>) -> impl Responder {
     let mut action_json = serde_json::to_string(&action).unwrap();
     // TODO: can remove this Call/Check change now
     if is_check {
-        action_json = action_json.replace("Call", "Check");
+        action_json = action_json.replace("Check", "Call");
     }
     action_json
 }
@@ -69,6 +69,7 @@ async fn get_cpu_action(infoset: web::Json<InfoSetJSON>) -> impl Responder {
 struct HistoryInfo {
     pot: i32,
     street: String,
+    callAmount: i32,
     minBetAmount: i32,
     allInAmount: i32,
     whoseTurn: String,
@@ -97,7 +98,8 @@ async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responde
         1 => "flop",
         2 => "turn",
         3 => "river",
-        _ => panic!("Bad street")
+        4 => "showdown",
+        _ => panic!("Bad street"),
     };
     let whose_turn = match history.player {
         0 => "dealer",
@@ -118,6 +120,7 @@ async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responde
     let history_info = HistoryInfo {
         pot: history.pot(),
         street: street.to_string(),
+        callAmount: history.to_call(),
         minBetAmount: history.min_bet(),
         allInAmount: history.max_bet(),
         whoseTurn: whose_turn.to_string(),
