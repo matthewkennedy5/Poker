@@ -83,7 +83,6 @@ class Game extends Component {
         if (this.winnings !== 0) {
             this.handOver()
         } else {
-            console.log(this.whoseTurn + "'s turn");
             if (this.whoseTurn === this.humanPosition) {
                 this.props.listenForHumanAction();
             } else {
@@ -178,8 +177,6 @@ class Game extends Component {
             opponentCards = this.humanCards;
         }
         const result = await this.props.getHistoryInfo(this.history, dealerCards, opponentCards, this.board);
-        console.log("game state:", result);
-        console.log(this.history);
         this.pot = result.pot;
         this.street = result.street;
         this.callAmount = result.callAmount;

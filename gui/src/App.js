@@ -25,7 +25,6 @@ class App extends Component {
       if (street !== "preflop" && (prevAction === undefined || prevAction["action"] === "Call")) {
           enabled.push("Check");
       }
-      console.log("Call amount:", this.state.game.get)
       if (this.state.game.getCallAmount() > 0) {
           enabled.push("Call");
       }
@@ -129,7 +128,6 @@ class App extends Component {
           return "CPU wins $" + this.state.game.pot;
       }
       let action = this.state.game.getPrevCPUAction();
-      console.log("Prev CPU Action:", action);
       let text = "CPU ";
       if (action === undefined) {
           return "";
