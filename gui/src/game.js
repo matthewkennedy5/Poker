@@ -1,12 +1,6 @@
 import {Random} from "random-js";
 import {Component} from 'react';
 
-// TODO: Read these from a config file, however this seems hard to do on the 
-// frontend. 
-const STACK_SIZE = 20000;
-const BIG_BLIND = 100;
-const SMALL_BLIND = 50;
-
 const DECK = ['2c', '2s', '2h', '2d',
               '3c', '3s', '3h', '3d',
               '4c', '4s', '4h', '4d',
@@ -25,44 +19,33 @@ const DECK = ['2c', '2s', '2h', '2d',
 class Game extends Component {
 
     constructor(props) {
-        super(props);   // TODO: change this deprecated function
-        this.dealer = "human";
-        this.street = "preflop";
-        this.bets = [0, 0];
+        super(props);
+        this.humanPosition = "opponent";  
         this.deck = DECK;
         this.humanCards = [];
         this.cpuCards = [];
         this.board = [];
-        this.history = {
-            preflop: [],
-            flop: [],
-            turn: [],
-            river: []
-        };
-        this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
-        this.pot = 0;
-        this.winner = "";
+        this.clearHistory();
 
+        // Game state info. These are updated together by the API call
+        this.street = "preflop";
+        this.pot = 0;
+        this.stacks = {
+            'dealer': 20000,
+            'opponent': 20000,
+        };
+        this.whoseTurn = "dealer";
+        this.winner = "";
+        this.minBetAmount = 0;
+        this.allInAmount = 0;
+        
         this.score = 0;     // Human's cumulative score across all hands in the session
         this.numHands = 0;  // Total hands played in the session
     };
 
-    nextHand = () => {
-        this.street = "preflop";
-        if (this.dealer === "cpu") {
-            this.dealer = "human";
-        } else {
-            this.dealer = "cpu";
-        }
-        this.history = {
-            preflop: [],
-            flop: [],
-            turn: [],
-            river: []
-        };
-        this.stacks = {"human": STACK_SIZE, "cpu": STACK_SIZE};
-        this.bets = [0, 0];
-        this.pot = 0;
+    nextHand = async() => {
+        this.humanPosition = this.otherPosition(this.humanPosition);
+        this.clearHistory();
         const random = new Random();
         random.shuffle(this.deck);
         // The deck card order is as follows:
@@ -70,27 +53,12 @@ class Game extends Component {
         this.humanCards = this.deck.slice(0, 2);
         this.cpuCards = this.deck.slice(2, 4);
         this.board = this.deck.slice(4, 9);
-        this.playStreet();
+        this.nextMove();
     };
 
     fold = () => {
         this.playerAction("human", {action: "Fold", amount: 0});
     };
-
-    advanceStreet() {
-        if (this.stacks["human"] + this.stacks["cpu"] === 0) {
-            // Both players are all-in, so skip to the showdown
-            this.street = "showdown";
-        } else if (this.street === "preflop") {
-            this.street = "flop";
-        } else if (this.street === "flop") {
-            this.street = "turn";
-        } else if (this.street === "turn") {
-            this.street = "river";
-        } else if (this.street === "river") {
-            this.street = "showdown";
-        }
-    }
 
     check = () => {
         this.playerAction("human", {action: "Call", amount: 0})
@@ -105,40 +73,22 @@ class Game extends Component {
         this.playerAction("human", {action: "Bet", amount: amount})
     };
 
-    playerAction(player, action) {
-        this.pot += action["amount"];
-        this.stacks[player] -= action["amount"];
-        this.history[this.street].push(action);
+    clearHistory() {
+        this.history = [];
+    }
 
-        if (action["action"] === "Fold") {
-            let losings = STACK_SIZE - this.stacks[player];
-            if (losings === 0) {
-                // Player folded before betting, so has to post their blind
-                if (this.dealer === player) {
-                    losings = SMALL_BLIND;
-                } else {
-                    losings = BIG_BLIND;
-                }
-            }
-            if (player === "human") {
-                // Human folded so they lose money
-                this.winner = "cpu";
-                this.handOver(-losings);
-            } else {
-                // CPU folded so human wins money
-                this.winner = "human";
-                this.handOver(losings);
-            }
-        } else if (this.bettingIsOver()) {
-            this.advanceStreet();
-            this.playStreet();
+    async nextMove() {
+        await this.updateGameState();
+        if (this.whoseTurn === this.humanPosition) {
+            this.props.listenForHumanAction();
         } else {
-            if (player === "human") {
-                this.cpuAction();
-            } else {
-                this.props.listenForHumanAction();
-            }
+            this.cpuAction();
         }
+    }
+
+    playerAction(player, action) {
+        this.history.push(action);
+        this.nextMove();
     }
 
     handOver(score) {
@@ -147,126 +97,84 @@ class Game extends Component {
         this.props.listenForHumanAction();
     }
 
-    async cpuAction() {
-        const result = await this.props.getCPUAction(this.cpuCards, this.history);
-        const action = result.data;
-        this.playerAction("cpu", action);
-    };
-
-    // Returns the total amount of money bet by each player on the current street
-    streetBets(streetActions) {
-        // We know the previous bet was from the CPU, so we use that fact to know
-        // which player is which in the action history.
-        let cpuTotal = 0;
-        let humanTotal = 0;
-
-        streetActions = streetActions.slice().reverse();
-        for (let i = 0; i < streetActions.length; i++) {
-            if (i % 2 === 0) {
-                // This is a CPU action
-                cpuTotal += streetActions[i]["amount"];
-            } else {
-                humanTotal += streetActions[i]["amount"];
-            }
-        }
-        return [humanTotal, cpuTotal];
-    }
-
-    // TODO: Delete a lot of this code and replace it with an API call to the backend, which
-    // uses ActionHistory::next_actions to answer these questions. DRY 
-
     getCallAmount() {
-        // for the human
-        return (this.stacks["human"] - this.stacks["cpu"])
+        return this.callAmount;
     }
 
     getMinBetAmount() {
-        const prevAction = this.getPrevAction();
-        let minBetAmount = SMALL_BLIND;
-        if (prevAction === undefined) {
-            // On the first action of the preflop, the min bet is the big blind.
-            minBetAmount = BIG_BLIND;
-        } else if (prevAction && prevAction["amount"] > 0) {
-            // Otherwise the min bet is twice the previous bet. 
-            minBetAmount = 2 * prevAction["amount"];
-        }
-        return minBetAmount;
+        return this.minBetAmount;
     }
 
     getAllInAmount() {
-        return this.stacks["human"];
+        return this.allInAmount;
     }
 
-    getStacks() {
-        return this.stacks;
-    }
-
-    // TODO: refactor this prevAction undefined situation
-    getPrevAction() {
-        try {
-            return this.history[this.street].slice(-1)[0];
-        } catch (e) {
-            return undefined;
+    otherPosition(position) {
+        if (position === "dealer") {
+            return "opponent";
+        } else if (position === "opponent") {
+            return "dealer";
+        } else {
+            throw new Error("Bad position string");
         }
+    }
+
+    getHumanStack() {
+        return this.stacks[this.humanPosition]
+    }
+
+    getCPUStack() {
+        return this.stacks[this.otherPosition(this.humanPosition)]
     }
 
     getPrevCPUAction() {
-        if (this.whoseTurnIsIt() === "human") {
-            // Last action is the CPUs
-            return this.getPrevAction();
-        } else {
-            // Last action is the humans
-            try {
-                return this.history[this.street].slice(-2)[0];
-            } catch {
-                return undefined;
-            }
+        if (this.whoseTurn === "human" && this.history.length >= 1) {
+            return this.history[this.history.length - 1];
+        } else if (this.whoseTurn === "cpu" && this.history.length >= 2) {
+            return this.history[this.history.length - 2];
         }
+        return undefined;
     }
 
-    whoseTurnIsIt() {
-        if (this.street === "preflop") {
-            if (this.dealer === "human") {
-                return "human";
-            } else {
-                return "cpu";
-            }
-        } else {
-            if (this.dealer === "cpu") {
-                return "human";
-            } else {
-                return "cpu";
-            }
-        }
-    }
-
-    bettingIsOver() {
-        let betsEqual = this.stacks["human"] === this.stacks["cpu"];
-        let bothPlayersBet = this.history[this.street].length >= 2;
-        return (betsEqual && bothPlayersBet);
+    async cpuAction() {
+        const action = await this.props.getCPUAction(this.cpuCards, this.history);
+        this.playerAction("cpu", action);
     };
 
-    async showdown() {
-        const humanHand = this.humanCards.concat(this.board);
-        const cpuHand = this.cpuCards.concat(this.board);
-        const result = await this.props.evaluateHands(humanHand, cpuHand);
-        this.winner = result.data
-        let winnings = 0;
-        if (this.winner === "human") {
-            winnings = this.pot / 2;
-        } else if (this.winner === "cpu") {
-            winnings = -this.pot / 2;
-        }
-        this.handOver(winnings);
-    };
-
-    playStreet() {
-        if (this.street === "showdown") {
-            this.showdown();
-        } else if (this.whoseTurnIsIt() === "human") {
-            this.props.listenForHumanAction();
+    async updateGameState() {
+        let dealerCards = [];
+        let opponentCards = [];
+        if (this.humanPosition == "dealer") {
+            dealerCards = this.humanCards;
+            opponentCards = this.cpuCards;
         } else {
-            this.cpuAction();
+            dealerCards = this.cpuCards;
+            opponentCards = this.humanCards;
+        }
+        const result = await this.props.getHistoryInfo(this.history, dealerCards, opponentCards, this.board);
+        console.log("game state:", result);
+        this.pot = result.pot;
+        this.street = result.street;
+        this.minBetAmount = result.minBetAmount;
+        this.allInAmount = result.allInAmount;
+        this.whoseTurn = result.whoseTurn;
+        this.stacks = result.stacks;
+
+        if (result.winnings !== 0) {
+            if (this.humanPosition == "dealer") {
+                if (result.winnings > 0) {
+                    this.winner = "human";
+                } else {
+                    this.winner = "cpu";
+                }
+            } else {
+                if (result.winnings > 0) {
+                    this.winner = "cpu";
+                } else {
+                    this.winner = "human";
+                }
+            }
+            this.handOver(result.winnings);
         }
     }
 };

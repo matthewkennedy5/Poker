@@ -6,7 +6,7 @@ class Table extends Component {
         return (
             <div className="poker-table">
                 <div className="cpu-stack">
-                    <label>stack: ${this.props.stacks["cpu"]}</label>
+                    <label>stack: ${this.props.cpuStack}</label>
                 </div>
                 <div className="cpu-cards">
                     <img className="single-card" src={"/cards/" + this.props.cpuCards[0] + ".svg"} alt=""></img>
@@ -30,7 +30,7 @@ class Table extends Component {
                     <img className="single-card" src={"/cards/" + this.props.humanCards[1] + ".svg"} alt=""></img>
                 </div>
                 <div className="human-stack">
-                    <label>stack: ${this.props.stacks["human"]}</label>
+                    <label>stack: ${this.props.humanStack}</label>
                 </div>
             </div>
         );

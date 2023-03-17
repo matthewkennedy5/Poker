@@ -72,7 +72,7 @@ pub fn iterate(
     nodes: &mut HashMap<InfoSet, Node>,
 ) -> f64 {
     if history.hand_over() {
-        return terminal_utility(&deck, history.clone(), player);
+        return terminal_utility(&deck, history, player);
     }
 
     // Look up the DCFR node for this information set, or make a new one if it
@@ -90,7 +90,7 @@ pub fn iterate(
     if history.player == opponent {
         history.add(&sample_action_from_node(&node));
         if history.hand_over() {
-            return terminal_utility(&deck, history, player);
+            return terminal_utility(&deck, &history, player);
         }
         infoset = InfoSet::from_deck(&deck, &history);
         node = match nodes.get(&infoset) {

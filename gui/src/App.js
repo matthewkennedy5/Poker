@@ -3,7 +3,6 @@ import Game from './game';
 import Score from './components/score';
 import Table from './components/table';
 import Buttons from './components/buttons';
-import Log from './components/log';
 import './App.css';
 
 const axios = require('axios');
@@ -14,8 +13,11 @@ class App extends Component {
 
   getEnabledButtons = () => {
       const street = this.state.game.street;
-      const prevAction = this.state.game.getPrevAction();
-
+      const history = this.state.game.history;
+      let prevAction = undefined;
+      if (history.length > 0) {
+          prevAction = history[history.length - 1];
+      } 
       if (prevAction !== undefined && prevAction["action"] === "Fold" || street === "showdown") {
           return ["nextHand"];
       }
@@ -72,7 +74,17 @@ class App extends Component {
           board: this.getDisplayedBoardCards(),
           history: history
       });
-      return response;
+      return response.data;
+  }
+
+  getHistoryInfo = async(history, dealerCards, opponentCards, boardCards) => {
+      const response = await axios.post(URL + '/api/historyInfo', {
+          history: history,
+          dealerCards: dealerCards,
+          opponentCards: opponentCards,
+          boardCards: boardCards
+      });
+      return response.data;
   }
 
   getDisplayedHumanCards = () => {
@@ -122,11 +134,11 @@ class App extends Component {
       if (action === undefined) {
           return "";
       } else if (action["action"] === "Fold") {
-          text +=  "folds.";
+          text += "folds.";
       } else if (action["action"] === "Check") {  // TODO: remove
-          text +=  "checks";
+          text += "checks";
       } else if (action["action"] === "Call") {
-          text +=  "calls $" + action["amount"];
+          text += "calls $" + action["amount"];
       } else if (action["action"] === "Bet") {  
           text += "bets $" + action["amount"];
       }
@@ -136,8 +148,8 @@ class App extends Component {
   state = {
     game: new Game({
       evaluateHands: this.evaluateHands,
-      incrementHands: this.incrementHands,
       getCPUAction: this.getCPUAction,
+      getHistoryInfo: this.getHistoryInfo,
       listenForHumanAction: this.listenForHumanAction
     }),
     enabledButtons: [],
@@ -153,7 +165,8 @@ class App extends Component {
     return (
       <div className="app">
         <Table pot={this.state.game.pot}
-               stacks={this.state.game.getStacks()}
+               cpuStack={this.state.game.getCPUStack()}
+               humanStack={this.state.game.getHumanStack()}
                cpuActionText={this.getCPUActionText()}
                humanCards={this.getDisplayedHumanCards()}
                cpuCards={this.getDisplayedCPUCards()}
@@ -162,13 +175,13 @@ class App extends Component {
                  fold={this.state.game.fold}
                  check={this.state.game.check}
                  call={this.state.game.call}
-                 callAmount={this.state.game.getCallAmount()}
+                 callAmount={this.state.game.callAmount}
                  bet={() => this.state.game.bet(this.state.betAmount)}
                  updateBetAmount={this.updateBetAmount}
                  updateBetAmountFromEvent={this.updateBetAmountFromEvent}
                  betAmount={this.state.betAmount}
-                 minBetAmount={this.state.game.getMinBetAmount()}
-                 allInAmount={this.state.game.getAllInAmount()}
+                 minBetAmount={this.state.game.minBetAmount}
+                 allInAmount={this.state.game.allInAmount}
                  pot={this.state.game.pot}
                  enabledButtons={this.state.enabledButtons}/>
         <Score className="score"

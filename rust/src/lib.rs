@@ -12,7 +12,6 @@ extern crate cute;
 extern crate rand;
 extern crate bincode;
 extern crate bio;
-extern crate qstring;
 extern crate rayon;
 extern crate actix_web;
 extern crate actix_rt;

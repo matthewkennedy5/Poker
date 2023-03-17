@@ -51,7 +51,7 @@ pub struct ActionHistory {
     last_action: Option<Action>,
     pub street: usize,
     pub player: usize,
-    stacks: [i32; 2],
+    pub stacks: [i32; 2],
 }
 
 impl ActionHistory {
@@ -106,6 +106,8 @@ impl ActionHistory {
         self.last_action.clone()
     }
 
+    // TODO: The stack sizes should reflect that the blinds are posted in the beginning. So they start
+    // as like 19000 or whatever. 
     pub fn stack_sizes(&self) -> [i32; 2] {
         self.stacks
     }
@@ -493,7 +495,7 @@ pub fn sample_action_from_strategy(strategy: &HashMap<Action, f64>) -> Action {
 
 // Assuming history represents a terminal state (someone folded, or it's a showdown),
 // return the utility, in chips, that the given player gets.
-pub fn terminal_utility(deck: &[Card], history: ActionHistory, player: usize) -> f64 {
+pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -> f64 {
     let opponent = 1 - player;
     if history.last_action().unwrap().action == ActionType::Fold {
         // Someone folded -- assign the chips to the winner.
