@@ -185,7 +185,6 @@ class Game extends Component {
         this.whoseTurn = result.whoseTurn;
         this.stacks = result.stacks;
         this.winnings = result.winnings;
-
     }
 };
 

@@ -71,7 +71,6 @@ impl Bot {
         board: &[Card],
         history: &ActionHistory,
     ) -> HashMap<Action, f64> {
-
         let subgame_root: ActionHistory = history.without_last_action();
         let translated = subgame_root.translate(&CONFIG.bet_abstraction);
 
@@ -80,8 +79,9 @@ impl Bot {
         let get_strategy = |hole: &[Card], board: &[Card], history: &ActionHistory| {
             self.get_strategy_action_translation(hole, board, &history)
         };
-        let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
 
+        let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
+        
         // Solve the opponent's subgame, including their action in the abstraction 
         let nodes = self.solve_subgame(&subgame_root, &opp_range, history.last_action().unwrap(), CONFIG.subgame_iters);
 
@@ -118,6 +118,7 @@ impl Bot {
         let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
         let mut rng = rand::thread_rng();
         let bar = card_utils::pbar(iters);   // TODO: use .progress() instead of this
+        println!("{}", history);
         for _i in 0..iters {
             let opp_hand = opp_range.sample_hand();
             let mut deck = card_utils::deck();

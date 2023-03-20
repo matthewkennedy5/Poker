@@ -79,6 +79,8 @@ pub fn iterate(
     // doesn't exist
     let mut history = history.clone();
     let mut infoset = InfoSet::from_deck(&deck, &history);
+    println!("Infoset history: {}", infoset.get_history());
+    println!("History: {}", history);
     let mut node: Node = match nodes.get(&infoset) {
         Some(n) => n.clone(),
         None => Node::new(&infoset),
@@ -107,6 +109,7 @@ pub fn iterate(
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     for (action, prob) in strategy {
+        // TODO: Add pruning for low probability actions. MCCFR?
         let mut next_history = history.clone();
         next_history.add(&action);
         let new_weights = match player {

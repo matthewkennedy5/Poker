@@ -274,6 +274,7 @@ impl ActionHistory {
             }
             builder.add(&action);
         }
+        assert!(compressed.len() == builder.history.len());
         compressed
     }
 }
@@ -353,7 +354,7 @@ impl InfoSet {
         self.get_history().next_actions(&CONFIG.bet_abstraction)
     }
 
-    fn get_history(&self) -> ActionHistory {
+    pub fn get_history(&self) -> ActionHistory {
         let mut full_history = ActionHistory::new();
         for action in &self.history {
             let next_actions = full_history.next_actions(&CONFIG.bet_abstraction);
@@ -367,7 +368,7 @@ impl InfoSet {
 impl fmt::Display for InfoSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let card_display = hand_with_bucket(self.card_bucket, self.get_history().street);
-        write!(f, "{}|{}", card_display, self.get_history().to_string())
+        write!(f, "{}|{}", card_display, self.get_history())
     }
 }
 

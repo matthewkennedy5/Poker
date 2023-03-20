@@ -1,5 +1,4 @@
 #[cfg(test)]
-
 use optimus::*;
 use rand::prelude::*;
 use once_cell::sync::Lazy;
@@ -247,7 +246,7 @@ fn play_hand_always_call() -> f64 {
         };
         history.add(&action);
     }
-    terminal_utility(&deck, history, bot)
+    terminal_utility(&deck, &history, bot)
 }
 
 #[test]
