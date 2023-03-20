@@ -2,6 +2,8 @@ use crate::card_utils;
 use crate::card_utils::Card;
 use crate::config::CONFIG;
 use crate::trainer_utils::*;
+use crate::exploiter::*;
+use crate::bot::Bot;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
@@ -29,7 +31,8 @@ pub fn train(iters: u64) {
         );
         if i % CONFIG.eval_every == 0 {
             serialize_nodes(&nodes);
-            // exploitability(&nodes);
+            let bot = Bot::new();
+            exploitability(&bot, CONFIG.lbr_iters);
         }
         bar.inc(1);
     }
