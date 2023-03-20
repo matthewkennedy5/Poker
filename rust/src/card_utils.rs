@@ -405,7 +405,7 @@ pub fn len(hand: u64) -> i32 {
     -1
 }
 
-fn str2cards(hand_str: &str) -> Vec<Card> {
+pub fn str2cards(hand_str: &str) -> Vec<Card> {
     let mut result: Vec<Card> = Vec::new();
     let hand_str = hand_str.to_string();
     for i in (0..hand_str.len()).step_by(2) {

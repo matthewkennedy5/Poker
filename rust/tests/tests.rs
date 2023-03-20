@@ -185,8 +185,8 @@ fn bot_strategy_contains_amount(amount: i32, hole: &str, board: &str, actions: V
     for a in actions {
         history.add(&a);
     }
-    let hole = hand2cards(str2hand(hole));
-    let board = hand2cards(str2hand(board));
+    let hole = str2cards(hole);
+    let board = str2cards(board);
     let strategy = BOT.get_strategy(&hole, &board, &history);
     let amounts: Vec<i32> = strategy.keys().map(|action| action.amount).collect();
     return amounts.contains(&amount);
@@ -226,6 +226,18 @@ fn min_bet_at_least_double() {
         Action {action: ActionType::Bet, amount: 200}
     ];
     assert!(!bot_strategy_contains_amount(250, "Ah8h", "", actions));
+}
+
+#[test]
+fn limp_is_call_not_bet() {
+    let history = ActionHistory::new();
+    let bet_abstraction: Vec<Vec<f64>> = vec![vec![1.0]];
+    // assumes that bet_abstraction contains POT on preflop
+    let call = Action {action: ActionType::Call, amount: CONFIG.big_blind};
+    let bet = Action {action: ActionType::Bet, amount: CONFIG.big_blind};
+    let next_actions = history.next_actions(&bet_abstraction);
+    assert!(next_actions.contains(&call));
+    assert!(!next_actions.contains(&bet));
 }
 
 fn play_hand_always_call() -> f64 {
@@ -268,3 +280,6 @@ fn bot_beats_always_call() {
     let confidence = 1.96 * std / (iters as f64).sqrt();
     println!("Score against check/call bot: {} +/- {} BB/h\n", mean, confidence);
 }
+
+// TODO: Write a test to make sure that the nodes contain all the infosets (no gaps)
+// Only matters for the final training process

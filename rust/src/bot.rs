@@ -51,11 +51,7 @@ impl Bot {
         assert!(board.len() <= 5);
         let translated = history.translate(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(hole, board, &translated);
-
-        let node = self
-            .blueprint
-            .get(&infoset)
-            .expect(format!("Infoset not in blueprint: {:?}", infoset).as_str());
+        let node = lookup_or_new(&self.blueprint, &infoset);
         let node_strategy = node.cumulative_strategy();
 
         let mut adjusted_strategy: HashMap<Action, f64> = HashMap::new();
@@ -89,11 +85,7 @@ impl Bot {
         let mut this_history = subgame_root.clone();
         this_history.add(&history.last_action().unwrap());
         let infoset = InfoSet::from_hand(hole, board, &this_history);
-        // TODO: let node = nodes.get(&infoset).expect(&format!("Infoset {} not in subgame {}", infoset.uncompress(), subgame_root));
-        let node = match nodes.get(&infoset) {
-            Some(n) => n.clone(),
-            None => Node::new(&infoset),
-        };
+        let node = lookup_or_new(&nodes, &infoset);
         node.cumulative_strategy()
     }
 
@@ -118,7 +110,6 @@ impl Bot {
         let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
         let mut rng = rand::thread_rng();
         let bar = card_utils::pbar(iters);   // TODO: use .progress() instead of this
-        println!("{}", history);
         for _i in 0..iters {
             let opp_hand = opp_range.sample_hand();
             let mut deck = card_utils::deck();
@@ -136,6 +127,3 @@ impl Bot {
         nodes
     }
 }
-
-
-// 

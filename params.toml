@@ -20,13 +20,13 @@ beta = 0.0
 gamma = 2.0
 
 # Filenames
-blueprint_strategy_path = "products/blueprint.bin"
+blueprint_strategy_path = "products/blueprint.bin"  # TODO: Delete blueprint_strategy_path (unused)
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 1000
-lbr_iters = 100
-eval_every = 1000000
+train_iters = 1000000
+lbr_iters = 10000
+eval_every = 10000
 
 # Realtime solving
 subgame_iters = 1000

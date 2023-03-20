@@ -168,7 +168,7 @@ impl ActionHistory {
             action: ActionType::Call,
             amount: to_call,
         });
-        // Add the fold action, unless we can just check
+        // Add the fold action, unless we can just check. Check is a Call of 0
         if to_call > 0 {
             actions.push(FOLD)
         }
@@ -259,24 +259,6 @@ impl ActionHistory {
         }
         actions
     }
-
-    pub fn compress(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<u8> {
-        let mut compressed = Vec::new();
-        let mut builder = ActionHistory::new();
-        for action in self.get_actions() {
-            for (i, candidate) in builder.next_actions(bet_abstraction)
-                                            .iter()
-                                            .enumerate() {
-                if action == candidate.clone() {
-                    compressed.push(i as u8);
-                    break;
-                }
-            }
-            builder.add(&action);
-        }
-        assert!(compressed.len() == builder.history.len());
-        compressed
-    }
 }
 
 impl fmt::Display for ActionHistory {
@@ -324,7 +306,7 @@ fn board_length(street: usize) -> usize {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub struct InfoSet {
-    pub history: Vec<u8>,
+    pub history: ActionHistory,
     pub card_bucket: i32,
 }
 
@@ -335,7 +317,7 @@ impl InfoSet {
         let cards = get_hand(&deck, history.player, history.street);
         let card_bucket = ABSTRACTION.bin(&cards);
         InfoSet {
-            history: history.compress(&CONFIG.bet_abstraction).clone(),
+            history: history.clone(),
             card_bucket: card_bucket,
         }
     }
@@ -345,30 +327,20 @@ impl InfoSet {
         assert!(board.len() == board_length(history.street));
         let hand = [hole, board].concat();
         InfoSet {
-            history: history.compress(&CONFIG.bet_abstraction).clone(),
+            history: history.clone(),
             card_bucket: ABSTRACTION.bin(&hand),
         }
     }
 
     pub fn next_actions(&self) -> Vec<Action> {
-        self.get_history().next_actions(&CONFIG.bet_abstraction)
-    }
-
-    pub fn get_history(&self) -> ActionHistory {
-        let mut full_history = ActionHistory::new();
-        for action in &self.history {
-            let next_actions = full_history.next_actions(&CONFIG.bet_abstraction);
-            let next_action = &next_actions[action.clone() as usize];
-            full_history.add(next_action);
-        }
-        full_history
+        self.history.next_actions(&CONFIG.bet_abstraction)
     }
 }
 
 impl fmt::Display for InfoSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let card_display = hand_with_bucket(self.card_bucket, self.get_history().street);
-        write!(f, "{}|{}", card_display, self.get_history())
+        let card_display = hand_with_bucket(self.card_bucket, self.history.street);
+        write!(f, "{}|{}", card_display, self.history)
     }
 }
 
@@ -382,6 +354,13 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
         if ABSTRACTION.bin(&hand) == bucket {
             return cards2str(&hand);
         }
+    }
+}
+
+pub fn lookup_or_new(nodes: &HashMap<InfoSet, Node>, infoset: &InfoSet) -> Node {
+    match nodes.get(&infoset) {
+        Some(n) => n.clone(),
+        None => Node::new(&infoset),
     }
 }
 
@@ -543,7 +522,7 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
 pub fn write_preflop_strategy(nodes: &HashMap<InfoSet, Node>, path: &str) {
     let mut preflop_strategy: HashMap<String, HashMap<String, f64>> = HashMap::new();
     for (infoset, node) in nodes {
-        if infoset.history.len() == 0 {
+        if infoset.history.is_empty() {
             let hand = Abstraction::preflop_hand(infoset.card_bucket);
             let strategy: HashMap<String, f64> = node
                 .cumulative_strategy()

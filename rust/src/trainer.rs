@@ -61,7 +61,6 @@ fn serialize_nodes(nodes: &HashMap<InfoSet, Node>) {
     let mut file = File::create(&CONFIG.nodes_path).unwrap();
     file.write_all(&bincode).unwrap();
     println!("[INFO] Saved strategy.");
-
 }
 
 pub fn iterate(
@@ -79,8 +78,6 @@ pub fn iterate(
     // doesn't exist
     let mut history = history.clone();
     let mut infoset = InfoSet::from_deck(&deck, &history);
-    println!("Infoset history: {}", infoset.get_history());
-    println!("History: {}", history);
     let mut node: Node = match nodes.get(&infoset) {
         Some(n) => n.clone(),
         None => Node::new(&infoset),
