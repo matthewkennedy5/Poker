@@ -1,17 +1,18 @@
 use crate::itertools::Itertools;
-use std::{
-    fmt,
-    thread,
-    io::{BufRead, BufReader, Read, Write},
-    collections::{HashMap, HashSet}, fs::{File, self}, 
-    path::Path 
-};
-use std::sync::mpsc;
 use bio::stats::combinatorics::combinations;
-use serde::{Serialize, Deserialize};
-use serde_json;
 use once_cell::sync::Lazy;
 use rs_poker::core::{Hand, Rank, Rankable};
+use serde::{Deserialize, Serialize};
+use serde_json;
+use std::sync::mpsc;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    fs::{self, File},
+    io::{BufRead, BufReader, Read, Write},
+    path::Path,
+    thread,
+};
 
 const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.json";
 const LIGHT_HAND_TABLE_PATH: &str = "products/strengths.json";
@@ -29,7 +30,7 @@ pub const DIAMONDS: i32 = 1;
 pub const HEARTS: i32 = 2;
 pub const SPADES: i32 = 3;
 
-const NUM_THREADS: usize = 100;     // Number of threads to use in parallel loops
+const NUM_THREADS: usize = 100; // Number of threads to use in parallel loops
 
 #[derive(Hash, Debug, Clone, PartialOrd, Eq, Serialize, Deserialize)]
 pub struct Card {
@@ -99,7 +100,8 @@ pub fn rank_str(rank: u8) -> String {
         13 => "K",
         14 => "A",
         _ => panic!("Bad rank value: {}", rank),
-    }.to_string()
+    }
+    .to_string()
 }
 
 impl fmt::Display for Card {
@@ -240,7 +242,6 @@ pub struct FastHandTable {
 }
 
 impl FastHandTable {
-
     pub fn new() -> FastHandTable {
         FastHandTable {
             strengths: FastHandTable::load_hand_strengths(),
@@ -249,14 +250,15 @@ impl FastHandTable {
 
     pub fn hand_strength(&self, hand: &[Card]) -> i32 {
         let compact = cards2bitmap(hand);
-        let strength = self.strengths.get(&compact)
-                                     .expect(&format!("{} not in FastHandTable", compact))
-                                     .clone();
+        let strength = self
+            .strengths
+            .get(&compact)
+            .expect(&format!("{} not in FastHandTable", compact))
+            .clone();
         strength
     }
 
     fn load_hand_strengths() -> HashMap<u64, i32> {
-
         if !Path::new(FAST_HAND_TABLE_PATH).exists() {
             println!("[INFO] Creating fast hand table.");
             let mut table: HashMap<u64, i32> = HashMap::new();
@@ -334,17 +336,16 @@ impl LightHandTable {
         vec_map
     }
 
-
     // 1. Deal isomorphic 5 card hands (no streets)
-    // 2. use rs_poker to get the hand strength? 
+    // 2. use rs_poker to get the hand strength?
     // 3. sort all the hand strengths
-    // 4. write the sorted vector to the json file, checking for equivalence as well. 
+    // 4. write the sorted vector to the json file, checking for equivalence as well.
     fn create() -> HashMap<String, i32> {
         let mut hands: Vec<String> = deal_isomorphic(5, false)
-                                        .iter()
-                                        .map(|hand| hand2str(hand.clone()))
-                                        .collect();
-       
+            .iter()
+            .map(|hand| hand2str(hand.clone()))
+            .collect();
+
         hands.sort_by(|a, b| {
             let strength_a = Hand::new_from_str(&a).unwrap().rank();
             let strength_b = Hand::new_from_str(&b).unwrap().rank();
@@ -496,7 +497,6 @@ pub fn hand2cards(hand: u64) -> Vec<Card> {
     result
 }
 
-
 // Converts the old fashioned Vec<Card> representation into the compact u64
 // representation.
 pub fn cards2hand(cards: &[Card]) -> u64 {
@@ -508,15 +508,15 @@ pub fn cards2hand(cards: &[Card]) -> u64 {
     result
 }
 
-/* 
+/*
  * Represents hands using 52 bits, one bit for each card. If the card is present
- * in the hand, then the corresponding bit will be 1. 
- * 
+ * in the hand, then the corresponding bit will be 1.
+ *
  * | filler     | Clubs       | Diamonds    | Hearts      | Spades      |
  * |            |23456789TJQKA|23456789TJQKA|23456789TJQKA|23456789TJQKA|
  * |000000000000|0000000000000|0000000000000|0000000000000|0000000000000|
- * 
- * for a total of 64 bits. 
+ *
+ * for a total of 64 bits.
  */
 pub fn cards2bitmap(cards: &[Card]) -> u64 {
     let mut bitmap: u64 = 0;
@@ -525,7 +525,7 @@ pub fn cards2bitmap(cards: &[Card]) -> u64 {
     // Shift right 13 * suits times
     // Shift right rank-1 times because I'm starting with 2 for ranks
     for card in cards {
-        let shift = 52 - 13*card.suit - (card.rank - 1);
+        let shift = 52 - 13 * card.suit - (card.rank - 1);
         let card_bit: u64 = 1 << shift;
         bitmap += card_bit;
     }
@@ -633,7 +633,7 @@ pub fn expected_hs2(hand: u64) -> f64 {
 }
 
 fn river_equity(hand: Vec<Card>) -> f64 {
-// fn river_equity(hand: &[Card]) -> f64 {
+    // fn river_equity(hand: &[Card]) -> f64 {
     let mut deck = deck();
     // Remove the already-dealt cards from the deck
     deck.retain(|c| !hand.contains(&c));
@@ -643,7 +643,6 @@ fn river_equity(hand: Vec<Card>) -> f64 {
     let mut n_runs = 0;
 
     for opp_preflop in deck.iter().combinations(2) {
-
         n_runs += 1;
 
         // Create the poker hands by concatenating cards
@@ -713,7 +712,10 @@ impl EquityTable {
         println!("[INFO] Creating the river equity lookup table...");
         let chunk_size = isomorphic.len() / NUM_THREADS;
 
-        let chunks: Vec<Vec<u64>> = isomorphic.chunks(chunk_size).map(|s| s.to_owned()).collect();
+        let chunks: Vec<Vec<u64>> = isomorphic
+            .chunks(chunk_size)
+            .map(|s| s.to_owned())
+            .collect();
         let mut handles = Vec::new();
 
         let (tx, rx) = mpsc::channel();
@@ -723,18 +725,18 @@ impl EquityTable {
         for chunk in chunks {
             let thread_tx = tx.clone();
             let thread_pbar_tx = pbar_tx.clone();
-            handles.push(
-                thread::spawn(move || {
-                    let equities: Vec<(u64, f64)> = chunk
-                        .iter()
-                        .map(|h| {
-                            thread_pbar_tx.send(1).expect("could not send pbar increment");
-                            (h.clone(), river_equity(hand2cards(h.clone())))
-                        })
-                        .collect();
-                    thread_tx.send(equities).expect("Could not send the equity");
-                })
-            );
+            handles.push(thread::spawn(move || {
+                let equities: Vec<(u64, f64)> = chunk
+                    .iter()
+                    .map(|h| {
+                        thread_pbar_tx
+                            .send(1)
+                            .expect("could not send pbar increment");
+                        (h.clone(), river_equity(hand2cards(h.clone())))
+                    })
+                    .collect();
+                thread_tx.send(equities).expect("Could not send the equity");
+            }));
         }
 
         let bar = pbar(isomorphic.len() as u64);
@@ -772,8 +774,9 @@ impl EquityTable {
 
     pub fn lookup(&self, hand: &[Card]) -> f64 {
         let hand = cards2hand(&isomorphic_hand(hand, true));
-        self.table.get(&hand)
-                  .expect(&format!("{} not in equity table", hand2str(hand)))
-                  .clone()
+        self.table
+            .get(&hand)
+            .expect(&format!("{} not in equity table", hand2str(hand)))
+            .clone()
     }
 }

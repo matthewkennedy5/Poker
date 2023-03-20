@@ -1,8 +1,8 @@
 use crate::card_utils::{self, Card};
 use crate::config::CONFIG;
+use crate::ranges::*;
 use crate::trainer;
 use crate::trainer_utils::*;
-use crate::ranges::*;
 use rand::prelude::*;
 use std::collections::HashMap;
 
@@ -26,7 +26,7 @@ impl Bot {
 
     // Wrapper for the real time solving for the bot's strategy
     // TODO: Refactor this to maybe just input an infoset, or just a hand. The hole and board inputs add complexity
-    // since it's different than the rest of the codebase. 
+    // since it's different than the rest of the codebase.
     pub fn get_strategy(
         &self,
         hole: &[Card],
@@ -77,11 +77,16 @@ impl Bot {
         };
 
         let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
-        
-        // Solve the opponent's subgame, including their action in the abstraction 
-        let nodes = self.solve_subgame(&subgame_root, &opp_range, history.last_action().unwrap(), CONFIG.subgame_iters);
 
-        // That gives us our strategy in response to their action. 
+        // Solve the opponent's subgame, including their action in the abstraction
+        let nodes = self.solve_subgame(
+            &subgame_root,
+            &opp_range,
+            history.last_action().unwrap(),
+            CONFIG.subgame_iters,
+        );
+
+        // That gives us our strategy in response to their action.
         let mut this_history = subgame_root.clone();
         this_history.add(&history.last_action().unwrap());
         let infoset = InfoSet::from_hand(hole, board, &this_history);
@@ -89,15 +94,15 @@ impl Bot {
         node.cumulative_strategy()
     }
 
-    // Use unsafe subgame solving to return the Nash equilibrium strategy for the current spot, 
-    // assuming that the opponent is playing with the given range. 
-    // 
+    // Use unsafe subgame solving to return the Nash equilibrium strategy for the current spot,
+    // assuming that the opponent is playing with the given range.
+    //
     // Inputs:
     //      history: The history of actions leading up to this spot, not including the opponent's most recent action
     //      opp_range: Our Bayesian belief distribution of the cards the opponent has
     //      opp_action: Action the opponent took at this spot, which might not be in the action abstraction
     //      iters: How many iterations of CFR to run
-    // 
+    //
     // Returns:
     //      nodes: The solved CFR tree nodes for each infoset in the subgame
     fn solve_subgame(
@@ -114,7 +119,7 @@ impl Bot {
             let mut deck = card_utils::deck();
             // Remove opponent's cards (blockers) from the deck
             // TODO: Refactor to be DRY with trainer.rs
-            // TODO: Add opp_action to the bet abstraction used here. 
+            // TODO: Add opp_action to the bet abstraction used here.
             deck.retain(|card| !opp_hand.contains(card));
             deck.shuffle(&mut rng);
             trainer::iterate(DEALER, &deck, history, [1.0, 1.0], &mut nodes);

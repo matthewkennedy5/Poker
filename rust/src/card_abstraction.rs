@@ -7,10 +7,7 @@
 use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::{
-    collections::HashMap,
-    fs::File,
-};
+use std::{collections::HashMap, fs::File};
 
 const FLOP_PATH: &str = "products/flop_abstraction.bin";
 const TURN_PATH: &str = "products/turn_abstraction.bin";

@@ -1,9 +1,9 @@
 use crate::card_abstraction::Abstraction;
 use crate::card_utils::*;
 use crate::config::CONFIG;
-use std::{fmt, fs::File, hash::Hash, io::Write, cmp::Eq, collections::HashMap};
-use rand::{prelude::SliceRandom, thread_rng};
 use once_cell::sync::Lazy;
+use rand::{prelude::SliceRandom, thread_rng};
+use std::{cmp::Eq, collections::HashMap, fmt, fs::File, hash::Hash, io::Write};
 
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
@@ -47,7 +47,7 @@ impl fmt::Display for Action {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ActionHistory {
-    history: Vec<Vec<Action>>,  // Each index is a street
+    history: Vec<Vec<Action>>, // Each index is a street
     last_action: Option<Action>,
     pub street: usize,
     pub player: usize,
@@ -107,7 +107,7 @@ impl ActionHistory {
     }
 
     // TODO: The stack sizes should reflect that the blinds are posted in the beginning. So they start
-    // as like 19000 or whatever. 
+    // as like 19000 or whatever.
     pub fn stack_sizes(&self) -> [i32; 2] {
         self.stacks
     }
@@ -191,7 +191,7 @@ impl ActionHistory {
         }
         prev_history.history[prev_history.street].pop();
 
-        // There's a lot of complex rules, so just create a new history and add all the actions 
+        // There's a lot of complex rules, so just create a new history and add all the actions
         // in prev_history.
         let mut history = ActionHistory::new();
         for action in prev_history.get_actions() {
@@ -300,7 +300,7 @@ fn board_length(street: usize) -> usize {
         FLOP => 3,
         TURN => 4,
         RIVER => 5,
-        _ => panic!("Bad street")
+        _ => panic!("Bad street"),
     }
 }
 
@@ -538,4 +538,3 @@ pub fn write_preflop_strategy(nodes: &HashMap<InfoSet, Node>, path: &str) {
     let mut file = File::create(&path).unwrap();
     file.write(json.as_bytes()).unwrap();
 }
-

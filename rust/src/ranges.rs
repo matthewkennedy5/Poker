@@ -6,7 +6,7 @@ use crate::card_utils::*;
 use crate::trainer_utils::*;
 
 // If a hand's probability is below PROB_CUTOFF in the range, just skip it since it has a negligible
-// contribution to the range. 
+// contribution to the range.
 pub const PROB_CUTOFF: f64 = 0.0001;
 
 #[derive(Debug)]
@@ -51,7 +51,11 @@ impl Range {
             }
             let p = get_strategy(&hole)
                 .get(&action)
-                .expect(&format!("Action {} is not in strategy: {:?}", action, get_strategy(&hole)))
+                .expect(&format!(
+                    "Action {} is not in strategy: {:?}",
+                    action,
+                    get_strategy(&hole)
+                ))
                 .clone();
             let new_prob = prob * p;
             new_range.insert(hole.clone(), new_prob);

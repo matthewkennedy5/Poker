@@ -1,11 +1,11 @@
 use crate::bot::Bot;
-use crate::{card_utils::*, OPPONENT};
 use crate::trainer_utils::*;
+use crate::{card_utils::*, OPPONENT};
 use actix_cors::Cors;
 use actix_files as fs;
 use actix_web::{web, App, HttpServer, Responder};
 use once_cell::sync::Lazy;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 static HAND_STRENGTHS: Lazy<LightHandTable> = Lazy::new(|| LightHandTable::new());
 static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
@@ -13,7 +13,7 @@ static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct HandCompJSON {
     humanHand: Vec<String>,
-    cpuHand: Vec<String>
+    cpuHand: Vec<String>,
 }
 
 async fn compare_hands(json: web::Json<HandCompJSON>) -> impl Responder {
@@ -74,13 +74,13 @@ struct HistoryInfo {
     allInAmount: i32,
     whoseTurn: String,
     stacks: StacksJSON,
-    winnings: f64
+    winnings: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct StacksJSON {
     dealer: i32,
-    opponent: i32
+    opponent: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -88,7 +88,7 @@ struct HistoryAndCardsJSON {
     history: Vec<ActionJSON>,
     dealerCards: Vec<String>,
     opponentCards: Vec<String>,
-    boardCards: Vec<String>
+    boardCards: Vec<String>,
 }
 
 async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responder {
@@ -104,9 +104,12 @@ async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responde
     let whose_turn = match history.player {
         0 => "dealer",
         1 => "opponent",
-        _ => panic!("Bad player ID")
+        _ => panic!("Bad player ID"),
     };
-    let stacks = StacksJSON { dealer: history.stacks[DEALER], opponent: history.stacks[OPPONENT] };
+    let stacks = StacksJSON {
+        dealer: history.stacks[DEALER],
+        opponent: history.stacks[OPPONENT],
+    };
 
     let mut winnings = 0.0;
     if history.hand_over() {
@@ -140,9 +143,9 @@ fn parse_history(h: &Vec<ActionJSON>) -> ActionHistory {
                 "Call" => ActionType::Call,
                 "Check" => ActionType::Call,
                 "Fold" => ActionType::Fold,
-                _ => panic!("unexpected action string")
+                _ => panic!("unexpected action string"),
             },
-            amount: action_json.amount
+            amount: action_json.amount,
         };
         history.add(&action);
     }

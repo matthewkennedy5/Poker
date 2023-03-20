@@ -1,14 +1,14 @@
 // For reading and storing the configuration file info
 
-use serde::{Serialize, Deserialize};
-use toml;
-use std::fs;
 use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use toml;
 
 pub static CONFIG: Lazy<Config> = Lazy::new(|| {
-        let config_string = fs::read_to_string("../params.toml").unwrap();
-        let parsed = toml::from_str(&config_string).expect("Could not parse TOML config file");
-        parsed
+    let config_string = fs::read_to_string("../params.toml").unwrap();
+    let parsed = toml::from_str(&config_string).expect("Could not parse TOML config file");
+    parsed
 });
 
 #[derive(Serialize, Deserialize)]

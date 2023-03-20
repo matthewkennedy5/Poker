@@ -1,12 +1,12 @@
-use crate::config::CONFIG;
 use crate::card_utils;
 use crate::card_utils::Card;
+use crate::config::CONFIG;
 use crate::trainer_utils::*;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{Write, BufReader};
+use std::io::{BufReader, Write};
 
 pub fn train(iters: u64) {
     let mut rng = thread_rng();
