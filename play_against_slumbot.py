@@ -34,6 +34,7 @@ import re
 import json
 import sys
 import argparse
+from tqdm import trange
 
 host = 'slumbot.com'
 
@@ -256,19 +257,18 @@ def Act(token, action):
 
     if 'error_msg' in r:
         print('Error: %s' % r['error_msg'])
-        sys.exit(-1)
+        raise ValueError
         
     return r
 
 def BotAction(response):
     """Gets Optimus's action in the given situation."""
-    # Need to translate between the different formats. 
     board = response.get('board')
     if len(board) < 5:
         board += ['back'] * (5 - len(board))
     
     streets = 'preflop', 'flop', 'turn', 'river'
-    optimus_history = {s: [] for s in streets}
+    optimus_history = []
     slumbot_history = response.get('action').split('/')
     for street, history in zip(streets, slumbot_history):
         actions = re.findall(r"([ck]|b\d+)", history)
@@ -279,15 +279,23 @@ def BotAction(response):
             if action[0] == 'b':
                 amount = int(action[1:])
                 bets[player] += amount
-                action = {'action': 'bet', 'amount': amount}
+                action = {'action': 'Bet', 'amount': amount}
             elif action == 'c':
-                to_call = bets[1 - player] - bets[player]
-                action = {'action': 'call', 'amount': to_call}
+                if len(optimus_history) == 0:
+                    to_call = BIG_BLIND
+                    bets[player] += to_call
+                else:
+                    to_call = bets[1 - player] - bets[player]
+                action = {'action': 'Call', 'amount': to_call}
             elif action == 'k':
-                action = {'action': 'check', 'amount': 0}
+                to_call = 0
+                if len(optimus_history) == 1:
+                    to_call = BIG_BLIND
+                    bets[player] += to_call
+                action = {'action': 'Call', 'amount': to_call}
             else:
                 raise ValueError()
-            optimus_history[street].append(action)
+            optimus_history.append(action)
 
     # history = str(json.dumps(optimus_history))
     # history.replace(' ', '')
@@ -300,7 +308,7 @@ def BotAction(response):
         'board': board,
         'history': history
     }
-    response = requests.post('https://www.pokertrainer.info/api/bot?', json=data)
+    response = requests.post('http://localhost/api/bot?', json=data)
     
     try:
         response = response.json()
@@ -309,12 +317,14 @@ def BotAction(response):
 
     action = response['action']
     amount = response['amount']
-    if action == 'check':
+    if action == 'Call' and amount == 0:
         return 'k'
-    elif action == 'call':
+    elif action == 'Call':
         return 'c'
-    elif action == 'bet':
+    elif action == 'Bet':
         return f'b{amount}'
+    elif action == 'Fold':
+        return 'f'
     else:
         breakpoint()
         raise ValueError
@@ -352,7 +362,10 @@ def PlayHand(token):
         incr = BotAction(r)
 
         print('Sending incremental action: %s' % incr)
-        r = Act(token, incr)
+        try:
+            r = Act(token, incr)
+        except ValueError:
+            breakpoint()
     # Should never get here
 
         
@@ -399,9 +412,9 @@ def main():
     else:
         token = None
 
-    num_hands = 1
+    num_hands = 100
     winnings = 0
-    for h in range(num_hands):
+    for h in trange(num_hands):
         (token, hand_winnings) = PlayHand(token)
         winnings += hand_winnings
     print('Total winnings: %i' % winnings)
