@@ -278,6 +278,12 @@ def BotAction(response):
             player = 1 - player
             if action[0] == 'b':
                 amount = int(action[1:])
+                # The Optimus history includes the blinds in the preflop bet sizes, but slumbot
+                # treats them separately, so we have to adjust for that here
+                if len(optimus_history) == 0:
+                    amount += BIG_BLIND
+                elif len(optimus_history) == 1:
+                    amount += SMALL_BLIND
                 bets[player] += amount
                 action = {'action': 'Bet', 'amount': amount}
             elif action == 'c':

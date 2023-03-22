@@ -188,6 +188,7 @@ fn bot_strategy_contains_amount(amount: i32, hole: &str, board: &str, actions: V
     let hole = str2cards(hole);
     let board = str2cards(board);
     let strategy = BOT.get_strategy(&hole, &board, &history);
+    println!("{:?}", strategy);
     let amounts: Vec<i32> = strategy.keys().map(|action| action.amount).collect();
     return amounts.contains(&amount);
 }
@@ -210,14 +211,37 @@ fn negative_bet_size() {
 #[test]
 fn cpu_bets_more_than_stack() {
     let actions = vec![
-        Action {action: ActionType::Bet, amount: 50},
+        Action {action: ActionType::Call, amount: 100},
         Action {action: ActionType::Bet, amount: 250},
         Action {action: ActionType::Bet, amount: 500},
-        Action {action: ActionType::Call, amount: 300},
+        Action {action: ActionType::Call, amount: 350},
         Action {action: ActionType::Bet, amount: 1000},
         Action {action: ActionType::Bet, amount: 2000},
     ];
     assert!(!bot_strategy_contains_amount(18750, "QdQs", "6dTcJd", actions));
+}
+
+#[test]
+fn action_translation_sizes() {
+    let actions = vec![
+        Action {action: ActionType::Bet, amount: 250},
+        Action {action: ActionType::Bet, amount: 750},
+        Action {action: ActionType::Bet, amount: 2500},
+        Action {action: ActionType::Call, amount: 2000},
+        Action {action: ActionType::Call, amount: 0},
+        Action {action: ActionType::Bet, amount: 17250},
+    ];
+    assert!(!bot_strategy_contains_amount(17500, "Qs4h", "8c6h4d", actions));
+    let actions = vec![
+        Action {action: ActionType::Call, amount: 100},
+        Action {action: ActionType::Bet, amount: 300},
+        Action {action: ActionType::Bet, amount: 2000},
+        Action {action: ActionType::Bet, amount: 4500},
+        Action {action: ActionType::Call, amount: 2700},
+        Action {action: ActionType::Bet, amount: 4500},
+        Action {action: ActionType::Bet, amount: 15200},
+    ];
+    assert!(!bot_strategy_contains_amount(15500, "Kh9s", "Ah7h2d", actions));
 }
 
 #[test]
@@ -226,6 +250,18 @@ fn min_bet_at_least_double() {
         Action {action: ActionType::Bet, amount: 200}
     ];
     assert!(!bot_strategy_contains_amount(250, "Ah8h", "", actions));
+}
+
+#[test]
+fn bet_size_too_small() {
+    let actions: Vec<Action> = vec![
+        Action {action: ActionType::Bet, amount: 500},
+        Action {action: ActionType::Bet, amount: 1500},
+        Action {action: ActionType::Call, amount: 1000},
+        Action {action: ActionType::Bet, amount: 1500},
+        Action {action: ActionType::Bet, amount: 18450},
+    ];
+    assert!(!bot_strategy_contains_amount(18500, "6h5s", "Js8s7h", actions));
 }
 
 #[test]

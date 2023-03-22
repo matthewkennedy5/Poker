@@ -91,6 +91,7 @@ impl ActionHistory {
 
     // Add an new action to this history, and update the state
     pub fn add(&mut self, action: &Action) {
+        assert!(self.is_legal_next_action(action), "Action {} is illegal for history {:#?}", action, self);
         let action = action.clone();
         self.stacks[self.player] -= action.amount;
         self.player = 1 - self.player;
@@ -99,6 +100,19 @@ impl ActionHistory {
         if self.stacks[0] == self.stacks[1] && self.history[self.street].len() >= 2 {
             self.street += 1;
             self.player = OPPONENT;
+        }
+    }
+
+    fn is_legal_next_action(&self, action: &Action) -> bool {
+        match action.action {
+            ActionType::Bet => {
+                // The bet size must be different than the call size, and within the correct range
+                let not_call = action.amount != self.to_call();
+                let size_ok = (action.amount >= self.min_bet()) && (action.amount <= self.max_bet());
+                not_call && size_ok
+            },
+            ActionType::Call => action.amount == self.to_call(),
+            ActionType::Fold => self.to_call() != 0
         }
     }
 
@@ -131,9 +145,13 @@ impl ActionHistory {
     }
 
     pub fn min_bet(&self) -> i32 {
-        match &self.last_action {
-            Some(action) => 2 * action.amount,
-            None => CONFIG.big_blind,
+        if self.history[PREFLOP].is_empty() {
+            CONFIG.big_blind
+        } else if self.history[self.street].is_empty() {
+            0
+        } else {
+            let last_action: Action = self.last_action.clone().unwrap();
+            2 * last_action.amount
         }
     }
 
@@ -213,23 +231,29 @@ impl ActionHistory {
     pub fn translate(&self, bet_abstraction: &Vec<Vec<f64>>) -> ActionHistory {
         let mut translated = ActionHistory::new();
         for action in self.get_actions() {
-            let next = translated.next_actions(bet_abstraction);
-            if next.contains(&action) {
-                translated.add(&action);
-            } else {
-                // The action is not in the abstraction--time to perform
-                // action translation by finding the closest action.
-                let mut closest_action = next[0].clone();
-                for candidate_action in next {
-                    if (candidate_action.amount - action.amount).abs()
-                        < (closest_action.amount - action.amount).abs()
-                    {
-                        closest_action = candidate_action;
+            let next_actions = translated.next_actions(bet_abstraction);
+            let next_action;
+            if next_actions.contains(&action) {
+                next_action = action;
+            } else if action.action == ActionType::Call {
+                next_action = Action {action: ActionType::Call, amount: translated.to_call()};
+            } else if action.action == ActionType::Bet {
+                // To translate the bet, find the bet size in the abstraction which is closest in 
+                // log space to the real bet size. 
+                let mut candidate_bets = Vec::new();
+                for a in next_actions {
+                    if a.action == ActionType::Bet {
+                        candidate_bets.push(a.amount);
                     }
                 }
-                translated.add(&closest_action);
+                let closest_bet_size = find_closest_log(candidate_bets, action.amount);
+                next_action = Action {action: ActionType::Bet, amount: closest_bet_size};
+            } else {
+                panic!("Action not translating");
             }
+            translated.add(&next_action);
         }
+        assert!(translated.street == self.street, "History: {}\nTranslated: {}", self, translated);
         translated
     }
 
@@ -273,6 +297,21 @@ impl fmt::Display for ActionHistory {
         }
         write!(f, "{}", result)
     }
+}
+
+// Returns the element which is closest in log space to the input
+fn find_closest_log(v: Vec<i32>, n: i32) -> i32 {
+    let log_n = (n as f64).ln();
+    let mut closest_v = 0;
+    let mut log_closest_diff = f64::MAX;
+    for candidate in v {
+        let log_candidate_diff = ((candidate as f64).ln() - log_n).abs();
+        if log_candidate_diff < log_closest_diff {
+            closest_v = candidate;
+            log_closest_diff = log_candidate_diff;
+        }
+    }
+    closest_v
 }
 
 pub fn get_hand(deck: &[Card], player: usize, street: usize) -> Vec<Card> {

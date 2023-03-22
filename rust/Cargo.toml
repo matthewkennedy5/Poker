@@ -33,7 +33,7 @@ incremental = true
 
 [profile.dev]
 debug = true
-opt-level = 1
+opt-level = 0
 
 [[bin]]
 name="server"
