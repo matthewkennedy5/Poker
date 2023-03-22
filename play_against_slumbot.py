@@ -281,9 +281,9 @@ def BotAction(response):
                 # The Optimus history includes the blinds in the preflop bet sizes, but slumbot
                 # treats them separately, so we have to adjust for that here
                 if len(optimus_history) == 0:
-                    amount += BIG_BLIND
-                elif len(optimus_history) == 1:
                     amount += SMALL_BLIND
+                elif len(optimus_history) == 1:
+                    amount += BIG_BLIND
                 bets[player] += amount
                 action = {'action': 'Bet', 'amount': amount}
             elif action == 'c':
