@@ -331,22 +331,22 @@ def PlayHand(token):
     new_token = r.get('token')
     if new_token:
         token = new_token
-    print('Token: %s' % token)
+    # print('Token: %s' % token)
     while True:
-        print('-----------------')
-        print(repr(r))
+        # print('-----------------')
+        # print(repr(r))
         action = r.get('action')
         client_pos = r.get('client_pos')
         hole_cards = r.get('hole_cards')
         board = r.get('board')
         winnings = r.get('winnings')
-        print('Action: %s' % action)
-        if client_pos:
-            print('Client pos: %i' % client_pos)
-        print('Client hole cards: %s' % repr(hole_cards))
-        print('Board: %s' % repr(board))
+        # print('Action: %s' % action)
+        # if client_pos:
+            # print('Client pos: %i' % client_pos)
+        # print('Client hole cards: %s' % repr(hole_cards))
+        # print('Board: %s' % repr(board))
         if winnings is not None:
-            print('Hand winnings: %i' % winnings)
+            # print('Hand winnings: %i' % winnings)
             return (token, winnings)
         # Need to check or call
         a = ParseAction(action)
@@ -359,7 +359,7 @@ def PlayHand(token):
         # Test that the action is legal according to Slumbot
         ParseAction(action + incr)
 
-        print('Sending incremental action: %s' % incr)
+        # print('Sending incremental action: %s' % incr)
         try:
             r = Act(token, incr)
         except ValueError:
@@ -416,24 +416,15 @@ def main():
     else:
         token = None
     
-
-    num_hands = 100
+    num_hands = 10000
     scores = []
     with mp.Pool(mp.cpu_count()) as pool:
         for score in tqdm(pool.imap(play_hand, range(num_hands)), total=num_hands):
             scores.append(score)
 
-    
     mean = np.mean(scores) / BIG_BLIND
     std = np.std(scores) / BIG_BLIND
     print(f'Winnings: {mean} +/- {1.96*std} BB/h')
-
-    # winnings = 0
-    # for h in trange(num_hands):
-    #     (token, hand_winnings) = PlayHand(token)
-    #     winnings += hand_winnings
-    # print('Total winnings: %i' % winnings)
-
     
 if __name__ == '__main__':
     main()
