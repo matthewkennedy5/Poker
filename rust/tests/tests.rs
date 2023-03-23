@@ -265,6 +265,36 @@ fn bet_size_too_small() {
 }
 
 #[test]
+fn all_in_size_allowed() {
+    let actions: Vec<Action> = vec![
+        Action {action: ActionType::Bet, amount: 200},
+        Action {action: ActionType::Bet, amount: 1250},
+        Action {action: ActionType::Call, amount: 1050},
+        Action {action: ActionType::Call, amount: 0},
+        Action {action: ActionType::Bet, amount: 750},
+        Action {action: ActionType::Bet, amount: 18650},
+    ];
+    assert!(bot_strategy_contains_amount(18000, "AdJc", "8h4d2s", actions));
+}
+
+#[test]
+fn history_all_in_size_allowed() {
+    let actions: Vec<Action> = vec![
+        Action {action: ActionType::Bet, amount: 200},
+        Action {action: ActionType::Bet, amount: 1250},
+        Action {action: ActionType::Call, amount: 1050},
+        Action {action: ActionType::Call, amount: 0},
+        Action {action: ActionType::Bet, amount: 750},
+        Action {action: ActionType::Bet, amount: 18650},
+    ];
+    let mut history = ActionHistory::new();
+    for a in actions {
+        history.add(&a);
+    }
+    assert!(history.is_legal_next_action(&Action {action: ActionType::Bet, amount: 18000}));
+}
+
+#[test]
 fn limp_is_call_not_bet() {
     let history = ActionHistory::new();
     let bet_abstraction: Vec<Vec<f64>> = vec![vec![1.0]];

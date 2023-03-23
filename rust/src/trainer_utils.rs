@@ -103,7 +103,7 @@ impl ActionHistory {
         }
     }
 
-    fn is_legal_next_action(&self, action: &Action) -> bool {
+    pub fn is_legal_next_action(&self, action: &Action) -> bool {
         match action.action {
             ActionType::Bet => {
                 // The bet size must be different than the call size, and within the correct range
@@ -151,7 +151,12 @@ impl ActionHistory {
             0
         } else {
             let last_action: Action = self.last_action.clone().unwrap();
-            2 * last_action.amount
+            if 2 * last_action.amount > self.max_bet() {
+                // Can always go all-in
+                self.max_bet()
+            } else {
+                2 * last_action.amount
+            }
         }
     }
 

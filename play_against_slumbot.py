@@ -169,7 +169,7 @@ def ParseAction(action):
                 return {'error': 'Bet size not an integer'}
             new_last_bet_size = new_street_last_bet_to - street_last_bet_to
             # Validate that the bet is legal
-            remaining = STACK_SIZE - street_last_bet_to
+            remaining = STACK_SIZE - total_last_bet_to
             if last_bet_size > 0:
                 min_bet_size = last_bet_size
 	        # Make sure minimum opening bet is the size of the big blind.
@@ -181,6 +181,7 @@ def ParseAction(action):
             if min_bet_size > remaining:
                 min_bet_size = remaining
             if new_last_bet_size < min_bet_size:
+                breakpoint()
                 return {'error': 'Bet too small'}
             max_bet_size = remaining
             if new_last_bet_size > max_bet_size:
@@ -274,22 +275,24 @@ def BotAction(response):
         actions = re.findall(r"([ck]|b\d+)", history)
         bets = [0, 0]
         player = 0
+        if street == 'preflop':
+            player = 1
         for action in actions:
             player = 1 - player
             if action[0] == 'b':
-                amount = int(action[1:])
+                amount = int(action[1:]) - bets[player] 
                 # The Optimus history includes the blinds in the preflop bet sizes, but slumbot
                 # treats them separately, so we have to adjust for that here
                 if len(optimus_history) == 0:
                     amount += SMALL_BLIND
                 elif len(optimus_history) == 1:
                     amount += BIG_BLIND
-                bets[player] += amount
+                bets[player] = amount
                 action = {'action': 'Bet', 'amount': amount}
             elif action == 'c':
                 if len(optimus_history) == 0:
                     to_call = BIG_BLIND
-                    bets[player] += to_call
+                    # bets[player] += to_call
                 else:
                     to_call = bets[1 - player] - bets[player]
                 action = {'action': 'Call', 'amount': to_call}
@@ -297,7 +300,7 @@ def BotAction(response):
                 to_call = 0
                 if len(optimus_history) == 1:
                     to_call = BIG_BLIND
-                    bets[player] += to_call
+                    # bets[player] += to_call
                 action = {'action': 'Call', 'amount': to_call}
             else:
                 raise ValueError()
@@ -367,11 +370,15 @@ def PlayHand(token):
         # This sample program implements a naive strategy of "always check or call".
         incr = BotAction(r)
 
+        # Test that the action is legal according to Slumbot
+        ParseAction(action + incr)
+
         print('Sending incremental action: %s' % incr)
         try:
             r = Act(token, incr)
         except ValueError:
             breakpoint()
+        
     # Should never get here
 
         
