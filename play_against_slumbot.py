@@ -34,7 +34,9 @@ import re
 import json
 import sys
 import argparse
-from tqdm import trange
+from tqdm import trange, tqdm
+import multiprocessing as mp
+import numpy as np
 
 host = 'slumbot.com'
 
@@ -397,6 +399,11 @@ def Login(username, password):
     return token
 
 
+def play_hand(dummy):
+    _, hand_winnings = PlayHand(None)
+    return hand_winnings
+
+
 def main():
     parser = argparse.ArgumentParser(description='Slumbot API example')
     parser.add_argument('--username', type=str)
@@ -408,13 +415,24 @@ def main():
         token = Login(username, password)
     else:
         token = None
+    
 
     num_hands = 100
-    winnings = 0
-    for h in trange(num_hands):
-        (token, hand_winnings) = PlayHand(token)
-        winnings += hand_winnings
-    print('Total winnings: %i' % winnings)
+    scores = []
+    with mp.Pool(mp.cpu_count()) as pool:
+        for score in tqdm(pool.imap(play_hand, range(num_hands)), total=num_hands):
+            scores.append(score)
+
+    
+    mean = np.mean(scores) / BIG_BLIND
+    std = np.std(scores) / BIG_BLIND
+    print(f'Winnings: {mean} +/- {1.96*std} BB/h')
+
+    # winnings = 0
+    # for h in trange(num_hands):
+    #     (token, hand_winnings) = PlayHand(token)
+    #     winnings += hand_winnings
+    # print('Total winnings: %i' % winnings)
 
     
 if __name__ == '__main__':
