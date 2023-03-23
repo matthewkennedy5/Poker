@@ -272,57 +272,40 @@ def BotAction(response):
     optimus_history = []
     slumbot_history = response.get('action').split('/')
     for street, history in zip(streets, slumbot_history):
-        actions = re.findall(r"([ck]|b\d+)", history)
-        bets = [0, 0]
+        actions = re.findall(r"([ck]|b\d+)", history)   # Thanks GPT 4
+        street_bets = [0, 0]
         player = 0
         if street == 'preflop':
             player = 1
         for action in actions:
-            player = 1 - player
             if action[0] == 'b':
-                amount = int(action[1:]) - bets[player] 
+                amount = int(action[1:]) - street_bets[player] 
                 # The Optimus history includes the blinds in the preflop bet sizes, but slumbot
                 # treats them separately, so we have to adjust for that here
-                if len(optimus_history) == 0:
-                    amount += SMALL_BLIND
-                elif len(optimus_history) == 1:
-                    amount += BIG_BLIND
-                bets[player] = amount
                 action = {'action': 'Bet', 'amount': amount}
             elif action == 'c':
                 if len(optimus_history) == 0:
                     to_call = BIG_BLIND
-                    # bets[player] += to_call
                 else:
-                    to_call = bets[1 - player] - bets[player]
+                    to_call = street_bets[1 - player] - street_bets[player]
                 action = {'action': 'Call', 'amount': to_call}
             elif action == 'k':
                 to_call = 0
                 if len(optimus_history) == 1:
                     to_call = BIG_BLIND
-                    # bets[player] += to_call
                 action = {'action': 'Call', 'amount': to_call}
             else:
                 raise ValueError()
             optimus_history.append(action)
-
-    # history = str(json.dumps(optimus_history))
-    # history.replace(' ', '')
-    # history.replace('{', '%7B')
-    # history.replace('}', '%7D')
-    history = optimus_history
+            street_bets[player] += action['amount']
+            player = 1 - player
 
     data = {
         'cpuCards': response.get('hole_cards'),
         'board': board,
-        'history': history
+        'history': optimus_history 
     }
-    response = requests.post('http://localhost/api/bot?', json=data)
-    
-    try:
-        response = response.json()
-    except json.decoder.JSONDecodeError:
-        breakpoint()
+    response = requests.post('http://localhost/api/bot?', json=data).json()
 
     action = response['action']
     amount = response['amount']
@@ -331,6 +314,7 @@ def BotAction(response):
     elif action == 'Call':
         return 'c'
     elif action == 'Bet':
+        amount += street_bets[player]
         return f'b{amount}'
     elif action == 'Fold':
         return 'f'
