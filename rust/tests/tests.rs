@@ -331,6 +331,13 @@ fn limp_is_call_not_bet() {
     assert!(!next_actions.contains(&bet));
 }
 
+#[test]
+fn all_in_call() {
+    let mut history = ActionHistory::new();
+    history.add(&Action {action: ActionType::Bet, amount: 20000});
+    assert!(!history.is_legal_next_action(&Action {action: ActionType::Bet, amount: 20000}));
+}
+
 fn play_hand_always_call() -> f64 {
     let mut deck: Vec<Card> = deck();
     let mut rng = &mut rand::thread_rng();

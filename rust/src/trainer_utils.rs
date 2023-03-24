@@ -340,7 +340,7 @@ pub fn get_hand(deck: &[Card], player: usize, street: usize) -> Vec<Card> {
     cards
 }
 
-fn board_length(street: usize) -> usize {
+pub fn board_length(street: usize) -> usize {
     match street {
         PREFLOP => 0,
         FLOP => 3,

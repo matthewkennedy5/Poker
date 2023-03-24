@@ -48,7 +48,7 @@ impl Bot {
         history: &ActionHistory,
     ) -> HashMap<Action, f64> {
         assert!(hole.len() == 2);
-        assert!(board.len() <= 5);
+        assert!(board.len() == board_length(history.street), "Board: {}, History: {}", card_utils::cards2str(board), history);
         let translated = history.translate(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(hole, board, &translated);
         let node = lookup_or_new(&self.blueprint, &infoset);
