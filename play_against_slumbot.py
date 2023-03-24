@@ -33,6 +33,7 @@ import requests
 import re
 import json
 import sys
+import os
 import argparse
 import time
 from tqdm import trange, tqdm
@@ -421,6 +422,7 @@ def main():
     parser = argparse.ArgumentParser(description='Slumbot API example')
     parser.add_argument('--username', type=str)
     parser.add_argument('--password', type=str)
+    parser.add_argument('--num_hands', type=int)
     args = parser.parse_args()
     username = args.username
     password = args.password
@@ -429,7 +431,7 @@ def main():
     else:
         token = None
     
-    num_hands = 10000
+    num_hands = args.num_hands
     scores = []
     with mp.Pool(mp.cpu_count()) as pool:
         for score in tqdm(pool.imap(play_hand, range(num_hands)), 

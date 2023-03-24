@@ -65,6 +65,24 @@ impl ActionHistory {
         }
     }
 
+    // Example:
+    // let history = ActionHistory::from_strings(vec!["Bet 200", "Call 200"]);
+    pub fn from_strings(actions: Vec<&str>) -> ActionHistory {
+        let mut history = ActionHistory::new();
+        for str in actions {
+            let tokens: Vec<&str> = str.split(' ').collect();
+            let action = match tokens[0] {
+                "Bet" => ActionType::Bet,
+                "Call" => ActionType::Call,
+                "Fold" => ActionType::Fold,
+                _ => panic!("Bad action string")
+            };
+            let amount: i32 = tokens[1].parse().expect("Bad action amount");
+            history.add(&Action {action: action, amount: amount});
+        }
+        history
+    }
+
     // Returns true if the hand is over (either someone has folded or it's time for
     // a showdown).
     pub fn hand_over(&self) -> bool {
@@ -108,9 +126,8 @@ impl ActionHistory {
             ActionType::Bet => {
                 // The bet size must be different than the call size, and within the correct range
                 let not_call = action.amount != self.to_call();
-                let all_in = action.amount == self.max_bet();
                 let size_ok = (action.amount >= self.min_bet()) && (action.amount <= self.max_bet());
-                size_ok && (not_call || all_in)
+                size_ok && not_call
             },
             ActionType::Call => action.amount == self.to_call(),
             ActionType::Fold => self.to_call() != 0
@@ -232,15 +249,15 @@ impl ActionHistory {
         let mut untranslated = ActionHistory::new();
         for action in self.get_actions() {
             let translated_next_actions = translated.next_actions(bet_abstraction);
-            let next_action;
+            let translated_action;
             if action.action == ActionType::Fold {
-                next_action = FOLD;
+                translated_action = FOLD;
             } else if action.action == ActionType::Call {
-                next_action = Action {action: ActionType::Call, amount: translated.to_call()};
+                translated_action = Action {action: ActionType::Call, amount: translated.to_call()};
             } else if action.action == ActionType::Bet {
                 if action.amount == untranslated.max_bet() {
                     // All in
-                    next_action = Action {action: ActionType::Bet, amount: translated.max_bet()};
+                    translated_action = Action {action: ActionType::Bet, amount: translated.max_bet()};
                 } else {
                     // To translate the bet, find the bet size in the abstraction which is closest in 
                     // log space to the real bet size. This does not include the all-in action, because
@@ -251,13 +268,18 @@ impl ActionHistory {
                             candidate_bets.push(a.amount);
                         }
                     }
+                    if candidate_bets.is_empty() {
+                        // The only legal bet size in the abstraction is the all-in amount, but
+                        // we don't want to end the hand, so we reduce the bet size slightly. 
+                        candidate_bets.push(translated.max_bet() - &CONFIG.big_blind);
+                    }
                     let closest_bet_size = find_closest_log(candidate_bets, action.amount);
-                    next_action = Action {action: ActionType::Bet, amount: closest_bet_size};
+                    translated_action = Action {action: ActionType::Bet, amount: closest_bet_size};
                 }
             } else {
                 panic!("Action not translating");
             }
-            translated.add(&next_action);
+            translated.add(&translated_action);
             untranslated.add(&action);
         }
         assert!(translated.street == self.street, "Different streets: History: {}\nTranslated: {}", self, translated);
@@ -308,6 +330,7 @@ impl fmt::Display for ActionHistory {
 
 // Returns the element which is closest in log space to the input
 fn find_closest_log(v: Vec<i32>, n: i32) -> i32 {
+    assert!(!v.is_empty());
     let log_n = (n as f64).ln();
     let mut closest_v = 0;
     let mut log_closest_diff = f64::MAX;

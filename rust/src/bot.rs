@@ -33,12 +33,12 @@ impl Bot {
         board: &[Card],
         history: &ActionHistory,
     ) -> HashMap<Action, f64> {
-        self.get_strategy_action_translation(hole, board, history)
-        // if history.is_empty() {
-        //     return self.get_strategy_action_translation(hole, board, history);
-        // } else {
-        //     return self.unsafe_nested_subgame_solving(hole, board, history);
-        // }
+        // self.get_strategy_action_translation(hole, board, history)
+        if history.is_empty() {
+            return self.get_strategy_action_translation(hole, board, history);
+        } else {
+            return self.unsafe_nested_subgame_solving(hole, board, history);
+        }
     }
 
     fn get_strategy_action_translation(
@@ -48,7 +48,8 @@ impl Bot {
         history: &ActionHistory,
     ) -> HashMap<Action, f64> {
         assert!(hole.len() == 2);
-        assert!(board.len() == board_length(history.street), "Board: {}, History: {}", card_utils::cards2str(board), history);
+        // Only look at board cards for this street
+        let board = &board[..board_length(history.street)];    
         let translated = history.translate(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(hole, board, &translated);
         let node = lookup_or_new(&self.blueprint, &infoset);

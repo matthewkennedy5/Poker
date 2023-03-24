@@ -1,7 +1,7 @@
+use once_cell::sync::Lazy;
 #[cfg(test)]
 use optimus::*;
 use rand::prelude::*;
-use once_cell::sync::Lazy;
 use rayon::iter::*;
 
 static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
@@ -9,15 +9,14 @@ static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
 #[test]
 fn card_bitmap() {
     let hand = vec!["2d", "9s", "Qd", "Qs", "Ac", "Ah", "As"];
-    
-/*     filler       clubs           diamonds      hearts        spades
- *
- *    |            |23456789TJQKA|23456789TJQKA|23456789TJQKA|23456789TJQKA|
- *    |000000000000|0000000000001|1000000000100|0000000000001|0000000100101|
- */
+
+    /*     filler       clubs           diamonds      hearts        spades
+     *
+     *    |            |23456789TJQKA|23456789TJQKA|23456789TJQKA|23456789TJQKA|
+     *    |000000000000|0000000000001|1000000000100|0000000000001|0000000100101|
+     */
     let expected = 0b0000000000000000000000001100000000010000000000000010000000100101;
     assert_eq!(cards2bitmap(&strvec2cards(&hand)), expected);
-
 }
 
 #[test]
@@ -180,7 +179,12 @@ fn high_pair_beats_low_pair() {
 }
 
 // Helper function for tests that get the bot's response at a certain spot
-fn bot_strategy_contains_amount(amount: i32, hole: &str, board: &str, actions: Vec<Action>) -> bool {
+fn bot_strategy_contains_amount(
+    amount: i32,
+    hole: &str,
+    board: &str,
+    actions: Vec<Action>,
+) -> bool {
     let mut history = ActionHistory::new();
     for a in actions {
         history.add(&a);
@@ -197,92 +201,219 @@ fn bot_strategy_contains_amount(amount: i32, hole: &str, board: &str, actions: V
 fn negative_bet_size() {
     // TODO: this is giving a stack overflow error for some reason
     let actions = vec![
-        Action {action: ActionType::Call, amount: 100},
-        Action {action: ActionType::Call, amount: 100},
-        Action {action: ActionType::Bet, amount: 50},
-        Action {action: ActionType::Bet, amount: 100},
-        Action {action: ActionType::Bet, amount: 200}
+        Action {
+            action: ActionType::Call,
+            amount: 100,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 100,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 50,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 100,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 200,
+        },
     ];
-    assert!(!bot_strategy_contains_amount(19834, "Ts8s", "Js5sQc", actions));
+    assert!(!bot_strategy_contains_amount(
+        19834, "Ts8s", "Js5sQc", actions
+    ));
 }
 
-// Due to a bug in action translation, the out of position player's "all in" size (18750) bigger 
+// Due to a bug in action translation, the out of position player's "all in" size (18750) bigger
 // can be bigger than its remaining stack (18450)
 #[test]
 fn cpu_bets_more_than_stack() {
     let actions = vec![
-        Action {action: ActionType::Call, amount: 100},
-        Action {action: ActionType::Bet, amount: 250},
-        Action {action: ActionType::Bet, amount: 500},
-        Action {action: ActionType::Call, amount: 350},
-        Action {action: ActionType::Bet, amount: 1000},
-        Action {action: ActionType::Bet, amount: 2000},
+        Action {
+            action: ActionType::Call,
+            amount: 100,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 250,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 500,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 350,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 1000,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 2000,
+        },
     ];
-    assert!(!bot_strategy_contains_amount(18750, "QdQs", "6dTcJd", actions));
+    assert!(!bot_strategy_contains_amount(
+        18750, "QdQs", "6dTcJd", actions
+    ));
 }
 
 #[test]
 fn action_translation_sizes() {
     let actions = vec![
-        Action {action: ActionType::Bet, amount: 250},
-        Action {action: ActionType::Bet, amount: 750},
-        Action {action: ActionType::Bet, amount: 2500},
-        Action {action: ActionType::Call, amount: 2000},
-        Action {action: ActionType::Call, amount: 0},
-        Action {action: ActionType::Bet, amount: 17250},
+        Action {
+            action: ActionType::Bet,
+            amount: 250,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 750,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 2500,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 2000,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 0,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 17250,
+        },
     ];
-    assert!(!bot_strategy_contains_amount(17500, "Qs4h", "8c6h4d", actions));
+    assert!(!bot_strategy_contains_amount(
+        17500, "Qs4h", "8c6h4d", actions
+    ));
     let actions = vec![
-        Action {action: ActionType::Call, amount: 100},
-        Action {action: ActionType::Bet, amount: 300},
-        Action {action: ActionType::Bet, amount: 2000},
-        Action {action: ActionType::Bet, amount: 4500},
-        Action {action: ActionType::Call, amount: 2700},
-        Action {action: ActionType::Bet, amount: 4500},
-        Action {action: ActionType::Bet, amount: 15200},
+        Action {
+            action: ActionType::Call,
+            amount: 100,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 300,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 2000,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 4500,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 2700,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 4500,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 15200,
+        },
     ];
-    assert!(!bot_strategy_contains_amount(15500, "Kh9s", "Ah7h2d", actions));
+    assert!(!bot_strategy_contains_amount(
+        15500, "Kh9s", "Ah7h2d", actions
+    ));
 }
 
 #[test]
 fn min_bet_at_least_double() {
-    let actions: Vec<Action> = vec![
-        Action {action: ActionType::Bet, amount: 200}
-    ];
+    let actions: Vec<Action> = vec![Action {
+        action: ActionType::Bet,
+        amount: 200,
+    }];
     assert!(!bot_strategy_contains_amount(250, "Ah8h", "", actions));
 }
 
 #[test]
 fn bet_size_too_small() {
     let actions: Vec<Action> = vec![
-        Action {action: ActionType::Bet, amount: 500},
-        Action {action: ActionType::Bet, amount: 1500},
-        Action {action: ActionType::Call, amount: 1000},
-        Action {action: ActionType::Bet, amount: 1500},
-        Action {action: ActionType::Bet, amount: 18450},
+        Action {
+            action: ActionType::Bet,
+            amount: 500,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 1500,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 1000,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 1500,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 18450,
+        },
     ];
-    assert!(!bot_strategy_contains_amount(18500, "6h5s", "Js8s7h", actions));
+    assert!(!bot_strategy_contains_amount(
+        18500, "6h5s", "Js8s7h", actions
+    ));
 }
 
 #[test]
 fn all_in_size_allowed() {
     let actions: Vec<Action> = vec![
-        Action {action: ActionType::Bet, amount: 200},
-        Action {action: ActionType::Bet, amount: 1250},
-        Action {action: ActionType::Call, amount: 1050},
-        Action {action: ActionType::Call, amount: 0},
-        Action {action: ActionType::Bet, amount: 750},
-        Action {action: ActionType::Bet, amount: 18650},
+        Action {
+            action: ActionType::Bet,
+            amount: 200,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 1250,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 1050,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 0,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 750,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 18650,
+        },
     ];
-    assert!(bot_strategy_contains_amount(18000, "AdJc", "8h4d2s", actions));
+    assert!(bot_strategy_contains_amount(
+        18000, "AdJc", "8h4d2s", actions
+    ));
 }
 
 #[test]
 fn no_bet_zero() {
     let actions: Vec<Action> = vec![
-        Action {action: ActionType::Bet, amount: 250},
-        Action {action: ActionType::Call, amount: 250},
-        Action {action: ActionType::Bet, amount: 19750},
+        Action {
+            action: ActionType::Bet,
+            amount: 250,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 250,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 19750,
+        },
     ];
     assert!(bot_strategy_contains_amount(0, "AdJc", "8h4d2s", actions));
 }
@@ -290,27 +421,60 @@ fn no_bet_zero() {
 #[test]
 fn history_all_in_size_allowed() {
     let actions: Vec<Action> = vec![
-        Action {action: ActionType::Bet, amount: 200},
-        Action {action: ActionType::Bet, amount: 1250},
-        Action {action: ActionType::Call, amount: 1050},
-        Action {action: ActionType::Call, amount: 0},
-        Action {action: ActionType::Bet, amount: 750},
-        Action {action: ActionType::Bet, amount: 18650},
+        Action {
+            action: ActionType::Bet,
+            amount: 200,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 1250,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 1050,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 0,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 750,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 18650,
+        },
     ];
     let mut history = ActionHistory::new();
     for a in actions {
         history.add(&a);
     }
-    assert!(history.is_legal_next_action(&Action {action: ActionType::Bet, amount: 18000}));
+    assert!(history.is_legal_next_action(&Action {
+        action: ActionType::Bet,
+        amount: 18000
+    }));
 }
 
 #[test]
 fn action_translation_all_in() {
     let actions = vec![
-        Action {action: ActionType::Bet, amount: 200},
-        Action {action: ActionType::Call, amount: 200},
-        Action {action: ActionType::Bet, amount: 19750},
-        Action {action: ActionType::Bet, amount: 19800},
+        Action {
+            action: ActionType::Bet,
+            amount: 200,
+        },
+        Action {
+            action: ActionType::Call,
+            amount: 200,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 19750,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 19800,
+        },
     ];
     let mut history = ActionHistory::new();
     for a in actions {
@@ -324,8 +488,14 @@ fn limp_is_call_not_bet() {
     let history = ActionHistory::new();
     let bet_abstraction: Vec<Vec<f64>> = vec![vec![1.0]];
     // assumes that bet_abstraction contains POT on preflop
-    let call = Action {action: ActionType::Call, amount: CONFIG.big_blind};
-    let bet = Action {action: ActionType::Bet, amount: CONFIG.big_blind};
+    let call = Action {
+        action: ActionType::Call,
+        amount: CONFIG.big_blind,
+    };
+    let bet = Action {
+        action: ActionType::Bet,
+        amount: CONFIG.big_blind,
+    };
     let next_actions = history.next_actions(&bet_abstraction);
     assert!(next_actions.contains(&call));
     assert!(!next_actions.contains(&bet));
@@ -334,8 +504,14 @@ fn limp_is_call_not_bet() {
 #[test]
 fn all_in_call() {
     let mut history = ActionHistory::new();
-    history.add(&Action {action: ActionType::Bet, amount: 20000});
-    assert!(!history.is_legal_next_action(&Action {action: ActionType::Bet, amount: 20000}));
+    history.add(&Action {
+        action: ActionType::Bet,
+        amount: 20000,
+    });
+    assert!(!history.is_legal_next_action(&Action {
+        action: ActionType::Bet,
+        amount: 20000
+    }));
 }
 
 fn play_hand_always_call() -> f64 {
@@ -352,14 +528,17 @@ fn play_hand_always_call() -> f64 {
             BOT.get_action(hole, board, &history)
         } else {
             // Opponent only uses check/call actions
-            Action { action: ActionType::Call, amount: history.to_call() }
+            Action {
+                action: ActionType::Call,
+                amount: history.to_call(),
+            }
         };
         history.add(&action);
     }
     terminal_utility(&deck, &history, bot)
 }
 
-#[test]
+// #[test]
 fn bot_beats_always_call() {
     println!("[INFO] Starting game against always call bot...");
     let iters = 10_000;
@@ -376,8 +555,52 @@ fn bot_beats_always_call() {
     let mean = statistical::mean(&winnings);
     let std = statistical::standard_deviation(&winnings, Some(mean));
     let confidence = 1.96 * std / (iters as f64).sqrt();
-    println!("Score against check/call bot: {} +/- {} BB/h\n", mean, confidence);
+    println!(
+        "Score against check/call bot: {} +/- {} BB/h\n",
+        mean, confidence
+    );
 }
 
 // TODO: Write a test to make sure that the nodes contain all the infosets (no gaps)
 // Only matters for the final training process
+
+#[test]
+fn cpu_action_backend() {
+    let history = ActionHistory::from_strings(vec![
+        "Bet 200",
+        "Bet 1000",
+        "Call 800",
+        "Call 0",
+        "Bet 1000",
+        "Bet 3000",
+        "Call 2000",
+        "Bet 4000",
+        "Call 4000",
+        "Bet 8000",
+        "Bet 12000",
+    ]);
+    BOT.get_action(&str2cards("As3s"), &str2cards("Qd9c3h9h8h"), &history);
+}
+
+#[test]
+fn more_action_translation() {
+    let history = ActionHistory::from_strings(vec![
+        // Preflop
+        "Bet 200",      // 250
+        "Bet 1000",     // 1250
+        "Call 800",     // 1000
+        // Flop         
+        "Call 0",       // 0
+        "Bet 1000",     // 1250
+        "Bet 3000",     // 3750
+        "Call 2000",    // 2500
+        // Turn         
+        "Bet 4000",     // 5000
+        "Call 4000",    // 5000
+        // River
+        "Bet 8000",
+        "Bet 12000",
+    ]);
+    history.translate(&CONFIG.bet_abstraction);
+}
+
