@@ -45,7 +45,7 @@ struct InfoSetJSON {
 }
 
 async fn get_cpu_action(infoset: web::Json<InfoSetJSON>) -> impl Responder {
-    println!("[INFO] Received CPU action request: {:#?}", infoset);
+    // println!("[INFO] Received CPU action request: {:#?}", infoset);
 
     let cpu_cards = parse_cards(&infoset.cpuCards);
     let board = parse_cards(&infoset.board);

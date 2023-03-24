@@ -34,6 +34,7 @@ import re
 import json
 import sys
 import argparse
+import time
 from tqdm import trange, tqdm
 import multiprocessing as mp
 import numpy as np
@@ -183,7 +184,6 @@ def ParseAction(action):
             if min_bet_size > remaining:
                 min_bet_size = remaining
             if new_last_bet_size < min_bet_size:
-                breakpoint()
                 return {'error': 'Bet too small'}
             max_bet_size = remaining
             if new_last_bet_size > max_bet_size:
@@ -264,21 +264,25 @@ def Act(token, action):
         
     return r
 
-def BotAction(response):
-    """Gets Optimus's action in the given situation."""
-    board = response.get('board')
-    if len(board) < 5:
-        board += ['back'] * (5 - len(board))
-    
-    streets = 'preflop', 'flop', 'turn', 'river'
+
+def TestTranslateAction():
+    result = [
+        {'action': 'Bet', 'amount': 250},
+        {'action': 'Call', 'amount': 250},
+        {'action': 'Bet', 'amount': 19750}
+    ]
+    assert(TranslateAction("b250c/b19750") == (result, 0))
+
+
+def TranslateAction(action):
+    """Translates the Slumbot action format to Optimus"""
+    slumbot_history = action.split('/')
     optimus_history = []
-    slumbot_history = response.get('action').split('/')
+    streets = 'preflop', 'flop', 'turn', 'river'
     for street, history in zip(streets, slumbot_history):
         actions = re.findall(r"([ck]|b\d+)", history)   # Thanks GPT 4
         street_bets = [0, 0]
-        player = 0
-        if street == 'preflop':
-            player = 1
+        player = 1 if street == 'preflop' else 0
         for action in actions:
             if action[0] == 'b':
                 amount = int(action[1:]) - street_bets[player] 
@@ -302,12 +306,30 @@ def BotAction(response):
             street_bets[player] += action['amount']
             player = 1 - player
 
+    return optimus_history, street_bets[player]
+
+
+def BotAction(response):
+    """Gets Optimus's action in the given situation."""
+    board = response.get('board')
+    if len(board) < 5:
+        board += ['back'] * (5 - len(board))
+    
+    optimus_history, bet_so_far = TranslateAction(response.get('action'))
+
     data = {
         'cpuCards': response.get('hole_cards'),
         'board': board,
         'history': optimus_history 
     }
-    response = requests.post('http://localhost/api/bot?', json=data).json()
+
+    while True:
+        try:
+            response = requests.post('http://localhost/api/bot?', json=data).json()
+            break
+        except:
+            print("error", data)
+            time.sleep(1)
 
     action = response['action']
     amount = response['amount']
@@ -316,15 +338,13 @@ def BotAction(response):
     elif action == 'Call':
         return 'c'
     elif action == 'Bet':
-        amount += street_bets[player]
-        return f'b{amount}'
+        return f'b{amount + bet_so_far}'
     elif action == 'Fold':
         return 'f'
     else:
-        breakpoint()
         raise ValueError
 
-    
+
 def PlayHand(token):
     r = NewHand(token)
     # We may get a new token back from /api/new_hand
@@ -353,17 +373,10 @@ def PlayHand(token):
         if 'error' in a:
             print('Error parsing action %s: %s' % (action, a['error']))
             sys.exit(-1)
-        # This sample program implements a naive strategy of "always check or call".
         incr = BotAction(r)
 
-        # Test that the action is legal according to Slumbot
-        ParseAction(action + incr)
-
         # print('Sending incremental action: %s' % incr)
-        try:
-            r = Act(token, incr)
-        except ValueError:
-            breakpoint()
+        r = Act(token, incr)
         
     # Should never get here
 
@@ -419,12 +432,16 @@ def main():
     num_hands = 10000
     scores = []
     with mp.Pool(mp.cpu_count()) as pool:
-        for score in tqdm(pool.imap(play_hand, range(num_hands)), total=num_hands):
+        for score in tqdm(pool.imap(play_hand, range(num_hands)), 
+                          total=num_hands,
+                          smoothing=0):
             scores.append(score)
 
     mean = np.mean(scores) / BIG_BLIND
     std = np.std(scores) / BIG_BLIND
-    print(f'Winnings: {mean} +/- {1.96*std} BB/h')
+    conf = 1.96 * std / np.sqrt(num_hands)
+    print(f'Winnings: {mean} +/- {conf} BB/h')
     
 if __name__ == '__main__':
     main()
+    # TestTranslateAction()

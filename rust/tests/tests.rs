@@ -278,6 +278,16 @@ fn all_in_size_allowed() {
 }
 
 #[test]
+fn no_bet_zero() {
+    let actions: Vec<Action> = vec![
+        Action {action: ActionType::Bet, amount: 250},
+        Action {action: ActionType::Call, amount: 250},
+        Action {action: ActionType::Bet, amount: 19750},
+    ];
+    assert!(bot_strategy_contains_amount(0, "AdJc", "8h4d2s", actions));
+}
+
+#[test]
 fn history_all_in_size_allowed() {
     let actions: Vec<Action> = vec![
         Action {action: ActionType::Bet, amount: 200},
@@ -292,6 +302,21 @@ fn history_all_in_size_allowed() {
         history.add(&a);
     }
     assert!(history.is_legal_next_action(&Action {action: ActionType::Bet, amount: 18000}));
+}
+
+#[test]
+fn action_translation_all_in() {
+    let actions = vec![
+        Action {action: ActionType::Bet, amount: 200},
+        Action {action: ActionType::Call, amount: 200},
+        Action {action: ActionType::Bet, amount: 19750},
+        Action {action: ActionType::Bet, amount: 19800},
+    ];
+    let mut history = ActionHistory::new();
+    for a in actions {
+        history.add(&a);
+    }
+    history.translate(&CONFIG.bet_abstraction);
 }
 
 #[test]

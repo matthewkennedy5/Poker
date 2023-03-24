@@ -91,7 +91,7 @@ impl ActionHistory {
 
     // Add an new action to this history, and update the state
     pub fn add(&mut self, action: &Action) {
-        assert!(self.is_legal_next_action(action), "Action {} is illegal for history {:#?}", action, self);
+        assert!(self.is_legal_next_action(action), "Action {:?} is illegal for history {:#?}", action, self);
         let action = action.clone();
         self.stacks[self.player] -= action.amount;
         self.player = 1 - self.player;
@@ -108,8 +108,9 @@ impl ActionHistory {
             ActionType::Bet => {
                 // The bet size must be different than the call size, and within the correct range
                 let not_call = action.amount != self.to_call();
+                let all_in = action.amount == self.max_bet();
                 let size_ok = (action.amount >= self.min_bet()) && (action.amount <= self.max_bet());
-                not_call && size_ok
+                size_ok && (not_call || all_in)
             },
             ActionType::Call => action.amount == self.to_call(),
             ActionType::Fold => self.to_call() != 0
@@ -167,7 +168,9 @@ impl ActionHistory {
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
     pub fn next_actions(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<Action> {
-        let mut actions = Vec::new();
+        // Add all the potential bet sizes in the abstraction, and call and fold actions.
+        // Then later we filter out the illegal actions.
+        let mut candidate_actions = Vec::new();
         let pot = self.pot();
         for fraction in bet_abstraction[self.street].iter() {
             let bet = if fraction == &ALL_IN {
@@ -175,28 +178,19 @@ impl ActionHistory {
             } else {
                 (fraction.clone() * (pot as f64)) as i32
             };
-            // Add the bet if the amount is legal and it's distinct from the
-            // call amount.
-            if self.min_bet() <= bet && bet <= self.max_bet() && bet != self.to_call() {
-                actions.push(Action {
-                    action: ActionType::Bet,
-                    amount: bet,
-                });
-            }
+            candidate_actions.push(Action {
+                action: ActionType::Bet,
+                amount: bet,
+            });
         }
-
-        // Add call/check action.
-        let to_call = self.to_call();
-        actions.push(Action {
+        candidate_actions.push(Action {
             action: ActionType::Call,
-            amount: to_call,
+            amount: self.to_call(),
         });
-        // Add the fold action, unless we can just check. Check is a Call of 0
-        if to_call > 0 {
-            actions.push(FOLD)
-        }
+        candidate_actions.push(FOLD);
+        candidate_actions.retain(|a| self.is_legal_next_action(&a));
 
-        actions
+        candidate_actions
     }
 
     pub fn is_empty(&self) -> bool {
@@ -235,30 +229,38 @@ impl ActionHistory {
     // allowed in the abstraction.
     pub fn translate(&self, bet_abstraction: &Vec<Vec<f64>>) -> ActionHistory {
         let mut translated = ActionHistory::new();
+        let mut untranslated = ActionHistory::new();
         for action in self.get_actions() {
-            let next_actions = translated.next_actions(bet_abstraction);
+            let translated_next_actions = translated.next_actions(bet_abstraction);
             let next_action;
-            if next_actions.contains(&action) {
-                next_action = action;
+            if action.action == ActionType::Fold {
+                next_action = FOLD;
             } else if action.action == ActionType::Call {
                 next_action = Action {action: ActionType::Call, amount: translated.to_call()};
             } else if action.action == ActionType::Bet {
-                // To translate the bet, find the bet size in the abstraction which is closest in 
-                // log space to the real bet size. 
-                let mut candidate_bets = Vec::new();
-                for a in next_actions {
-                    if a.action == ActionType::Bet {
-                        candidate_bets.push(a.amount);
+                if action.amount == untranslated.max_bet() {
+                    // All in
+                    next_action = Action {action: ActionType::Bet, amount: translated.max_bet()};
+                } else {
+                    // To translate the bet, find the bet size in the abstraction which is closest in 
+                    // log space to the real bet size. This does not include the all-in action, because
+                    // that would end the hand. 
+                    let mut candidate_bets = Vec::new();
+                    for a in translated_next_actions {
+                        if a.action == ActionType::Bet && a.amount != translated.max_bet() {
+                            candidate_bets.push(a.amount);
+                        }
                     }
+                    let closest_bet_size = find_closest_log(candidate_bets, action.amount);
+                    next_action = Action {action: ActionType::Bet, amount: closest_bet_size};
                 }
-                let closest_bet_size = find_closest_log(candidate_bets, action.amount);
-                next_action = Action {action: ActionType::Bet, amount: closest_bet_size};
             } else {
                 panic!("Action not translating");
             }
             translated.add(&next_action);
+            untranslated.add(&action);
         }
-        assert!(translated.street == self.street, "History: {}\nTranslated: {}", self, translated);
+        assert!(translated.street == self.street, "Different streets: History: {}\nTranslated: {}", self, translated);
         translated
     }
 
