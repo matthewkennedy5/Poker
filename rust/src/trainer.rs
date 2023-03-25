@@ -5,30 +5,17 @@ use crate::trainer_utils::*;
 use crate::exploiter::*;
 use crate::bot::Bot;
 use rand::prelude::SliceRandom;
-use rand::thread_rng;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Write};
 
 pub fn train(iters: u64) {
-    let mut rng = thread_rng();
-    let mut deck = card_utils::deck();
+    let deck = card_utils::deck();
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
     println!("[INFO] Beginning training.");
-    let mut p0_util = 0.0;
-    let mut p1_util = 0.0;
     let bar = card_utils::pbar(iters);
     for i in 0..iters {
-        deck.shuffle(&mut rng);
-        p0_util += iterate(DEALER, &deck, &ActionHistory::new(), [1.0, 1.0], &mut nodes);
-        deck.shuffle(&mut rng);
-        p1_util += iterate(
-            OPPONENT,
-            &deck,
-            &ActionHistory::new(),
-            [1.0, 1.0],
-            &mut nodes,
-        );
+        cfr_iteration(&deck, &ActionHistory::new(), &mut nodes);
         if i % CONFIG.eval_every == 0 {
             serialize_nodes(&nodes);
             let bot = Bot::new();
@@ -39,14 +26,6 @@ pub fn train(iters: u64) {
     bar.finish();
 
     println!("{} nodes reached.", nodes.len());
-    println!(
-        "Utilities:
-            Dealer:   {} BB/h,
-            Opponent: {} BB/h",
-        p0_util / (iters as f64) / (CONFIG.big_blind as f64),
-        p1_util / (iters as f64) / (CONFIG.big_blind as f64),
-    );
-
     serialize_nodes(&nodes);
 }
 
@@ -64,6 +43,15 @@ fn serialize_nodes(nodes: &HashMap<InfoSet, Node>) {
     let mut file = File::create(&CONFIG.nodes_path).unwrap();
     file.write_all(&bincode).unwrap();
     println!("[INFO] Saved strategy.");
+}
+
+pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &mut HashMap<InfoSet, Node>) {
+    let mut rng = rand::thread_rng();
+    let mut deck = deck.to_vec();
+    deck.shuffle(&mut rng);
+    iterate(DEALER, &deck, history, [1.0, 1.0], nodes);
+    deck.shuffle(&mut rng);
+    iterate(OPPONENT, &deck, history, [1.0, 1.0], nodes);
 }
 
 pub fn iterate(

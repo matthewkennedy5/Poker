@@ -1,9 +1,8 @@
 use crate::card_utils::{self, Card};
 use crate::config::CONFIG;
 use crate::ranges::*;
-use crate::trainer;
+use crate::trainer::*;
 use crate::trainer_utils::*;
-use rand::prelude::*;
 use std::collections::HashMap;
 
 pub struct Bot {
@@ -14,7 +13,7 @@ pub struct Bot {
 
 impl Bot {
     pub fn new() -> Bot {
-        let blueprint = trainer::load_nodes(&CONFIG.nodes_path);
+        let blueprint = load_nodes(&CONFIG.nodes_path);
         Bot { blueprint }
     }
 
@@ -113,18 +112,13 @@ impl Bot {
         iters: u64,
     ) -> HashMap<InfoSet, Node> {
         let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
-        let mut rng = rand::thread_rng();
         for _i in 0..iters {
             let opp_hand = opp_range.sample_hand();
             let mut deck = card_utils::deck();
             // Remove opponent's cards (blockers) from the deck
-            // TODO: Refactor to be DRY with trainer.rs
             // TODO: Add opp_action to the bet abstraction used here.
             deck.retain(|card| !opp_hand.contains(card));
-            deck.shuffle(&mut rng);
-            trainer::iterate(DEALER, &deck, history, [1.0, 1.0], &mut nodes);
-            deck.shuffle(&mut rng);
-            trainer::iterate(OPPONENT, &deck, history, [1.0, 1.0], &mut nodes);
+            cfr_iteration(&deck, history, &mut nodes);
         }
         nodes
     }
