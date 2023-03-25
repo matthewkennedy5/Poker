@@ -401,8 +401,8 @@ impl InfoSet {
         }
     }
 
-    pub fn next_actions(&self) -> Vec<Action> {
-        self.history.next_actions(&CONFIG.bet_abstraction)
+    pub fn next_actions(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<Action> {
+        self.history.next_actions(&bet_abstraction)
     }
 }
 
@@ -426,10 +426,10 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
     }
 }
 
-pub fn lookup_or_new(nodes: &HashMap<InfoSet, Node>, infoset: &InfoSet) -> Node {
+pub fn lookup_or_new(nodes: &HashMap<InfoSet, Node>, infoset: &InfoSet, bet_abstraction: &Vec<Vec<f64>>) -> Node {
     match nodes.get(&infoset) {
         Some(n) => n.clone(),
-        None => Node::new(&infoset),
+        None => Node::new(infoset, bet_abstraction),
     }
 }
 
@@ -441,11 +441,11 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(infoset: &InfoSet) -> Node {
+    pub fn new(infoset: &InfoSet, bet_abstraction: &Vec<Vec<f64>>) -> Node {
         // Create a HashMap of action -> 0.0 to initialize the regrets and
         // cumulative strategy sum
         let mut zeros = HashMap::new();
-        for action in infoset.next_actions() {
+        for action in infoset.next_actions(bet_abstraction) {
             zeros.insert(action, 0.0);
         }
         Node {

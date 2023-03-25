@@ -50,7 +50,7 @@ impl Bot {
         let board = &board[..board_length(history.street)];    
         let translated = history.translate(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(hole, board, &translated);
-        let node = lookup_or_new(&self.blueprint, &infoset);
+        let node = lookup_or_new(&self.blueprint, &infoset, &CONFIG.bet_abstraction);
         let node_strategy = node.cumulative_strategy();
 
         let mut adjusted_strategy: HashMap<Action, f64> = HashMap::new();
@@ -89,7 +89,7 @@ impl Bot {
         let mut this_history = subgame_root.clone();
         this_history.add(&history.last_action().unwrap());
         let infoset = InfoSet::from_hand(hole, board, &this_history);
-        let node = lookup_or_new(&nodes, &infoset);
+        let node = lookup_or_new(&nodes, &infoset, &CONFIG.bet_abstraction);
         node.cumulative_strategy()
     }
 
@@ -114,13 +114,20 @@ impl Bot {
         iters: u64,
     ) -> HashMap<InfoSet, Node> {
         let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
+        let mut bet_abstraction = CONFIG.bet_abstraction.clone();
+        let pot_frac = (opp_action.amount as f64) / (history.pot() as f64);
+        if opp_action.action == ActionType::Bet && !bet_abstraction[history.street].contains(&pot_frac) {
+            // If the opponent made an off-tree bet, add it to the bet abstraction
+            bet_abstraction[history.street].push(pot_frac);
+        }
+        bet_abstraction[history.street].push(pot_frac);
         for _i in 0..iters {
             let opp_hand = opp_range.sample_hand();
             let mut deck = card_utils::deck();
             // Remove opponent's cards (blockers) from the deck
             // TODO: Add opp_action to the bet abstraction used here.
             deck.retain(|card| !opp_hand.contains(card));
-            cfr_iteration(&deck, history, &mut nodes);
+            cfr_iteration(&deck, history, &mut nodes, &bet_abstraction);
         }
         nodes
     }

@@ -15,7 +15,7 @@ pub fn train(iters: u64) {
     println!("[INFO] Beginning training.");
     let bar = card_utils::pbar(iters);
     for i in 0..iters {
-        cfr_iteration(&deck, &ActionHistory::new(), &mut nodes);
+        cfr_iteration(&deck, &ActionHistory::new(), &mut nodes, &CONFIG.bet_abstraction);
         if i % CONFIG.eval_every == 0 {
             serialize_nodes(&nodes);
             let bot = Bot::new();
@@ -45,13 +45,14 @@ fn serialize_nodes(nodes: &HashMap<InfoSet, Node>) {
     println!("[INFO] Saved strategy.");
 }
 
-pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &mut HashMap<InfoSet, Node>) {
+pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &mut HashMap<InfoSet, Node>,
+                     bet_abstraction: &Vec<Vec<f64>>) {
     let mut rng = rand::thread_rng();
     let mut deck = deck.to_vec();
     deck.shuffle(&mut rng);
-    iterate(DEALER, &deck, history, [1.0, 1.0], nodes);
+    iterate(DEALER, &deck, history, [1.0, 1.0], nodes, bet_abstraction);
     deck.shuffle(&mut rng);
-    iterate(OPPONENT, &deck, history, [1.0, 1.0], nodes);
+    iterate(OPPONENT, &deck, history, [1.0, 1.0], nodes, bet_abstraction);
 }
 
 pub fn iterate(
@@ -60,6 +61,7 @@ pub fn iterate(
     history: &ActionHistory,
     weights: [f64; 2],
     nodes: &mut HashMap<InfoSet, Node>,
+    bet_abstraction: &Vec<Vec<f64>>
 ) -> f64 {
     if history.hand_over() {
         return terminal_utility(&deck, history, player);
@@ -69,10 +71,7 @@ pub fn iterate(
     // doesn't exist
     let mut history = history.clone();
     let mut infoset = InfoSet::from_deck(&deck, &history);
-    let mut node: Node = match nodes.get(&infoset) {
-        Some(n) => n.clone(),
-        None => Node::new(&infoset),
-    };
+    let mut node = lookup_or_new(nodes, &infoset, bet_abstraction);
 
     // If it's not our turn, we sample the other player's action from their
     // current policy, and load our node.
@@ -83,10 +82,7 @@ pub fn iterate(
             return terminal_utility(&deck, &history, player);
         }
         infoset = InfoSet::from_deck(&deck, &history);
-        node = match nodes.get(&infoset) {
-            Some(n) => n.clone(),
-            None => Node::new(&infoset),
-        };
+        node = lookup_or_new(nodes, &infoset, bet_abstraction);
     }
 
     // Grab the current strategy at this node
@@ -105,7 +101,7 @@ pub fn iterate(
             1 => [p0, p1 * prob],
             _ => panic!("Bad player value"),
         };
-        let utility = iterate(player, &deck, &next_history, new_weights, nodes);
+        let utility = iterate(player, &deck, &next_history, new_weights, nodes, bet_abstraction);
         utilities.insert(action, utility);
         node_utility += prob * utility;
     }
