@@ -32,7 +32,7 @@ impl Bot {
         board: &[Card],
         history: &ActionHistory,
     ) -> HashMap<Action, f64> {
-        if CONFIG.subgame_solving || history.is_empty() {
+        if !CONFIG.subgame_solving || history.is_empty() {
             self.get_strategy_action_translation(hole, board, history)
         } else {
             self.unsafe_nested_subgame_solving(hole, board, history)

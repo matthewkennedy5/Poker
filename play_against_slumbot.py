@@ -326,14 +326,18 @@ def BotAction(response):
 
     while True:
         try:
-            response = requests.post('http://localhost/api/bot?', json=data).json()
+            response = requests.post('http://localhost/api/bot?', json=data)
+            json = response.json()
             break
         except:
-            print("error", data)
+            try:
+                print("error", data, response.__dict__)
+            except:
+                print("error", data)
             time.sleep(1)
 
-    action = response['action']
-    amount = response['amount']
+    action = json['action']
+    amount = json['amount']
     if action == 'Call' and amount == 0:
         return 'k'
     elif action == 'Call':
