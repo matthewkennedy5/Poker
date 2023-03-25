@@ -93,13 +93,15 @@ impl Bot {
         node.cumulative_strategy()
     }
 
-    // Use unsafe subgame solving to return the Nash equilibrium strategy for the current spot,
+    // Uses unsafe subgame solving to return the Nash equilibrium strategy for the current spot,
     // assuming that the opponent is playing with the given range.
     //
     // Inputs:
-    //      history: The history of actions leading up to this spot, not including the opponent's most recent action
+    //      history: The history of actions leading up to this spot, not including the opponent's 
+    //          most recent action
     //      opp_range: Our Bayesian belief distribution of the cards the opponent has
-    //      opp_action: Action the opponent took at this spot, which might not be in the action abstraction
+    //      opp_action: Action the opponent took at this spot, which might not be in the action 
+    //          abstraction
     //      iters: How many iterations of CFR to run
     //
     // Returns:
