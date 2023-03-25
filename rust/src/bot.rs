@@ -33,12 +33,11 @@ impl Bot {
         board: &[Card],
         history: &ActionHistory,
     ) -> HashMap<Action, f64> {
-        self.get_strategy_action_translation(hole, board, history)
-        // if history.is_empty() {
-        //     return self.get_strategy_action_translation(hole, board, history);
-        // } else {
-        //     return self.unsafe_nested_subgame_solving(hole, board, history);
-        // }
+        if CONFIG.subgame_solving || history.is_empty() {
+            self.get_strategy_action_translation(hole, board, history)
+        } else {
+            self.unsafe_nested_subgame_solving(hole, board, history)
+        }
     }
 
     fn get_strategy_action_translation(

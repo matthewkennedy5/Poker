@@ -38,6 +38,7 @@ pub struct Config {
     pub eval_every: u64,
 
     // Real time solving
+    pub subgame_solving: bool,
     pub subgame_iters: u64,
 
     // Preflop chart
