@@ -57,7 +57,7 @@ pub fn train(iters: u64) {
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
     println!("[INFO] Beginning training.");
     let bar = card_utils::pbar(iters);
-    for i in 0..iters {
+    for i in 1..iters+1 {
         cfr_iteration(&deck, &ActionHistory::new(), &mut nodes, &CONFIG.bet_abstraction);
         if i % CONFIG.eval_every == 0 {
             serialize_nodes(&nodes);
@@ -139,11 +139,6 @@ pub fn iterate(
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     for (action, prob) in strategy {
-        // Only explore negative regret actions 10% of the time
-        let regret: f64 = node.regrets.get(&action).unwrap().clone();
-        if regret < 0.0 && rand::thread_rng().gen_bool(0.9) {
-            continue;
-        }
         let mut next_history = history.clone();
         next_history.add(&action);
         let new_weights = match player {

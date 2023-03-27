@@ -124,7 +124,6 @@ impl Bot {
             let opp_hand = opp_range.sample_hand();
             let mut deck = card_utils::deck();
             // Remove opponent's cards (blockers) from the deck
-            // TODO: Add opp_action to the bet abstraction used here.
             deck.retain(|card| !opp_hand.contains(card));
             cfr_iteration(&deck, history, &mut nodes, &bet_abstraction);
         }
