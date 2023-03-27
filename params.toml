@@ -24,12 +24,12 @@ nodes_path = "products/nodes.bin"
 
 # Training
 train_iters = 10000000
-lbr_iters = 100000
-eval_every = 1000000
+lbr_iters = 10000
+eval_every = 100000
 
 # Realtime solving
-subgame_solving = true
-subgame_iters = 1000
+subgame_solving = false
+subgame_iters = 100000
 
 # Preflop chart
 preflop_strategy_path = "products/preflop_strategy.json"

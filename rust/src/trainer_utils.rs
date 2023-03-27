@@ -472,12 +472,12 @@ impl Node {
 
         for action in regret_norm.keys() {
             // Add this action's probability to the cumulative strategy sum
-            let sum_prob = self.strategy_sum.get(action).unwrap().clone();
+
+            // DCFR+
+            let mut cumulative_strategy = self.strategy_sum.get(action).unwrap().clone();
             let new_prob = regret_norm.get(action).unwrap() * prob;
-            let mut cumulative_strategy = sum_prob + new_prob;
-            // Multiply the cumulative strategy sum according to Discounted
-            // Counterfactual Regret Minimization
-            cumulative_strategy *= (self.t / (self.t + 1.0)).powf(CONFIG.gamma);
+            let weight = if self.t < 100.0 { 0.0 } else { self.t - 100.0 };     // DCFR+
+            cumulative_strategy += weight * new_prob;
             self.strategy_sum
                 .insert(action.clone(), cumulative_strategy);
         }
