@@ -435,7 +435,7 @@ pub fn lookup_or_new(nodes: &HashMap<InfoSet, Node>, infoset: &InfoSet, bet_abst
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
-    regrets: HashMap<Action, f64>,
+    pub regrets: HashMap<Action, f64>,
     strategy_sum: HashMap<Action, f64>,
     pub t: f64,
 }
@@ -471,12 +471,10 @@ impl Node {
         regret_norm = normalize(&regret_norm);
 
         for action in regret_norm.keys() {
-            // Add this action's probability to the cumulative strategy sum
-
-            // DCFR+
+            // Add this action's probability to the cumulative strategy sum using DCFR+ update rules
             let mut cumulative_strategy = self.strategy_sum.get(action).unwrap().clone();
             let new_prob = regret_norm.get(action).unwrap() * prob;
-            let weight = if self.t < 100.0 { 0.0 } else { self.t - 100.0 };     // DCFR+
+            let weight = if self.t < 100.0 { 0.0 } else { self.t - 100.0 };
             cumulative_strategy += weight * new_prob;
             self.strategy_sum
                 .insert(action.clone(), cumulative_strategy);

@@ -161,10 +161,10 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
     let bar = indicatif::ProgressBar::new(n);
     bar.set_style(
         indicatif::ProgressStyle::default_bar()
-            .template("[{elapsed_precise}/{eta_precise}] {wide_bar} {pos:>7}/{len:7} {msg}"),
+            .template("[{elapsed_precise}/{eta_precise}] {wide_bar} {pos:>7}/{len:7} {per_sec} {msg}").unwrap(),
     );
     // make sure the drawing doesn't dominate computation for large n
-    bar.set_draw_delta(n / 100_000);
+    // bar.set_draw_delta(n / 100_000);
     bar
 }
 

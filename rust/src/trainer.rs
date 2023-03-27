@@ -4,7 +4,7 @@ use crate::config::CONFIG;
 use crate::trainer_utils::*;
 use crate::exploiter::*;
 use crate::bot::Bot;
-use rand::prelude::SliceRandom;
+use rand::prelude::*;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Write};
@@ -32,7 +32,7 @@ fn check_convergence(prev_node: &Node, curr_node: &Node) -> bool {
 pub fn train_until_convergence() -> u64 {
     let deck = card_utils::deck();
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
-    let starting_infoset = InfoSet::from_hand(&card_utils::str2cards("Qh9h"), &Vec::new(), &ActionHistory::new());
+    let starting_infoset = InfoSet::from_hand(&card_utils::str2cards("AsAh"), &Vec::new(), &ActionHistory::new());
     let mut prev_node = Node::new(&starting_infoset, &CONFIG.bet_abstraction);
     let mut counter: i32 = 1;
     println!("[INFO] Beginning training.");
@@ -40,7 +40,7 @@ pub fn train_until_convergence() -> u64 {
     loop {
         cfr_iteration(&deck, &ActionHistory::new(), &mut nodes, &CONFIG.bet_abstraction);
         let node = lookup_or_new(&nodes, &starting_infoset, &CONFIG.bet_abstraction);
-        println!("{}, {}: {:?}", counter, node.t, node.cumulative_strategy());
+        println!("{}, {}: {:?}", counter, node.t, node.regrets);
         if check_convergence(&prev_node, &node) {
             break;
         }
@@ -139,7 +139,11 @@ pub fn iterate(
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     for (action, prob) in strategy {
-        // TODO: Add pruning for low probability actions. MCCFR?
+        // Only explore negative regret actions 10% of the time
+        let regret: f64 = node.regrets.get(&action).unwrap().clone();
+        if regret < 0.0 && rand::thread_rng().gen_bool(0.9) {
+            continue;
+        }
         let mut next_history = history.clone();
         next_history.add(&action);
         let new_weights = match player {
