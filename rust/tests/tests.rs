@@ -23,7 +23,7 @@ fn card_bitmap() {
 // Tests hand evaluation using the direct lookup table from u64 bitmap to the
 // hand's strength
 fn fast_hand_evaluation() {
-    let table = FastHandTable::new();
+    let table = load_hand_strengths();
 
     // define the hands we'll be using
     let royal_flush = vec!["Jd", "As", "Js", "Ks", "Qs", "Ts", "2c"];
@@ -83,8 +83,8 @@ fn light_hand_strength(hand: Vec<&str>, table: &LightHandTable) -> i32 {
     return table.hand_strength(&strvec2cards(&hand));
 }
 
-fn fast_hand_strength(hand: Vec<&str>, table: &FastHandTable) -> i32 {
-    return table.hand_strength(&strvec2cards(&hand));
+fn fast_hand_strength(hand: Vec<&str>, table: &HandData) -> i32 {
+    return table.get(&strvec2cards(&hand));
 }
 
 #[test]

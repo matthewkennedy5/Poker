@@ -21,8 +21,8 @@ const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
 
-pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(|| FastHandTable::new());
-pub static LIGHT_HAND_TABLE: Lazy<LightHandTable> = Lazy::new(|| LightHandTable::new());
+pub static FAST_HAND_TABLE: Lazy<HandData> = Lazy::new(|| load_hand_strengths());
+pub static LIGHT_HAND_TABLE: Lazy<LightHandTable> = Lazy::new(|| LightHandTable::new());    // TODO: delete LightHandTable
 static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(|| EquityTable::new());
 
 pub const CLUBS: i32 = 0;
@@ -237,49 +237,52 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> Vec<Card> {
     isomorphic
 }
 
-pub struct FastHandTable {
-    strengths: HashMap<u64, i32>,
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct HandData {
+    data: HashMap<u64, i32>,
 }
 
-impl FastHandTable {
-    pub fn new() -> FastHandTable {
-        FastHandTable {
-            strengths: FastHandTable::load_hand_strengths(),
-        }
+impl HandData {
+    pub fn new() -> HandData {
+        HandData { data: HashMap::new() }
     }
 
-    pub fn hand_strength(&self, hand: &[Card]) -> i32 {
+    pub fn get(&self, hand: &[Card]) -> i32 {
         let compact = cards2bitmap(hand);
         let strength = self
-            .strengths
+            .data
             .get(&compact)
             .expect(&format!("{} not in FastHandTable", compact))
             .clone();
         strength
     }
 
-    fn load_hand_strengths() -> HashMap<u64, i32> {
-        if !Path::new(FAST_HAND_TABLE_PATH).exists() {
-            println!("[INFO] Creating fast hand table.");
-            let mut table: HashMap<u64, i32> = HashMap::new();
-            let deck = deck();
-            let bar = pbar(133784560);
-            for hand in deck.iter().combinations(7) {
-                let cards = deepcopy(&hand);
-                let strength = LIGHT_HAND_TABLE.hand_strength(&cards);
-                let bitmap = cards2bitmap(&cards);
-                table.insert(bitmap, strength);
-                bar.inc(1);
-            }
-            bar.finish();
-            let json: String = serde_json::to_string_pretty(&table).unwrap();
-            fs::write(FAST_HAND_TABLE_PATH, json).unwrap();
-        }
-
-        let json = fs::read_to_string(FAST_HAND_TABLE_PATH).unwrap();
-        let table: HashMap<u64, i32> = serde_json::from_str(&json).unwrap();
-        table
+    pub fn insert(&mut self, hand: &[Card], data: i32) {
+        let bitmap = cards2bitmap(hand);
+        self.data.insert(bitmap, data);
     }
+}
+
+pub fn load_hand_strengths() -> HandData {
+    if !Path::new(FAST_HAND_TABLE_PATH).exists() {
+        println!("[INFO] Creating fast hand table.");
+        let mut table: HandData = HandData::new();
+        let deck = deck();
+        let bar = pbar(133784560);
+        for hand in deck.iter().combinations(7) {
+            let cards = deepcopy(&hand);
+            let strength = LIGHT_HAND_TABLE.hand_strength(&cards);
+            table.insert(&cards, strength);
+            bar.inc(1);
+        }
+        bar.finish();
+        let json: String = serde_json::to_string_pretty(&table).unwrap();
+        fs::write(FAST_HAND_TABLE_PATH, json).unwrap();
+    }
+
+    let json = fs::read_to_string(FAST_HAND_TABLE_PATH).unwrap();
+    let table: HandData = serde_json::from_str(&json).unwrap();
+    table
 }
 
 // Uses the rs_poker library to evaluate the strength of a hand
@@ -649,8 +652,8 @@ fn river_equity(hand: Vec<Card>) -> f64 {
         let my_hand = hand.to_vec();
         let opp_hand = [deepcopy(&opp_preflop), board.clone()].concat();
 
-        let my_strength = FAST_HAND_TABLE.hand_strength(&my_hand);
-        let opp_strength = FAST_HAND_TABLE.hand_strength(&opp_hand);
+        let my_strength = FAST_HAND_TABLE.get(&my_hand);
+        let opp_strength = FAST_HAND_TABLE.get(&opp_hand);
 
         if my_strength > opp_strength {
             n_wins += 1.0;

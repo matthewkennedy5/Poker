@@ -572,8 +572,8 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
     let pot = history.pot();
     let player_hand = get_hand(&deck, player, RIVER);
     let opponent_hand = get_hand(&deck, opponent, RIVER);
-    let player_strength = FAST_HAND_TABLE.hand_strength(&player_hand);
-    let opponent_strength = FAST_HAND_TABLE.hand_strength(&opponent_hand);
+    let player_strength = FAST_HAND_TABLE.get(&player_hand);
+    let opponent_strength = FAST_HAND_TABLE.get(&opponent_hand);
 
     if player_strength > opponent_strength {
         return (pot / 2) as f64;
