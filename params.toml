@@ -27,7 +27,7 @@ lbr_iters = 100000
 eval_every = 1000000
 
 # Realtime solving
-subgame_solving = false
+subgame_solving = true
 subgame_iters = 100000
 
 # Preflop chart

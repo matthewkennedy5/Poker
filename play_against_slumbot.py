@@ -437,7 +437,7 @@ def main():
     
     num_hands = args.num_hands
     scores = []
-    with mp.Pool(mp.cpu_count()) as pool:
+    with mp.Pool(100) as pool:
         for score in tqdm(pool.imap(play_hand, range(num_hands)), 
                           total=num_hands,
                           smoothing=0):
