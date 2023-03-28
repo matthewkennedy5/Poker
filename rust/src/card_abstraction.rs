@@ -7,24 +7,21 @@
 use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::{collections::HashMap, fs::File};
+use std::{collections::HashMap, path::Path, fs};
 
 const FLOP_PATH: &str = "products/flop_abstraction.bin";
 const TURN_PATH: &str = "products/turn_abstraction.bin";
 const RIVER_PATH: &str = "products/river_abstraction.bin";
+const CARD_ABSTRACTION_PATH: &str = "products/card_abstraction.json";
 
 pub struct Abstraction {
-    flop: HashMap<u64, i32>,
-    turn: HashMap<u64, i32>,
-    river: HashMap<u64, i32>,
+    bins: HandData
 }
 
 impl Abstraction {
     pub fn new() -> Abstraction {
         Abstraction {
-            flop: load_abstraction(FLOP_PATH, 5, CONFIG.flop_buckets),
-            turn: load_abstraction(TURN_PATH, 6, CONFIG.turn_buckets),
-            river: load_abstraction(RIVER_PATH, 7, CONFIG.river_buckets),
+            bins: load_abstraction()
         }
     }
 
@@ -66,22 +63,39 @@ impl Abstraction {
 
     // Lookup methods: Translate the card to its isomorphic version and return
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        let isomorphic = isomorphic_hand(cards, true);
-        let hand = cards2hand(&isomorphic);
-        match cards.len() {
-            5 => self.flop.get(&hand).unwrap().clone(),
-            6 => self.turn.get(&hand).unwrap().clone(),
-            7 => self.river.get(&hand).unwrap().clone(),
-            _ => panic!("Bad number of cards"),
-        }
+        self.bins.get(cards)
     }
 }
 
-fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
-    match File::open(path) {
-        Err(_error) => make_abstraction(n_cards, n_buckets),
-        Ok(file) => read_serialized(file),
+// fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
+//     match File::open(path) {
+//         Err(_error) => make_abstraction(n_cards, n_buckets),
+//         Ok(file) => read_serialized(file),
+//     }
+// }
+
+fn load_abstraction() -> HandData {
+    if !Path::new(CARD_ABSTRACTION_PATH).exists() {
+        println!("[INFO] Creating the card abstraction table.");
+        let mut table: HandData = HandData::new();
+
+        let flop = make_abstraction(5, CONFIG.flop_buckets);
+        let turn = make_abstraction(6, CONFIG.turn_buckets);
+        let river = make_abstraction(7, CONFIG.river_buckets);
+        let mut all: HashMap<u64, i32> = HashMap::new();
+        all.extend(flop.into_iter());
+        all.extend(turn.into_iter());
+        all.extend(river.into_iter());
+        for (hand, bin) in all {
+            let cards = hand2cards(hand);
+            table.insert(&cards, bin);
+        }
+        let json: String = serde_json::to_string_pretty(&table).unwrap();
+        fs::write(CARD_ABSTRACTION_PATH, json).unwrap();
     }
+    let json = fs::read_to_string(CARD_ABSTRACTION_PATH).unwrap();
+    let table: HandData = serde_json::from_str(&json).unwrap();
+    table
 }
 
 // Returns all isomorphic hands paired with their E[HS^2] values, in sorted order

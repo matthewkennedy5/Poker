@@ -16,7 +16,7 @@ use std::{
 
 const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.json";
 const LIGHT_HAND_TABLE_PATH: &str = "products/strengths.json";
-const EQUITY_TABLE_PATH: &str = "products/equity_table.txt";
+const EQUITY_TABLE_PATH: &str = "products/equity_table.txt";    // TODO: Delete EQUITY TABLE
 const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
@@ -521,7 +521,7 @@ pub fn cards2hand(cards: &[Card]) -> u64 {
  *
  * for a total of 64 bits.
  */
-pub fn cards2bitmap(cards: &[Card]) -> u64 {
+pub fn cards2bitmap(cards: &[Card], hole_indicator: bool) -> u64 {
     let mut bitmap: u64 = 0;
     // Starting with rightmost bit: 1
     // Shift left 52 times to move the bit to the rightmost filler bit
@@ -532,6 +532,10 @@ pub fn cards2bitmap(cards: &[Card]) -> u64 {
         let card_bit: u64 = 1 << shift;
         bitmap += card_bit;
     }
+
+    // If we're using the hole indicator, then use the filler bits to mark
+    // which cards are the preflop cards. 
+
     bitmap
 }
 
