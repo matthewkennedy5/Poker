@@ -603,4 +603,3 @@ fn more_action_translation() {
     ]);
     history.translate(&CONFIG.bet_abstraction);
 }
-

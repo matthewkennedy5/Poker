@@ -146,7 +146,6 @@ pub fn iterate(
             1 => [p0, p1 * prob],
             _ => panic!("Bad player value"),
         };
-        // here: on preflop/flop, spawn new threads for the recursive calls. deal with &Node parallelism somehow.
         let utility = iterate(player, &deck, &next_history, new_weights, nodes, bet_abstraction);
         utilities.insert(action, utility);
         node_utility += prob * utility;

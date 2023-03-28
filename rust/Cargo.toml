@@ -25,6 +25,7 @@ actix-cors = "*"
 toml = "*"
 rs_poker = "1.0.0"
 moka = "*"
+criterion = { version = "0.4", features = ["html_reports"] }
 
 [profile.release]
 debug = true
@@ -35,6 +36,10 @@ incremental = true
 [profile.dev]
 debug = true
 opt-level = 0
+
+[[bench]]
+name="benches"
+harness=false
 
 [[bin]]
 name="server"
