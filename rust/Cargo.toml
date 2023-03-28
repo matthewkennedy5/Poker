@@ -24,6 +24,7 @@ actix-files = "*"
 actix-cors = "*"
 toml = "*"
 rs_poker = "1.0.0"
+moka = "*"
 
 [profile.release]
 debug = true

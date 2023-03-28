@@ -4,23 +4,36 @@ use crate::ranges::*;
 use crate::trainer::*;
 use crate::trainer_utils::*;
 use std::collections::HashMap;
+use moka::sync::Cache;
 
 pub struct Bot {
     // Right now the blueprint stores the mixed strategy for each infoset. To reduce
     // memory usage, we could pre-sample actions and just store a mapping of infoset -> action.
     blueprint: HashMap<InfoSet, Node>,
+    preflop_cache: Cache<(Vec<Card>, Vec<Card>, ActionHistory), Action> 
 }
 
 impl Bot {
     pub fn new() -> Bot {
         let blueprint = load_nodes(&CONFIG.nodes_path);
-        Bot { blueprint }
+        Bot { blueprint: blueprint, preflop_cache: Cache::new(10_000) }
     }
 
     pub fn get_action(&self, hand: &[Card], board: &[Card], history: &ActionHistory) -> Action {
-        let strategy = self.get_strategy(hand, board, history);
-        let action = sample_action_from_strategy(&strategy);
-        action
+        // TODO: This actually should cache strategies, not actions, but let's check the
+        // speedup anyway
+        let key = (hand.to_vec(), board.to_vec(), history.clone());
+        match self.preflop_cache.get(&key) {
+            Some(action) => action,
+            None => {
+                let strategy = self.get_strategy(hand, board, history);
+                let action = sample_action_from_strategy(&strategy);
+                if history.street == PREFLOP {
+                    self.preflop_cache.insert(key, action.clone());
+                }
+                action
+            }
+        }
     }
 
     // Wrapper for the real time solving for the bot's strategy

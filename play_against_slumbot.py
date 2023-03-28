@@ -330,10 +330,6 @@ def BotAction(response):
             json = response.json()
             break
         except:
-            try:
-                print("error", data, response.__dict__)
-            except:
-                print("error", data)
             time.sleep(1)
 
     action = json['action']
@@ -437,7 +433,7 @@ def main():
     
     num_hands = args.num_hands
     scores = []
-    with mp.Pool(100) as pool:
+    with mp.Pool(mp.cpu_count()) as pool:
         for score in tqdm(pool.imap(play_hand, range(num_hands)), 
                           total=num_hands,
                           smoothing=0):
