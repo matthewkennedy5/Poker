@@ -6,7 +6,6 @@ extern crate indicatif;
 extern crate itertools;
 extern crate serde;
 extern crate serde_json;
-#[macro_use(c)]
 extern crate cute;
 extern crate actix_files;
 extern crate actix_rt;

@@ -3,7 +3,6 @@ use once_cell::sync::Lazy;
 use optimus::*;
 use rand::prelude::*;
 use rayon::iter::*;
-use std::collections::HashMap;
 
 static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
 
