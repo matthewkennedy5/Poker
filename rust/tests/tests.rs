@@ -3,6 +3,7 @@ use once_cell::sync::Lazy;
 use optimus::*;
 use rand::prelude::*;
 use rayon::iter::*;
+use std::collections::HashMap;
 
 static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
 
@@ -603,3 +604,20 @@ fn more_action_translation() {
     ]);
     history.translate(&CONFIG.bet_abstraction);
 }
+
+// #[test]
+// fn test_isomorphic_hand() {
+//     let samples = 1_000_000;
+//     let mut deck = deck();
+//     let mut rng = rand::thread_rng();
+//     let bar = pbar(samples);
+//     for _i in 0..samples {
+//         deck.shuffle(&mut rng);
+//         let hand = &deck[0..7];
+//         let iso1 = isomorphic_hand(hand, true);
+//         let iso2 = isomorphic_hand_fast(hand, true);
+//         assert_eq!(iso1, iso2);
+//         bar.inc(1);
+//     }
+//     bar.finish();
+// }

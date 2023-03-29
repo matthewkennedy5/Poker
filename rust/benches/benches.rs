@@ -19,9 +19,18 @@ fn bench_cfr(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_isomorphic_hand(c: &mut Criterion) {
+    let cards = str2cards("As7h4c8d8c9dTh");
+    c.bench_function("isomorphic", |b| {
+        b.iter(|| {
+            isomorphic_hand(&cards, true)
+        })
+    });
+}
+
 criterion_group!(
     name=benches;
     config=Criterion::default().configure_from_args();
-    targets=bench_cfr
+    targets=bench_cfr, bench_isomorphic_hand
 );
 criterion_main!(benches);
