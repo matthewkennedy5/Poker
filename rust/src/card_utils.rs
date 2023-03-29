@@ -168,24 +168,6 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
     bar
 }
 
-// isomorphic / archetypal hand methods
-// thanks to stackoverflow user Daniel Slutzbach: https://stackoverflow.com/a/3831682
-
-fn sort_isomorphic(cards: &[Card], streets: bool) -> Vec<Card> {
-    let mut sorted;
-    if streets && cards.len() > 2 {
-        let mut preflop = (&cards[..2]).to_vec();
-        let mut board = (&cards[2..]).to_vec();
-        preflop.sort_by_key(|c| (c.suit.clone(), c.rank));
-        board.sort_by_key(|c| (c.suit.clone(), c.rank));
-        sorted = [preflop, board].concat();
-    } else {
-        sorted = cards.to_vec();
-        sorted.sort_by_key(|c| (c.suit.clone(), c.rank));
-    }
-    sorted
-}
-
 // Translates the given cards into their equivalent isomorphic representation.
 // When dealing with poker hands that come up in the game, there is some
 // information that doesn't matter. For example, we don't care about the order
@@ -193,46 +175,53 @@ fn sort_isomorphic(cards: &[Card], streets: bool) -> Vec<Card> {
 // for example a 5-card flush of hearts is essentially the same as a 5-card
 // flush of diamonds. This function maps the set of all hands to the much
 // smaller set of distinct isomorphic hands.
+fn sort_isomorphic(cards: &[Card], streets: bool) -> Vec<Card> {
+    let mut sorted;
+    if streets && cards.len() > 2 {
+        let mut preflop = (&cards[..2]).to_vec();
+        let mut board = (&cards[2..]).to_vec();
+        preflop.sort_unstable_by_key(|c| (c.suit, c.rank));
+        board.sort_unstable_by_key(|c| (c.suit, c.rank));
+        sorted = [preflop, board].concat();
+    } else {
+        sorted = cards.to_vec();
+        sorted.sort_unstable_by_key(|c| (c.suit, c.rank));
+    }
+    sorted
+}
+
 pub fn isomorphic_hand(cards: &[Card], streets: bool) -> Vec<Card> {
-    let cards = &sort_isomorphic(&cards, streets);
-    // Separate the cards by suit
-    let mut by_suits: Vec<Vec<u8>> = Vec::new();
-    for suit in 0..4 {
-        let ranks = c![card.rank, for card in cards, if card.suit == suit];
-        by_suits.push(ranks.to_vec());
+    let cards = sort_isomorphic(cards, streets);
+
+    let mut by_suits: Vec<Vec<u8>> = vec![Vec::new(); 4];
+    for card in &cards {
+        by_suits[card.suit as usize].push(card.rank);
     }
 
-    // Define a mapping from old suits to new suits. suit_mapping[old_suit] = new_suit.
-    let mut suit_mapping = [0, 0, 0, 0];
-
-    // Retrieve the suits in size order with lexicographic tie breaking
-
-    let mut unused_suits = vec![0, 1, 2, 3];
-    for new_suit in 0..4 {
-        let mut max = unused_suits[0];
-        for old_suit in &unused_suits {
-            let old_suit = *old_suit as usize;
-            // The next suit must have the largest length, using lower lexicographic ordering
-            // to break ties.
-            if by_suits[old_suit].len() > by_suits[max].len() {
-                max = old_suit;
-            } else if by_suits[old_suit].len() == by_suits[max].len()
-                && by_suits[old_suit] < by_suits[max]
-            {
-                max = old_suit;
-            }
+    let mut suit_indices: Vec<usize> = (0..4).collect();
+    suit_indices.sort_unstable_by(|a, b| {
+        let a_len = by_suits[*a].len();
+        let b_len = by_suits[*b].len();
+        if a_len == b_len {
+            by_suits[*a].cmp(&by_suits[*b])
+        } else {
+            b_len.cmp(&a_len)
         }
-        suit_mapping[max] = new_suit;
-        // Wipe the current suit in by_suits so it doesn't get used twice
-        unused_suits.retain(|s| s != &max);
+    });
+
+    let mut suit_mapping = [0, 0, 0, 0];
+    for (new_suit, &old_suit) in suit_indices.iter().enumerate() {
+        suit_mapping[old_suit] = new_suit;
     }
-    let mut isomorphic = Vec::new();
-    for card in cards {
-        isomorphic.push(Card {
+
+    let mut isomorphic: Vec<Card> = cards
+        .into_iter()
+        .map(|card| Card {
             rank: card.rank,
-            suit: suit_mapping[card.suit as usize],
-        });
-    }
+            suit: suit_mapping[card.suit as usize] as u8,
+        })
+        .collect();
+
     isomorphic = sort_isomorphic(&isomorphic, streets);
     isomorphic
 }
