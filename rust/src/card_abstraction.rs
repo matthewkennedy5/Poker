@@ -80,7 +80,7 @@ impl Abstraction {
 fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     match File::open(path) {
         Err(_error) => make_abstraction(n_cards, n_buckets),
-        Ok(file) => read_serialized(path),
+        Ok(_) => read_serialized(path),
     }
 }
 
