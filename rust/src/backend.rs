@@ -15,20 +15,6 @@ struct HandCompJSON {
     cpuHand: Vec<String>,
 }
 
-async fn compare_hands(json: web::Json<HandCompJSON>) -> impl Responder {
-    let human_hand = parse_cards(&json.humanHand);
-    let cpu_hand = parse_cards(&json.cpuHand);
-    let human_strength = hand_strength(&human_hand);
-    let cpu_strength = hand_strength(&cpu_hand);
-    if human_strength > cpu_strength {
-        return String::from("human");
-    } else if cpu_strength > human_strength {
-        return String::from("cpu");
-    } else {
-        return String::from("tie");
-    }
-}
-
 // TODO: Can I unify this with trainer_utils::Action?
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct ActionJSON {
