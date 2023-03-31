@@ -415,6 +415,7 @@ impl InfoSet {
     }
 
     pub fn from_hand(hole: &[Card], board: &[Card], history: &ActionHistory) -> InfoSet {
+        assert!(!board.contains(&hole[0]) && !board.contains(&hole[1]));
         let board = &board[..board_length(history.street)];
         assert!(board.len() == board_length(history.street));
         let hand = [hole, board].concat();
