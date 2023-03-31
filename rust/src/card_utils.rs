@@ -13,9 +13,10 @@ use std::{
     io::{BufRead, BufReader, Read, Write},
     path::Path,
     thread,
+    time::Duration
 };
 
-const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.json";
+const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.bin";
 const LIGHT_HAND_TABLE_PATH: &str = "products/strengths.json";
 const EQUITY_TABLE_PATH: &str = "products/equity_table.txt";
 const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.txt";
@@ -168,8 +169,7 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
             )
             .unwrap(),
     );
-    // make sure the drawing doesn't dominate computation for large n
-    // bar.set_draw_delta(n / 100_000);
+    bar.enable_steady_tick(Duration::new(0, 1_000_000_000));
     bar
 }
 
@@ -273,12 +273,9 @@ impl FastHandTable {
                 bar.inc(1);
             }
             bar.finish();
-            let json: String = serde_json::to_string_pretty(&table).unwrap();
-            fs::write(FAST_HAND_TABLE_PATH, json).unwrap();
+            serialize(table, FAST_HAND_TABLE_PATH);
         }
-
-        let json = fs::read_to_string(FAST_HAND_TABLE_PATH).unwrap();
-        let table: HashMap<u64, i32> = serde_json::from_str(&json).unwrap();
+        let table: HashMap<u64, i32> = read_serialized(FAST_HAND_TABLE_PATH);
         table
     }
 }
@@ -666,8 +663,8 @@ fn river_equity(hand: Vec<Card>) -> f64 {
 // There are multiple places where I have to serialize a HashMap of cards->i32
 // with some sort of data such as hand strength or abstraction ID. This loads
 // that data from a file desciptor and returns the lookup table.
-pub fn read_serialized(file: File) -> HashMap<u64, i32> {
-    let reader = BufReader::new(file);
+pub fn read_serialized(path: &str) -> HashMap<u64, i32> {
+    let reader = BufReader::new(File::open(path).unwrap());
     bincode::deserialize_from(reader).unwrap()
 }
 
