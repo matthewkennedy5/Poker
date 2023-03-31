@@ -193,6 +193,7 @@ fn sort_isomorphic(cards: &[Card], streets: bool) -> Vec<Card> {
     sorted
 }
 
+// https://stackoverflow.com/a/3831682
 pub fn isomorphic_hand(cards: &[Card], streets: bool) -> Vec<Card> {
     let cards = sort_isomorphic(cards, streets);
 
