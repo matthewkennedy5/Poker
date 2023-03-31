@@ -79,63 +79,57 @@ fn uint_hands() {
     assert_eq!(hand2cards(cards2hand(&cards)), cards);
 }
 
-fn light_hand_strength(hand: Vec<&str>, table: &LightHandTable) -> i32 {
-    return table.hand_strength(&strvec2cards(&hand));
-}
-
 fn fast_hand_strength(hand: Vec<&str>, table: &FastHandTable) -> i32 {
     return table.hand_strength(&strvec2cards(&hand));
 }
 
 #[test]
 fn hand_comparisons() {
-    let table = LightHandTable::new();
-
     // define the hands we'll be using
-    let royal_flush = vec!["Jd", "As", "Js", "Ks", "Qs", "Ts", "2c"];
-    let royal_flush2 = vec!["Jd", "Ac", "Jc", "Kc", "Qc", "Tc", "2c"];
-    let straight_flush = vec!["7d", "2c", "8d", "Jd", "9d", "3d", "Td"];
-    let full_house = vec!["As", "Jd", "Qs", "Jc", "2c", "Ac", "Ah"];
-    let same_full_house = vec!["As", "Js", "2s", "Jc", "2c", "Ac", "Ah"];
-    let better_full_house = vec!["2d", "9s", "Qd", "Qs", "Ac", "Ah", "As"];
-    let full_house3 = vec!["3d", "3h", "3c", "2c", "2d"];
-    let full_house2 = vec!["3d", "3h", "2c", "2h", "2d"];
-    let flush = vec!["Jh", "2c", "2h", "3h", "7h", "As", "9h"];
-    let same_flush = vec!["Jh", "2c", "2h", "3h", "7h", "2s", "9h"];
-    let better_flush = vec!["Jh", "2c", "Ah", "3h", "7h", "Ts", "9h"];
-    let straight = vec!["Ah", "2s", "3d", "5c", "4c"];
-    let better_straight = vec!["6h", "2s", "3d", "5c", "4c"];
-    let trips = vec!["5d", "4c", "6d", "6h", "6c"];
-    let two_pair = vec!["6d", "5c", "5h", "Ah", "Ac"];
-    let better_two_pair = vec!["Td", "Th", "Ad", "Ac", "6h"];
-    let pair = vec!["Ah", "2d", "2s", "3c", "5c"];
-    let ace_pair = vec!["Ac", "As", "2s", "3d", "6c"];
-    let better_kicker = vec!["Ac", "As", "Ts", "3d", "6c"];
-    let high_card = vec!["Kh", "Ah", "Qh", "2h", "3s"];
-    let other_high_card = vec!["Ks", "As", "Qs", "2h", "3s"];
+    let royal_flush = str2cards("JdAsJsKsQsTs2c");
+    let royal_flush2 = str2cards("JdAcJcKcQcTc2c");
+    let straight_flush = str2cards("7d2c8dJd9d3dTd");
+    let full_house = str2cards("AsJdQsJc2cAcAh");
+    let same_full_house = str2cards("AsJs2sJc2cAcAh");
+    let better_full_house = str2cards("2d9sQdQsAcAhAs");
+    let full_house3 = str2cards("3d3h3c2c2d");
+    let full_house2 = str2cards("3d3h2c2h2d");
+    let flush = str2cards("Jh2c2h3h7hAs9h");
+    let same_flush = str2cards("Jh2c2h3h7h2s9h");
+    let better_flush = str2cards("Jh2cAh3h7hTs9h");
+    let straight = str2cards("Ah2s3d5c4c");
+    let better_straight = str2cards("6h2s3d5c4c");
+    let trips = str2cards("5d4c6d6h6c");
+    let two_pair = str2cards("6d5c5hAhAc");
+    let better_two_pair = str2cards("TdThAdAc6h");
+    let pair = str2cards("Ah2d2s3c5c");
+    let ace_pair = str2cards("AcAs2s3d6c");
+    let better_kicker = str2cards("AcAsTs3d6c");
+    let high_card = str2cards("KhAhQh2h3s");
+    let other_high_card = str2cards("KsAsQs2h3s");
 
     // Get strengths
-    let royal_flush = light_hand_strength(royal_flush, &table);
-    let royal_flush2 = light_hand_strength(royal_flush2, &table);
-    let straight_flush = light_hand_strength(straight_flush, &table);
-    let full_house = light_hand_strength(full_house, &table);
-    let full_house2 = light_hand_strength(full_house2, &table);
-    let full_house3 = light_hand_strength(full_house3, &table);
-    let same_full_house = light_hand_strength(same_full_house, &table);
-    let better_full_house = light_hand_strength(better_full_house, &table);
-    let flush = light_hand_strength(flush, &table);
-    let same_flush = light_hand_strength(same_flush, &table);
-    let better_flush = light_hand_strength(better_flush, &table);
-    let straight = light_hand_strength(straight, &table);
-    let better_straight = light_hand_strength(better_straight, &table);
-    let trips = light_hand_strength(trips, &table);
-    let two_pair = light_hand_strength(two_pair, &table);
-    let better_two_pair = light_hand_strength(better_two_pair, &table);
-    let pair = light_hand_strength(pair, &table);
-    let ace_pair = light_hand_strength(ace_pair, &table);
-    let better_kicker = light_hand_strength(better_kicker, &table);
-    let high_card = light_hand_strength(high_card, &table);
-    let other_high_card = light_hand_strength(other_high_card, &table);
+    let royal_flush = hand_strength(&royal_flush);
+    let royal_flush2 = hand_strength(&royal_flush2);
+    let straight_flush = hand_strength(&straight_flush);
+    let full_house = hand_strength(&full_house);
+    let full_house2 = hand_strength(&full_house2);
+    let full_house3 = hand_strength(&full_house3);
+    let same_full_house = hand_strength(&same_full_house);
+    let better_full_house = hand_strength(&better_full_house);
+    let flush = hand_strength(&flush);
+    let same_flush = hand_strength(&same_flush);
+    let better_flush = hand_strength(&better_flush);
+    let straight = hand_strength(&straight);
+    let better_straight = hand_strength(&better_straight);
+    let trips = hand_strength(&trips);
+    let two_pair = hand_strength(&two_pair);
+    let better_two_pair = hand_strength(&better_two_pair);
+    let pair = hand_strength(&pair);
+    let ace_pair = hand_strength(&ace_pair);
+    let better_kicker = hand_strength(&better_kicker);
+    let high_card = hand_strength(&high_card);
+    let other_high_card = hand_strength(&other_high_card);
 
     // Test different hand type comparisons
     assert!(royal_flush > straight_flush);
@@ -163,19 +157,17 @@ fn hand_comparisons() {
 
 #[test]
 fn high_pair_beats_low_pair() {
-    let table = LightHandTable::new();
+    let human = str2cards("TdTc9c5s4d6hJd");
+    let cpu = str2cards("As4s9c5s4d6hJd");
+    assert!(hand_strength(&human) > hand_strength(&cpu));
 
-    let human = vec!["Td", "Tc", "9c", "5s", "4d", "6h", "Jd"];
-    let cpu = vec!["As", "4s", "9c", "5s", "4d", "6h", "Jd"];
-    assert!(light_hand_strength(human, &table) > light_hand_strength(cpu, &table));
+    let human = str2cards("TdTc9c6hJd");
+    let cpu = str2cards("As4s9c4dJd");
+    assert!(hand_strength(&human) > hand_strength(&cpu));
 
-    let human = vec!["Td", "Tc", "9c", "6h", "Jd"];
-    let cpu = vec!["As", "4s", "9c", "4d", "Jd"];
-    assert!(light_hand_strength(human, &table) > light_hand_strength(cpu, &table));
-
-    let human = vec!["9c", "Tc", "Td", "Jd", "6h"];
-    let cpu = vec!["4c", "Jc", "4d", "Ad", "9h"];
-    assert!(light_hand_strength(human, &table) > light_hand_strength(cpu, &table));
+    let human = str2cards("9cTcTdJd6h");
+    let cpu = str2cards("4cJc4dAd9h");
+    assert!(hand_strength(&human) > hand_strength(&cpu));
 }
 
 // Helper function for tests that get the bot's response at a certain spot
@@ -603,20 +595,3 @@ fn more_action_translation() {
     ]);
     history.translate(&CONFIG.bet_abstraction);
 }
-
-// #[test]
-// fn test_isomorphic_hand() {
-//     let samples = 1_000_000;
-//     let mut deck = deck();
-//     let mut rng = rand::thread_rng();
-//     let bar = pbar(samples);
-//     for _i in 0..samples {
-//         deck.shuffle(&mut rng);
-//         let hand = &deck[0..7];
-//         let iso1 = isomorphic_hand(hand, true);
-//         let iso2 = isomorphic_hand_fast(hand, true);
-//         assert_eq!(iso1, iso2);
-//         bar.inc(1);
-//     }
-//     bar.finish();
-// }

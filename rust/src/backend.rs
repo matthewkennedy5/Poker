@@ -7,7 +7,6 @@ use actix_web::{web, App, HttpServer, Responder};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-static HAND_STRENGTHS: Lazy<LightHandTable> = Lazy::new(|| LightHandTable::new());
 static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -19,8 +18,8 @@ struct HandCompJSON {
 async fn compare_hands(json: web::Json<HandCompJSON>) -> impl Responder {
     let human_hand = parse_cards(&json.humanHand);
     let cpu_hand = parse_cards(&json.cpuHand);
-    let human_strength = HAND_STRENGTHS.hand_strength(&human_hand);
-    let cpu_strength = HAND_STRENGTHS.hand_strength(&cpu_hand);
+    let human_strength = hand_strength(&human_hand);
+    let cpu_strength = hand_strength(&cpu_hand);
     if human_strength > cpu_strength {
         return String::from("human");
     } else if cpu_strength > human_strength {
