@@ -75,10 +75,13 @@ impl ActionHistory {
                 "Bet" => ActionType::Bet,
                 "Call" => ActionType::Call,
                 "Fold" => ActionType::Fold,
-                _ => panic!("Bad action string")
+                _ => panic!("Bad action string"),
             };
             let amount: i32 = tokens[1].parse().expect("Bad action amount");
-            history.add(&Action {action: action, amount: amount});
+            history.add(&Action {
+                action: action,
+                amount: amount,
+            });
         }
         history
     }
@@ -109,7 +112,12 @@ impl ActionHistory {
 
     // Add an new action to this history, and update the state
     pub fn add(&mut self, action: &Action) {
-        assert!(self.is_legal_next_action(action), "Action {:?} is illegal for history {:#?}", action, self);
+        assert!(
+            self.is_legal_next_action(action),
+            "Action {:?} is illegal for history {:#?}",
+            action,
+            self
+        );
         let action = action.clone();
         self.stacks[self.player] -= action.amount;
         self.player = 1 - self.player;
@@ -126,11 +134,12 @@ impl ActionHistory {
             ActionType::Bet => {
                 // The bet size must be different than the call size, and within the correct range
                 let not_call = action.amount != self.to_call();
-                let size_ok = (action.amount >= self.min_bet()) && (action.amount <= self.max_bet());
+                let size_ok =
+                    (action.amount >= self.min_bet()) && (action.amount <= self.max_bet());
                 size_ok && not_call
-            },
+            }
             ActionType::Call => action.amount == self.to_call(),
-            ActionType::Fold => self.to_call() != 0
+            ActionType::Fold => self.to_call() != 0,
         }
     }
 
@@ -253,15 +262,21 @@ impl ActionHistory {
             if action.action == ActionType::Fold {
                 translated_action = FOLD;
             } else if action.action == ActionType::Call {
-                translated_action = Action {action: ActionType::Call, amount: translated.to_call()};
+                translated_action = Action {
+                    action: ActionType::Call,
+                    amount: translated.to_call(),
+                };
             } else if action.action == ActionType::Bet {
                 if action.amount == untranslated.max_bet() {
                     // All in
-                    translated_action = Action {action: ActionType::Bet, amount: translated.max_bet()};
+                    translated_action = Action {
+                        action: ActionType::Bet,
+                        amount: translated.max_bet(),
+                    };
                 } else {
-                    // To translate the bet, find the bet size in the abstraction which is closest in 
+                    // To translate the bet, find the bet size in the abstraction which is closest in
                     // log space to the real bet size. This does not include the all-in action, because
-                    // that would end the hand. 
+                    // that would end the hand.
                     let mut candidate_bets = Vec::new();
                     for a in translated_next_actions {
                         if a.action == ActionType::Bet && a.amount != translated.max_bet() {
@@ -270,11 +285,14 @@ impl ActionHistory {
                     }
                     if candidate_bets.is_empty() {
                         // The only legal bet size in the abstraction is the all-in amount, but
-                        // we don't want to end the hand, so we reduce the bet size slightly. 
+                        // we don't want to end the hand, so we reduce the bet size slightly.
                         candidate_bets.push(translated.max_bet() - &CONFIG.big_blind);
                     }
                     let closest_bet_size = find_closest_log(candidate_bets, action.amount);
-                    translated_action = Action {action: ActionType::Bet, amount: closest_bet_size};
+                    translated_action = Action {
+                        action: ActionType::Bet,
+                        amount: closest_bet_size,
+                    };
                 }
             } else {
                 panic!("Action not translating");
@@ -282,7 +300,12 @@ impl ActionHistory {
             translated.add(&translated_action);
             untranslated.add(&action);
         }
-        assert!(translated.street == self.street, "Different streets: History: {}\nTranslated: {}", self, translated);
+        assert!(
+            translated.street == self.street,
+            "Different streets: History: {}\nTranslated: {}",
+            self,
+            translated
+        );
         translated
     }
 
@@ -426,7 +449,11 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
     }
 }
 
-pub fn lookup_or_new(nodes: &HashMap<InfoSet, Node>, infoset: &InfoSet, bet_abstraction: &Vec<Vec<f64>>) -> Node {
+pub fn lookup_or_new(
+    nodes: &HashMap<InfoSet, Node>,
+    infoset: &InfoSet,
+    bet_abstraction: &Vec<Vec<f64>>,
+) -> Node {
     match nodes.get(&infoset) {
         Some(n) => n.clone(),
         None => Node::new(infoset, bet_abstraction),

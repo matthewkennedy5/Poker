@@ -1,9 +1,9 @@
+use crate::bot::Bot;
 use crate::card_utils;
 use crate::card_utils::Card;
 use crate::config::CONFIG;
-use crate::trainer_utils::*;
 use crate::exploiter::*;
-use crate::bot::Bot;
+use crate::trainer_utils::*;
 use rand::prelude::*;
 use std::collections::HashMap;
 use std::fs::File;
@@ -32,13 +32,22 @@ fn check_convergence(prev_node: &Node, curr_node: &Node) -> bool {
 pub fn train_until_convergence() -> u64 {
     let deck = card_utils::deck();
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
-    let starting_infoset = InfoSet::from_hand(&card_utils::str2cards("AsAh"), &Vec::new(), &ActionHistory::new());
+    let starting_infoset = InfoSet::from_hand(
+        &card_utils::str2cards("AsAh"),
+        &Vec::new(),
+        &ActionHistory::new(),
+    );
     let mut prev_node = Node::new(&starting_infoset, &CONFIG.bet_abstraction);
     let mut counter: i32 = 1;
     println!("[INFO] Beginning training.");
     let bar = card_utils::pbar(1_000_000);
     loop {
-        cfr_iteration(&deck, &ActionHistory::new(), &mut nodes, &CONFIG.bet_abstraction);
+        cfr_iteration(
+            &deck,
+            &ActionHistory::new(),
+            &mut nodes,
+            &CONFIG.bet_abstraction,
+        );
         let node = lookup_or_new(&nodes, &starting_infoset, &CONFIG.bet_abstraction);
         println!("{}, {}: {:?}", counter, node.t, node.regrets);
         if check_convergence(&prev_node, &node) {
@@ -57,8 +66,13 @@ pub fn train(iters: u64) {
     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
     println!("[INFO] Beginning training.");
     let bar = card_utils::pbar(iters);
-    for i in 1..iters+1 {
-        cfr_iteration(&deck, &ActionHistory::new(), &mut nodes, &CONFIG.bet_abstraction);
+    for i in 1..iters + 1 {
+        cfr_iteration(
+            &deck,
+            &ActionHistory::new(),
+            &mut nodes,
+            &CONFIG.bet_abstraction,
+        );
         if i % CONFIG.eval_every == 0 {
             serialize_nodes(&nodes);
             let bot = Bot::new();
@@ -88,8 +102,12 @@ fn serialize_nodes(nodes: &HashMap<InfoSet, Node>) {
     println!("[INFO] Saved strategy.");
 }
 
-pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &mut HashMap<InfoSet, Node>,
-                     bet_abstraction: &Vec<Vec<f64>>) {
+pub fn cfr_iteration(
+    deck: &[Card],
+    history: &ActionHistory,
+    nodes: &mut HashMap<InfoSet, Node>,
+    bet_abstraction: &Vec<Vec<f64>>,
+) {
     let mut rng = rand::thread_rng();
     let mut deck = deck.to_vec();
     deck.shuffle(&mut rng);
@@ -104,7 +122,7 @@ pub fn iterate(
     history: &ActionHistory,
     weights: [f64; 2],
     nodes: &mut HashMap<InfoSet, Node>,
-    bet_abstraction: &Vec<Vec<f64>>
+    bet_abstraction: &Vec<Vec<f64>>,
 ) -> f64 {
     if history.hand_over() {
         return terminal_utility(&deck, history, player);
@@ -131,7 +149,7 @@ pub fn iterate(
     // Grab the current strategy at this node
     let [p0, p1] = weights;
     if weights[opponent] < 1e-6 {
-        return 0.0; 
+        return 0.0;
     }
     let strategy = node.current_strategy(weights[player]);
     let mut utilities: HashMap<Action, f64> = HashMap::new();
@@ -146,7 +164,14 @@ pub fn iterate(
             1 => [p0, p1 * prob],
             _ => panic!("Bad player value"),
         };
-        let utility = iterate(player, &deck, &next_history, new_weights, nodes, bet_abstraction);
+        let utility = iterate(
+            player,
+            &deck,
+            &next_history,
+            new_weights,
+            nodes,
+            bet_abstraction,
+        );
         utilities.insert(action, utility);
         node_utility += prob * utility;
     }

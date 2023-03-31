@@ -3,20 +3,23 @@ use crate::config::CONFIG;
 use crate::ranges::*;
 use crate::trainer::*;
 use crate::trainer_utils::*;
-use std::collections::HashMap;
 use moka::sync::Cache;
+use std::collections::HashMap;
 
 pub struct Bot {
     // Right now the blueprint stores the mixed strategy for each infoset. To reduce
     // memory usage, we could pre-sample actions and just store a mapping of infoset -> action.
     blueprint: HashMap<InfoSet, Node>,
-    preflop_cache: Cache<(Vec<Card>, Vec<Card>, ActionHistory), Action> 
+    preflop_cache: Cache<(Vec<Card>, Vec<Card>, ActionHistory), Action>,
 }
 
 impl Bot {
     pub fn new() -> Bot {
         let blueprint = load_nodes(&CONFIG.nodes_path);
-        Bot { blueprint: blueprint, preflop_cache: Cache::new(10_000) }
+        Bot {
+            blueprint: blueprint,
+            preflop_cache: Cache::new(10_000),
+        }
     }
 
     pub fn get_action(&self, hand: &[Card], board: &[Card], history: &ActionHistory) -> Action {
@@ -60,7 +63,7 @@ impl Bot {
     ) -> HashMap<Action, f64> {
         assert!(hole.len() == 2);
         // Only look at board cards for this street
-        let board = &board[..board_length(history.street)];    
+        let board = &board[..board_length(history.street)];
         let translated = history.translate(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(hole, board, &translated);
         let node = lookup_or_new(&self.blueprint, &infoset, &CONFIG.bet_abstraction);
@@ -109,10 +112,10 @@ impl Bot {
     // assuming that the opponent is playing with the given range.
     //
     // Inputs:
-    //      history: The history of actions leading up to this spot, not including the opponent's 
+    //      history: The history of actions leading up to this spot, not including the opponent's
     //          most recent action
     //      opp_range: Our Bayesian belief distribution of the cards the opponent has
-    //      opp_action: Action the opponent took at this spot, which might not be in the action 
+    //      opp_action: Action the opponent took at this spot, which might not be in the action
     //          abstraction
     //      iters: How many iterations of CFR to run
     //
@@ -128,7 +131,9 @@ impl Bot {
         let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
         let mut bet_abstraction = CONFIG.bet_abstraction.clone();
         let pot_frac = (opp_action.amount as f64) / (history.pot() as f64);
-        if opp_action.action == ActionType::Bet && !bet_abstraction[history.street].contains(&pot_frac) {
+        if opp_action.action == ActionType::Bet
+            && !bet_abstraction[history.street].contains(&pot_frac)
+        {
             // If the opponent made an off-tree bet, add it to the bet abstraction
             bet_abstraction[history.street].push(pot_frac);
         }
