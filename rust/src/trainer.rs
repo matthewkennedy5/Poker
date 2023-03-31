@@ -110,10 +110,10 @@ pub fn cfr_iteration(
 ) {
     let mut rng = rand::thread_rng();
     let mut deck = deck.to_vec();
-    deck.shuffle(&mut rng);
-    iterate(DEALER, &deck, history, [1.0, 1.0], nodes, bet_abstraction);
-    deck.shuffle(&mut rng);
-    iterate(OPPONENT, &deck, history, [1.0, 1.0], nodes, bet_abstraction);
+    for player in [DEALER, OPPONENT].iter() {
+        deck.shuffle(&mut rng);
+        iterate(player.clone(), &deck, history, [1.0, 1.0], nodes, bet_abstraction);
+    }
 }
 
 pub fn iterate(

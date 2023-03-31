@@ -22,12 +22,12 @@ beta = 0.0
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 10000000
-lbr_iters = 100000
-eval_every = 1000000
+train_iters = 1000000
+lbr_iters = 5000
+eval_every = 100000
 
 # Realtime solving
-subgame_solving = true
+subgame_solving = false
 subgame_iters = 100000
 
 # Preflop chart
