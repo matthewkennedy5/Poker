@@ -2,6 +2,7 @@ use crate::itertools::Itertools;
 use bio::stats::combinatorics::combinations;
 use once_cell::sync::Lazy;
 use rs_poker::core::{Hand, Rank, Rankable};
+use moka::sync::Cache;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::sync::mpsc;
@@ -24,6 +25,7 @@ const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
 pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(|| FastHandTable::new());
 pub static LIGHT_HAND_TABLE: Lazy<LightHandTable> = Lazy::new(|| LightHandTable::new());
 static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(|| EquityTable::new());
+static ISOMORPHIC_HAND_CACHE: Lazy<Cache<(Vec<Card>, bool), Vec<Card>>> = Lazy::new(|| Cache::new(10000));
 
 pub const CLUBS: i32 = 0;
 pub const DIAMONDS: i32 = 1;
@@ -195,6 +197,11 @@ fn sort_isomorphic(cards: &[Card], streets: bool) -> Vec<Card> {
 
 // https://stackoverflow.com/a/3831682
 pub fn isomorphic_hand(cards: &[Card], streets: bool) -> Vec<Card> {
+    let inputs = (cards.to_vec(), streets);
+    if let Some(iso) = ISOMORPHIC_HAND_CACHE.get(&inputs) {
+        return iso;
+    }
+
     let cards = sort_isomorphic(cards, streets);
 
     let mut by_suits: Vec<Vec<u8>> = vec![Vec::new(); 4];
@@ -227,6 +234,7 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> Vec<Card> {
         .collect();
 
     isomorphic = sort_isomorphic(&isomorphic, streets);
+    ISOMORPHIC_HAND_CACHE.insert(inputs, isomorphic.clone());
     isomorphic
 }
 
