@@ -3,7 +3,7 @@ use crate::card_utils::*;
 use crate::config::CONFIG;
 use once_cell::sync::Lazy;
 use rand::{prelude::SliceRandom, thread_rng};
-use std::{cmp::Eq, collections::HashMap, fmt, fs::File, hash::Hash, io::Write};
+use std::{cmp::Eq, collections::HashMap, fmt, hash::Hash};
 
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
@@ -463,8 +463,9 @@ pub fn lookup_or_new(
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
-    pub regrets: HashMap<Action, f64>,
-    strategy_sum: HashMap<Action, f64>,
+    pub regrets: Vec<f64>,
+    strategy_sum: Vec<f64>,
+    pub actions: Vec<Action>,
     pub t: f64,
 }
 
@@ -472,13 +473,11 @@ impl Node {
     pub fn new(infoset: &InfoSet, bet_abstraction: &Vec<Vec<f64>>) -> Node {
         // Create a HashMap of action -> 0.0 to initialize the regrets and
         // cumulative strategy sum
-        let mut zeros = HashMap::new();
-        for action in infoset.next_actions(bet_abstraction) {
-            zeros.insert(action, 0.0);
-        }
+        let actions = infoset.next_actions(bet_abstraction);
         Node {
-            regrets: zeros.clone(),
-            strategy_sum: zeros,
+            regrets: vec![0.0; actions.len()],
+            strategy_sum: vec![0.0; actions.len()],
+            actions: actions,
             t: 0.0,
         }
     }
@@ -486,26 +485,19 @@ impl Node {
     // Returns the current strategy for this node, and updates the cumulative strategy
     // as a side effect.
     // Input: prob is the probability of reaching this node
-    pub fn current_strategy(&mut self, prob: f64) -> HashMap<Action, f64> {
+    pub fn current_strategy(&mut self, prob: f64) -> Vec<f64> {
         // Normalize the regrets for this iteration of CFR
-        let mut regret_norm: HashMap<Action, f64> = HashMap::new();
-        for (action, regret) in self.regrets.clone() {
-            if regret > 0.0 {
-                regret_norm.insert(action, regret);
-            } else {
-                regret_norm.insert(action, 0.0);
-            }
-        }
-        regret_norm = normalize(&regret_norm);
-
-        for action in regret_norm.keys() {
+        let positive_regrets: Vec<f64> = self
+            .regrets
+            .iter()
+            .map(|r| if r.clone() >= 0.0 { r.clone() } else { 0.0 })
+            .collect();
+        let regret_norm: Vec<f64> = normalize_vec(&positive_regrets);
+        for i in 0..regret_norm.len() {
             // Add this action's probability to the cumulative strategy sum using DCFR+ update rules
-            let mut cumulative_strategy = self.strategy_sum.get(action).unwrap().clone();
-            let new_prob = regret_norm.get(action).unwrap() * prob;
+            let new_prob = regret_norm[i] * prob;
             let weight = if self.t < 100.0 { 0.0 } else { self.t - 100.0 };
-            cumulative_strategy += weight * new_prob;
-            self.strategy_sum
-                .insert(action.clone(), cumulative_strategy);
+            self.strategy_sum[i] += weight * new_prob;
         }
         if prob > 0.0 {
             self.t += 1.0;
@@ -513,12 +505,12 @@ impl Node {
         regret_norm
     }
 
-    pub fn cumulative_strategy(&self) -> HashMap<Action, f64> {
-        normalize(&self.strategy_sum)
+    pub fn cumulative_strategy(&self) -> Vec<f64> {
+        normalize_vec(&self.strategy_sum)
     }
 
-    pub fn add_regret(&mut self, action: &Action, regret: f64) {
-        let mut accumulated_regret = self.regrets[action] + regret;
+    pub fn add_regret(&mut self, action_index: usize, regret: f64) {
+        let mut accumulated_regret = self.regrets[action_index] + regret;
         // Update the accumulated regret according to Discounted Counterfactual
         // Regret Minimization rules
         if accumulated_regret >= 0.0 {
@@ -526,11 +518,12 @@ impl Node {
         } else {
             accumulated_regret *= self.t.powf(CONFIG.beta) / (self.t.powf(CONFIG.beta) + 1.0);
         }
-        self.regrets.insert(action.clone(), accumulated_regret);
+        self.regrets[action_index] = accumulated_regret;
     }
 }
 
 // Normalizes the values of a HashMap so that its elements sum to 1.
+// TODO: Remove this in favor of normalize_vec
 pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64> {
     let mut map = map.clone();
     let mut sum = 0.0;
@@ -550,11 +543,41 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64>
     map
 }
 
+fn normalize_vec(v: &[f64]) -> Vec<f64> {
+    for elem in v {
+        assert!(elem.clone() >= 0.0);
+    }
+    let sum: f64 = v.iter().sum();
+    let norm: Vec<f64> = v
+        .iter()
+        .map(|e| {
+            if sum == 0.0 {
+                // If all values are 0, then just return a uniform distribution
+                1.0 / v.len() as f64
+            } else {
+                e / sum
+            }
+        })
+        .collect();
+    let norm_sum: f64 = norm.iter().sum();
+    assert!(
+        (norm_sum - 1.0).abs() < 1e-6,
+        "Sum of normalized vector: {}. Input vector: {:?}",
+        norm_sum,
+        v
+    );
+    norm
+}
+
 // Randomly sample an action given the strategy at this node.
-pub fn sample_action_from_node(node: &Node) -> Action {
-    let node = &mut node.clone();
+pub fn sample_action_from_node(node: &mut Node) -> Action {
     let strategy = node.current_strategy(0.0);
-    sample_action_from_strategy(&strategy)
+    let action_indexes: Vec<usize> = (0..node.actions.len()).collect();
+    let index: usize = action_indexes
+        .choose_weighted(&mut thread_rng(), |i| strategy[i.clone()])
+        .expect(&format!("Invalid strategy distribution: {:?}", &strategy))
+        .clone();
+    node.actions.get(index).unwrap().clone()
 }
 
 pub fn sample_action_from_strategy(strategy: &HashMap<Action, f64>) -> Action {
@@ -614,22 +637,23 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
 }
 
 // For making preflop charts
-pub fn write_preflop_strategy(nodes: &HashMap<InfoSet, Node>, path: &str) {
-    let mut preflop_strategy: HashMap<String, HashMap<String, f64>> = HashMap::new();
-    for (infoset, node) in nodes {
-        if infoset.history.is_empty() {
-            let hand = Abstraction::preflop_hand(infoset.card_bucket);
-            let strategy: HashMap<String, f64> = node
-                .cumulative_strategy()
-                .iter()
-                .map(|(action, prob)| (action.to_string(), *prob))
-                .collect();
+// TODO: Use a bot instance -- this shouldnt depend on the node implementation. Orthogonality!
+// pub fn write_preflop_strategy(nodes: &HashMap<InfoSet, Node>, path: &str) {
+//     let mut preflop_strategy: HashMap<String, HashMap<String, f64>> = HashMap::new();
+//     for (infoset, node) in nodes {
+//         if infoset.history.is_empty() {
+//             let hand = Abstraction::preflop_hand(infoset.card_bucket);
+//             let strategy: HashMap<String, f64> = node
+//                 .cumulative_strategy()
+//                 .iter()
+//                 .map(|(action, prob)| (action.to_string(), *prob))
+//                 .collect();
 
-            preflop_strategy.insert(hand, strategy);
-        }
-    }
-    // Write the preflop strategy to a JSON
-    let json = serde_json::to_string_pretty(&preflop_strategy).unwrap();
-    let mut file = File::create(&path).unwrap();
-    file.write(json.as_bytes()).unwrap();
-}
+//             preflop_strategy.insert(hand, strategy);
+//         }
+//     }
+//     // Write the preflop strategy to a JSON
+//     let json = serde_json::to_string_pretty(&preflop_strategy).unwrap();
+//     let mut file = File::create(&path).unwrap();
+//     file.write(json.as_bytes()).unwrap();
+// }

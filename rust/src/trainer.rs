@@ -9,57 +9,57 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Write};
 
-fn check_convergence(prev_node: &Node, curr_node: &Node) -> bool {
-    if curr_node.t < 1000.0 {
-        return false;
-    }
-    let curr_strat = curr_node.cumulative_strategy();
-    let prev_strat = prev_node.cumulative_strategy();
-    for (action, prob) in &curr_strat {
-        let prev_prob = prev_strat.get(&action).unwrap();
-        if (prob - prev_prob).abs() > 0.01 {
-            return false;
-        }
-        if prob.clone() == 1.0 / (curr_strat.len() as f64) {
-            // If the strategy is a uniform probability distribution, then it's stable but hasn't
-            // been trained yet
-            return false;
-        }
-    }
-    return true;
-}
+// fn check_convergence(prev_node: &Node, curr_node: &Node) -> bool {
+//     if curr_node.t < 1000.0 {
+//         return false;
+//     }
+//     let curr_strat = curr_node.cumulative_strategy();
+//     let prev_strat = prev_node.cumulative_strategy();
+//     for (action, prob) in &curr_strat {
+//         let prev_prob = prev_strat.get(&action).unwrap();
+//         if (prob - prev_prob).abs() > 0.01 {
+//             return false;
+//         }
+//         if prob.clone() == 1.0 / (curr_strat.len() as f64) {
+//             // If the strategy is a uniform probability distribution, then it's stable but hasn't
+//             // been trained yet
+//             return false;
+//         }
+//     }
+//     return true;
+// }
 
-pub fn train_until_convergence() -> u64 {
-    let deck = card_utils::deck();
-    let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
-    let starting_infoset = InfoSet::from_hand(
-        &card_utils::str2cards("AsAh"),
-        &Vec::new(),
-        &ActionHistory::new(),
-    );
-    let mut prev_node = Node::new(&starting_infoset, &CONFIG.bet_abstraction);
-    let mut counter: i32 = 1;
-    println!("[INFO] Beginning training.");
-    let bar = card_utils::pbar(1_000_000);
-    loop {
-        cfr_iteration(
-            &deck,
-            &ActionHistory::new(),
-            &mut nodes,
-            &CONFIG.bet_abstraction,
-        );
-        let node = lookup_or_new(&nodes, &starting_infoset, &CONFIG.bet_abstraction);
-        println!("{}, {}: {:?}", counter, node.t, node.regrets);
-        if check_convergence(&prev_node, &node) {
-            break;
-        }
-        prev_node = node.clone();
-        counter += 1;
-        bar.inc(1);
-    }
-    bar.finish();
-    counter as u64
-}
+// pub fn train_until_convergence() -> u64 {
+//     let deck = card_utils::deck();
+//     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
+//     let starting_infoset = InfoSet::from_hand(
+//         &card_utils::str2cards("AsAh"),
+//         &Vec::new(),
+//         &ActionHistory::new(),
+//     );
+//     let mut prev_node = Node::new(&starting_infoset, &CONFIG.bet_abstraction);
+//     let mut counter: i32 = 1;
+//     println!("[INFO] Beginning training.");
+//     let bar = card_utils::pbar(1_000_000);
+//     loop {
+//         cfr_iteration(
+//             &deck,
+//             &ActionHistory::new(),
+//             &mut nodes,
+//             &CONFIG.bet_abstraction,
+//         );
+//         let node = lookup_or_new(&nodes, &starting_infoset, &CONFIG.bet_abstraction);
+//         println!("{}, {}: {:?}", counter, node.t, node.regrets);
+//         if check_convergence(&prev_node, &node) {
+//             break;
+//         }
+//         prev_node = node.clone();
+//         counter += 1;
+//         bar.inc(1);
+//     }
+//     bar.finish();
+//     counter as u64
+// }
 
 pub fn train(iters: u64) {
     let deck = card_utils::deck();
@@ -138,7 +138,7 @@ pub fn iterate(
     // current policy, and load our node.
     let opponent = 1 - player;
     if history.player == opponent {
-        history.add(&sample_action_from_node(&node));
+        history.add(&sample_action_from_node(&mut node));
         if history.hand_over() {
             return terminal_utility(&deck, &history, player);
         }
@@ -151,12 +151,13 @@ pub fn iterate(
     if weights[opponent] < 1e-6 {
         return 0.0;
     }
-    let strategy = node.current_strategy(weights[player]);
-    let mut utilities: HashMap<Action, f64> = HashMap::new();
+    let actions = infoset.next_actions(bet_abstraction);
+    let strategy: Vec<f64> = node.current_strategy(weights[player]);
+    let mut utilities: Vec<f64> = Vec::new();
     let mut node_utility = 0.0;
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.
-    for (action, prob) in strategy {
+    for (action, prob) in actions.iter().zip(strategy.iter()) {
         let mut next_history = history.clone();
         next_history.add(&action);
         let new_weights = match player {
@@ -172,14 +173,14 @@ pub fn iterate(
             nodes,
             bet_abstraction,
         );
-        utilities.insert(action, utility);
+        utilities.push(utility);
         node_utility += prob * utility;
     }
 
     // Update regrets
-    for (action, utility) in &utilities {
+    for (index, utility) in utilities.iter().enumerate() {
         let regret = utility - node_utility;
-        node.add_regret(&action, weights[opponent] * regret);
+        node.add_regret(index, weights[opponent] * regret);
     }
 
     let updated = node.clone();

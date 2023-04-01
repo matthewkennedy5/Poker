@@ -67,11 +67,11 @@ impl Bot {
         let translated = history.translate(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(hole, board, &translated);
         let node = lookup_or_new(&self.blueprint, &infoset, &CONFIG.bet_abstraction);
-        let node_strategy = node.cumulative_strategy();
+        let node_strategy: Vec<f64> = node.cumulative_strategy();
 
-        let mut adjusted_strategy: HashMap<Action, f64> = HashMap::new();
-        for (action, prob) in node_strategy {
-            adjusted_strategy.insert(history.adjust_action(&action), prob);
+        let mut adjusted_strategy: HashMap<Action,f64> = HashMap::new();
+        for (action, prob) in node.actions.iter().zip(node_strategy.iter()) {
+            adjusted_strategy.insert(history.adjust_action(&action), prob.clone());
         }
         adjusted_strategy
     }
@@ -105,7 +105,13 @@ impl Bot {
         this_history.add(&history.last_action().unwrap());
         let infoset = InfoSet::from_hand(hole, board, &this_history);
         let node = lookup_or_new(&nodes, &infoset, &CONFIG.bet_abstraction);
-        node.cumulative_strategy()
+
+        let mut strategy: HashMap<Action, f64> = HashMap::new();
+        let probs: Vec<f64> = node.cumulative_strategy();
+        for (action, prob) in node.actions.iter().zip(probs.iter()) {
+            strategy.insert(action.clone(), prob.clone());
+        }
+        strategy
     }
 
     // Uses unsafe subgame solving to return the Nash equilibrium strategy for the current spot,

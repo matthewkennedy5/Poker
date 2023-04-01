@@ -330,6 +330,7 @@ def BotAction(response):
             json = response.json()
             break
         except:
+            print("Error:", data)
             time.sleep(1)
 
     action = json['action']

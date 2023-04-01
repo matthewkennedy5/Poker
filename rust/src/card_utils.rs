@@ -1,8 +1,8 @@
 use crate::itertools::Itertools;
 use bio::stats::combinatorics::combinations;
+use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use rs_poker::core::{Hand, Rank, Rankable};
-use moka::sync::Cache;
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc;
 use std::{
@@ -12,7 +12,7 @@ use std::{
     io::{BufRead, BufReader, Write},
     path::Path,
     thread,
-    time::Duration
+    time::Duration,
 };
 
 const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.bin";
@@ -23,7 +23,8 @@ const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
 
 pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(|| FastHandTable::new());
 static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(|| EquityTable::new());
-static ISOMORPHIC_HAND_CACHE: Lazy<Cache<(Vec<Card>, bool), Vec<Card>>> = Lazy::new(|| Cache::new(10000));
+static ISOMORPHIC_HAND_CACHE: Lazy<Cache<(Vec<Card>, bool), Vec<Card>>> =
+    Lazy::new(|| Cache::new(10_000));
 
 pub const CLUBS: i32 = 0;
 pub const DIAMONDS: i32 = 1;
@@ -291,7 +292,7 @@ pub fn hand_strength(cards: &[Card]) -> i32 {
         Rank::Flush(strength) => (5, strength),
         Rank::FullHouse(strength) => (6, strength),
         Rank::FourOfAKind(strength) => (7, strength),
-        Rank::StraightFlush(strength) => (8, strength)
+        Rank::StraightFlush(strength) => (8, strength),
     };
     rank_val * step + rank_strength as i32
 }
