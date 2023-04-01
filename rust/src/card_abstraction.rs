@@ -30,9 +30,9 @@ impl Abstraction {
 
     pub fn bin(&self, cards: &[Card]) -> i32 {
         if cards.len() == 2 {
-            Abstraction::preflop_bin(&cards)
+            Abstraction::preflop_bin(cards)
         } else {
-            self.postflop_bin(&cards)
+            self.postflop_bin(cards)
         }
     }
 
@@ -48,7 +48,7 @@ impl Abstraction {
             rank_str(rank2 as u8),
             if suited { "s" } else { "o" }
         );
-        return hand;
+        hand
     }
 
     fn preflop_bin(cards: &[Card]) -> i32 {
@@ -60,8 +60,8 @@ impl Abstraction {
         if cards[0].suit == cards[1].suit {
             bin += 1;
         }
-        assert!(bin >= 404 && bin <= 2829);
-        return bin as i32;
+        assert!((404..=2829).contains(&bin));
+        bin
     }
 
     // Lookup methods: Translate the card to its isomorphic version and return
@@ -69,9 +69,9 @@ impl Abstraction {
         let isomorphic = isomorphic_hand(cards, true);
         let hand = cards2hand(&isomorphic);
         match cards.len() {
-            5 => self.flop.get(&hand).unwrap().clone(),
-            6 => self.turn.get(&hand).unwrap().clone(),
-            7 => self.river.get(&hand).unwrap().clone(),
+            5 => *self.flop.get(&hand).unwrap(),
+            6 => *self.turn.get(&hand).unwrap(),
+            7 => *self.river.get(&hand).unwrap(),
             _ => panic!("Bad number of cards"),
         }
     }
@@ -100,9 +100,9 @@ fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<(u64, f64)> {
     let mut hand_ehs2: Vec<(u64, f64)> = isomorphic_hands
         .par_iter()
         .map(|h| {
-            let ehs2 = expected_hs2(h.clone());
+            let ehs2 = expected_hs2(*h);
             bar.inc(1);
-            (h.clone(), ehs2)
+            (*h, ehs2)
         })
         .collect();
 
@@ -123,7 +123,7 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     for (idx, (hand, _ehs2)) in hand_ehs2.iter().enumerate() {
         // Bucket the hand according to the percentile of its E[HS^2]
         let bucket: i32 = ((n_buckets as f64) * (idx as f64) / (hand_ehs2.len() as f64)) as i32;
-        clusters.insert(hand.clone(), bucket.clone());
+        clusters.insert(*hand, bucket);
     }
     let path = match n_cards {
         5 => FLOP_PATH,

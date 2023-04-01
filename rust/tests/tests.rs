@@ -4,7 +4,7 @@ use optimus::*;
 use rand::prelude::*;
 use rayon::iter::*;
 
-static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
+static BOT: Lazy<Bot> = Lazy::new(Bot::new);
 
 #[test]
 fn card_bitmap() {
@@ -80,7 +80,7 @@ fn uint_hands() {
 }
 
 fn fast_hand_strength(hand: Vec<&str>, table: &FastHandTable) -> i32 {
-    return table.hand_strength(&strvec2cards(&hand));
+    table.hand_strength(&strvec2cards(&hand))
 }
 
 #[test]
@@ -184,9 +184,9 @@ fn bot_strategy_contains_amount(
     let hole = str2cards(hole);
     let board = str2cards(board);
     let strategy = BOT.get_strategy(&hole, &board, &history);
-    println!("{:?}", strategy);
+    println!("{strategy:?}");
     let amounts: Vec<i32> = strategy.keys().map(|action| action.amount).collect();
-    return amounts.contains(&amount);
+    amounts.contains(&amount)
 }
 
 #[test]
@@ -510,7 +510,7 @@ fn play_hand_always_call() -> f64 {
     let mut deck: Vec<Card> = deck();
     let mut rng = &mut rand::thread_rng();
     deck.shuffle(&mut rng);
-    let bot = [DEALER, OPPONENT].choose(&mut rng).unwrap().clone();
+    let bot = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
     let mut history = ActionHistory::new();
     while !history.hand_over() {
         let action = if history.player == bot {
@@ -548,8 +548,7 @@ fn bot_beats_always_call() {
     let std = statistical::standard_deviation(&winnings, Some(mean));
     let confidence = 1.96 * std / (iters as f64).sqrt();
     println!(
-        "Score against check/call bot: {} +/- {} BB/h\n",
-        mean, confidence
+        "Score against check/call bot: {mean} +/- {confidence} BB/h\n"
     );
 }
 

@@ -17,7 +17,7 @@ impl Bot {
     pub fn new() -> Bot {
         let blueprint = load_nodes(&CONFIG.nodes_path);
         Bot {
-            blueprint: blueprint,
+            blueprint,
             preflop_cache: Cache::new(10_000),
         }
     }
@@ -71,7 +71,7 @@ impl Bot {
 
         let mut adjusted_strategy: HashMap<Action,f64> = HashMap::new();
         for (action, prob) in node.actions.iter().zip(node_strategy.iter()) {
-            adjusted_strategy.insert(history.adjust_action(&action), prob.clone());
+            adjusted_strategy.insert(history.adjust_action(action), *prob);
         }
         adjusted_strategy
     }
@@ -88,7 +88,7 @@ impl Bot {
         // Get our beliefs of the opponent's range given their actions up to the subgame root.
         // Use action translation to map the actions so far to infosets in the blueprint strategy.
         let get_strategy = |hole: &[Card], board: &[Card], history: &ActionHistory| {
-            self.get_strategy_action_translation(hole, board, &history)
+            self.get_strategy_action_translation(hole, board, history)
         };
 
         let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
@@ -101,7 +101,7 @@ impl Bot {
         );
 
         // That gives us our strategy in response to their action.
-        let mut this_history = subgame_root.clone();
+        let mut this_history = subgame_root;
         this_history.add(&history.last_action().unwrap());
         let infoset = InfoSet::from_hand(hole, board, &this_history);
         let node = lookup_or_new(&nodes, &infoset, &CONFIG.bet_abstraction);
@@ -109,7 +109,7 @@ impl Bot {
         let mut strategy: HashMap<Action, f64> = HashMap::new();
         let probs: Vec<f64> = node.cumulative_strategy();
         for (action, prob) in node.actions.iter().zip(probs.iter()) {
-            strategy.insert(action.clone(), prob.clone());
+            strategy.insert(action.clone(), *prob);
         }
         strategy
     }

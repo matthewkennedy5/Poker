@@ -7,7 +7,7 @@ use actix_web::{web, App, HttpServer, Responder};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-static BOT: Lazy<Bot> = Lazy::new(|| Bot::new());
+static BOT: Lazy<Bot> = Lazy::new(Bot::new);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct HandCompJSON {
@@ -112,14 +112,14 @@ async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responde
         minBetAmount: history.min_bet(),
         allInAmount: history.max_bet(),
         whoseTurn: whose_turn.to_string(),
-        stacks: stacks,
-        winnings: winnings,
+        stacks,
+        winnings,
     };
-    let history_info_json = serde_json::to_string(&history_info).unwrap();
-    history_info_json
+    
+    serde_json::to_string(&history_info).unwrap()
 }
 
-fn parse_history(h: &Vec<ActionJSON>) -> ActionHistory {
+fn parse_history(h: &[ActionJSON]) -> ActionHistory {
     let mut history = ActionHistory::new();
     for action_json in h.clone() {
         let action = Action {
@@ -141,7 +141,7 @@ fn parse_history(h: &Vec<ActionJSON>) -> ActionHistory {
 fn parse_cards(cards: &[String]) -> Vec<Card> {
     let mut cards: Vec<String> = cards.to_vec();
     cards.retain(|c| c != "back");
-    let cardvec = cards.iter().map(|card| Card::new(&card)).collect();
+    let cardvec = cards.iter().map(|card| Card::new(card)).collect();
     cardvec
 }
 

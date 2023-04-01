@@ -25,7 +25,7 @@ impl Range {
             range.insert(hand, 1.0);
         }
         range = normalize(&range);
-        Range { range: range }
+        Range { range }
     }
 
     // When new cards come on the table, the opponent's range cannot contain those
@@ -49,14 +49,11 @@ impl Range {
             if prob < PROB_CUTOFF {
                 continue;
             }
-            let p = get_strategy(&hole)
-                .get(&action)
-                .expect(&format!(
-                    "Action {} is not in strategy: {:?}",
+            let p = *get_strategy(&hole)
+                .get(action)
+                .unwrap_or_else(|| panic!("Action {} is not in strategy: {:?}",
                     action,
-                    get_strategy(&hole)
-                ))
-                .clone();
+                    get_strategy(&hole)));
             let new_prob = prob * p;
             new_range.insert(hole.clone(), new_prob);
         }
@@ -64,11 +61,11 @@ impl Range {
     }
 
     pub fn hand_prob(&self, hand: &[Card]) -> f64 {
-        self.range.get(hand).unwrap().clone()
+        *self.range.get(hand).unwrap()
     }
 
     pub fn sample_hand(&self) -> Vec<Card> {
-        let hands: Vec<Vec<Card>> = self.range.keys().map(|x| x.clone()).collect();
+        let hands: Vec<Vec<Card>> = self.range.keys().cloned().collect();
         let hand = hands
             .choose_weighted(&mut thread_rng(), |hand: &Vec<Card>| self.hand_prob(hand))
             .unwrap();

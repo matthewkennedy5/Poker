@@ -87,7 +87,7 @@ pub fn train(iters: u64) {
 }
 
 pub fn load_nodes(path: &str) -> HashMap<InfoSet, Node> {
-    println!("[INFO] Loading strategy at {} ...", path);
+    println!("[INFO] Loading strategy at {path} ...");
     let file = File::open(path).expect("Nodes file not found");
     let reader = BufReader::new(file);
     let nodes = bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
@@ -112,7 +112,7 @@ pub fn cfr_iteration(
     let mut deck = deck.to_vec();
     for player in [DEALER, OPPONENT].iter() {
         deck.shuffle(&mut rng);
-        iterate(player.clone(), &deck, history, [1.0, 1.0], nodes, bet_abstraction);
+        iterate(*player, &deck, history, [1.0, 1.0], nodes, bet_abstraction);
     }
 }
 
@@ -125,13 +125,13 @@ pub fn iterate(
     bet_abstraction: &Vec<Vec<f64>>,
 ) -> f64 {
     if history.hand_over() {
-        return terminal_utility(&deck, history, player);
+        return terminal_utility(deck, history, player);
     }
 
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
     let mut history = history.clone();
-    let mut infoset = InfoSet::from_deck(&deck, &history);
+    let mut infoset = InfoSet::from_deck(deck, &history);
     let mut node = lookup_or_new(nodes, &infoset, bet_abstraction);
 
     // If it's not our turn, we sample the other player's action from their
@@ -140,9 +140,9 @@ pub fn iterate(
     if history.player == opponent {
         history.add(&sample_action_from_node(&mut node));
         if history.hand_over() {
-            return terminal_utility(&deck, &history, player);
+            return terminal_utility(deck, &history, player);
         }
-        infoset = InfoSet::from_deck(&deck, &history);
+        infoset = InfoSet::from_deck(deck, &history);
         node = lookup_or_new(nodes, &infoset, bet_abstraction);
     }
 
@@ -159,7 +159,7 @@ pub fn iterate(
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     for (action, prob) in actions.iter().zip(strategy.iter()) {
         let mut next_history = history.clone();
-        next_history.add(&action);
+        next_history.add(action);
         let new_weights = match player {
             0 => [p0 * prob, p1],
             1 => [p0, p1 * prob],
@@ -167,7 +167,7 @@ pub fn iterate(
         };
         let utility = iterate(
             player,
-            &deck,
+            deck,
             &next_history,
             new_weights,
             nodes,

@@ -19,7 +19,7 @@ pub const FOLD: Action = Action {
 };
 pub const ALL_IN: f64 = -1.0;
 
-pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(|| Abstraction::new());
+pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ActionType {
@@ -79,8 +79,8 @@ impl ActionHistory {
             };
             let amount: i32 = tokens[1].parse().expect("Bad action amount");
             history.add(&Action {
-                action: action,
-                amount: amount,
+                action,
+                amount,
             });
         }
         history
@@ -107,7 +107,7 @@ impl ActionHistory {
             // Showdown
             return true;
         }
-        return false;
+        false
     }
 
     // Add an new action to this history, and update the state
@@ -164,7 +164,7 @@ impl ActionHistory {
 
     // Returns the amount needed to call, so 0 for checking
     pub fn to_call(&self) -> i32 {
-        if self.street == PREFLOP && self.history[PREFLOP].len() == 0 {
+        if self.street == PREFLOP && self.history[PREFLOP].is_empty() {
             CONFIG.big_blind
         } else {
             self.stacks[self.player] - self.stacks[1 - self.player]
@@ -193,7 +193,7 @@ impl ActionHistory {
 
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
-    pub fn next_actions(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<Action> {
+    pub fn next_actions(&self, bet_abstraction: &[Vec<f64>]) -> Vec<Action> {
         // Add all the potential bet sizes in the abstraction, and call and fold actions.
         // Then later we filter out the illegal actions.
         let mut candidate_actions = Vec::new();
@@ -202,7 +202,7 @@ impl ActionHistory {
             let bet = if fraction == &ALL_IN {
                 self.stacks[self.player]
             } else {
-                (fraction.clone() * (pot as f64)) as i32
+                (*fraction * (pot as f64)) as i32
             };
             candidate_actions.push(Action {
                 action: ActionType::Bet,
@@ -214,7 +214,7 @@ impl ActionHistory {
             amount: self.to_call(),
         });
         candidate_actions.push(FOLD);
-        candidate_actions.retain(|a| self.is_legal_next_action(&a));
+        candidate_actions.retain(|a| self.is_legal_next_action(a));
 
         candidate_actions
     }
@@ -229,7 +229,7 @@ impl ActionHistory {
         }
         // Remove the last action from the history
         let mut prev_history = self.clone();
-        if prev_history.history[self.street].len() == 0 {
+        if prev_history.history[self.street].is_empty() {
             prev_history.street -= 1;
         }
         prev_history.history[prev_history.street].pop();
@@ -286,7 +286,7 @@ impl ActionHistory {
                     if candidate_bets.is_empty() {
                         // The only legal bet size in the abstraction is the all-in amount, but
                         // we don't want to end the hand, so we reduce the bet size slightly.
-                        candidate_bets.push(translated.max_bet() - &CONFIG.big_blind);
+                        candidate_bets.push(translated.max_bet() - CONFIG.big_blind);
                     }
                     let closest_bet_size = find_closest_log(candidate_bets, action.amount);
                     translated_action = Action {
@@ -341,13 +341,13 @@ impl fmt::Display for ActionHistory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut result = String::new();
         for street in &self.history {
-            for action in street.to_vec() {
+            for action in street {
                 result.push_str(&action.to_string());
-                result.push_str(",");
+                result.push(',');
             }
-            result.push_str(";");
+            result.push(';');
         }
-        write!(f, "{}", result)
+        write!(f, "{result}")
     }
 }
 
@@ -382,8 +382,8 @@ pub fn get_hand(deck: &[Card], player: usize, street: usize) -> Vec<Card> {
         RIVER => &deck[4..9],
         _ => panic!("Invalid street"),
     };
-    let cards = [hole, board].concat();
-    cards
+    
+    [hole, board].concat()
 }
 
 pub fn board_length(street: usize) -> usize {
@@ -406,11 +406,11 @@ impl InfoSet {
     // The dealer's cards are the first two cards in the deck, and the opponent's
     // are the second two cards. They are followed by the 5 board cards.
     pub fn from_deck(deck: &[Card], history: &ActionHistory) -> InfoSet {
-        let cards = get_hand(&deck, history.player, history.street);
+        let cards = get_hand(deck, history.player, history.street);
         let card_bucket = ABSTRACTION.bin(&cards);
         InfoSet {
             history: history.clone(),
-            card_bucket: card_bucket,
+            card_bucket,
         }
     }
 
@@ -426,7 +426,7 @@ impl InfoSet {
     }
 
     pub fn next_actions(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<Action> {
-        self.history.next_actions(&bet_abstraction)
+        self.history.next_actions(bet_abstraction)
     }
 }
 
@@ -455,7 +455,7 @@ pub fn lookup_or_new(
     infoset: &InfoSet,
     bet_abstraction: &Vec<Vec<f64>>,
 ) -> Node {
-    match nodes.get(&infoset) {
+    match nodes.get(infoset) {
         Some(n) => n.clone(),
         None => Node::new(infoset, bet_abstraction),
     }
@@ -477,7 +477,7 @@ impl Node {
         Node {
             regrets: vec![0.0; actions.len()],
             strategy_sum: vec![0.0; actions.len()],
-            actions: actions,
+            actions,
             t: 0.0,
         }
     }
@@ -490,7 +490,7 @@ impl Node {
         let positive_regrets: Vec<f64> = self
             .regrets
             .iter()
-            .map(|r| if r.clone() >= 0.0 { r.clone() } else { 0.0 })
+            .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
         let regret_norm: Vec<f64> = normalize_vec(&positive_regrets);
         for i in 0..regret_norm.len() {
@@ -545,7 +545,7 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64>
 
 fn normalize_vec(v: &[f64]) -> Vec<f64> {
     for elem in v {
-        assert!(elem.clone() >= 0.0);
+        assert!(*elem >= 0.0);
     }
     let sum: f64 = v.iter().sum();
     let norm: Vec<f64> = v
@@ -573,20 +573,18 @@ fn normalize_vec(v: &[f64]) -> Vec<f64> {
 pub fn sample_action_from_node(node: &mut Node) -> Action {
     let strategy = node.current_strategy(0.0);
     let action_indexes: Vec<usize> = (0..node.actions.len()).collect();
-    let index: usize = action_indexes
-        .choose_weighted(&mut thread_rng(), |i| strategy[i.clone()])
-        .expect(&format!("Invalid strategy distribution: {:?}", &strategy))
-        .clone();
+    let index: usize = *action_indexes
+        .choose_weighted(&mut thread_rng(), |i| strategy[(*i)])
+        .unwrap_or_else(|_| panic!("Invalid strategy distribution: {:?}", &strategy));
     node.actions.get(index).unwrap().clone()
 }
 
 pub fn sample_action_from_strategy(strategy: &HashMap<Action, f64>) -> Action {
     let actions: Vec<&Action> = strategy.keys().collect();
     let mut rng = thread_rng();
-    let action = actions
-        .choose_weighted(&mut rng, |a| strategy.get(&a).unwrap())
-        .unwrap()
-        .clone()
+    let action = (*actions
+        .choose_weighted(&mut rng, |a| strategy.get(a).unwrap())
+        .unwrap())
         .clone();
     action
 }
@@ -621,13 +619,13 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
 
     // Showdown time -- both players have contributed equally to the pot
     let pot = history.pot();
-    let player_hand = get_hand(&deck, player, RIVER);
-    let opponent_hand = get_hand(&deck, opponent, RIVER);
+    let player_hand = get_hand(deck, player, RIVER);
+    let opponent_hand = get_hand(deck, opponent, RIVER);
     let player_strength = FAST_HAND_TABLE.hand_strength(&player_hand);
     let opponent_strength = FAST_HAND_TABLE.hand_strength(&opponent_hand);
 
     if player_strength > opponent_strength {
-        return (pot / 2) as f64;
+        (pot / 2) as f64
     } else if player_strength < opponent_strength {
         return (-pot / 2) as f64;
     } else {

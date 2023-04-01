@@ -21,8 +21,8 @@ const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
 
-pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(|| FastHandTable::new());
-static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(|| EquityTable::new());
+pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(FastHandTable::new);
+static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(EquityTable::new);
 static ISOMORPHIC_HAND_CACHE: Lazy<Cache<(Vec<Card>, bool), Vec<Card>>> =
     Lazy::new(|| Cache::new(10_000));
 
@@ -33,7 +33,7 @@ pub const SPADES: i32 = 3;
 
 const NUM_THREADS: usize = 100; // Number of threads to use in parallel loops
 
-#[derive(Hash, Debug, Clone, PartialOrd, Eq, Serialize, Deserialize)]
+#[derive(Hash, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Card {
     pub rank: u8,
     pub suit: u8,
@@ -64,16 +64,10 @@ impl Card {
             "s" => SPADES,
             _ => panic!("bad card string"),
         };
-        return Card {
-            rank: rank,
+        Card {
+            rank,
             suit: suit as u8,
-        };
-    }
-}
-
-impl PartialEq<Card> for Card {
-    fn eq(&self, other: &Self) -> bool {
-        self.rank == other.rank && self.suit == other.suit
+        }
     }
 }
 
@@ -81,7 +75,13 @@ impl Ord for Card {
     // orders first based on rank, and if ranks are equal, then on alphebetical
     // order of the suit
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        (self.rank, self.suit.clone()).cmp(&(other.rank, other.suit.clone()))
+        (self.rank, self.suit).cmp(&(other.rank, other.suit))
+    }
+}
+
+impl PartialOrd for Card {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -115,7 +115,7 @@ impl fmt::Display for Card {
             SPADES => "s",
             _ => panic!("Bad suit value"),
         };
-        write!(f, "{}{}", rank, suit)
+        write!(f, "{rank}{suit}")
     }
 }
 
@@ -125,16 +125,16 @@ pub fn deck() -> Vec<Card> {
     for rank in ranks {
         for suit in 0..4 {
             deck.push(Card {
-                rank: rank,
-                suit: suit,
+                rank,
+                suit,
             });
         }
     }
-    return deck;
+    deck
 }
 
-pub fn deepcopy(vec: &Vec<&Card>) -> Vec<Card> {
-    let vec = vec.clone();
+pub fn deepcopy(vec: &[&Card]) -> Vec<Card> {
+    let vec = vec.to_owned();
     let mut result: Vec<Card> = Vec::new();
     for v in vec {
         result.push(v.clone());
@@ -181,8 +181,8 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
 fn sort_isomorphic(cards: &[Card], streets: bool) -> Vec<Card> {
     let mut sorted;
     if streets && cards.len() > 2 {
-        let mut preflop = (&cards[..2]).to_vec();
-        let mut board = (&cards[2..]).to_vec();
+        let mut preflop = cards[..2].to_vec();
+        let mut board = cards[2..].to_vec();
         preflop.sort_unstable_by_key(|c| (c.suit, c.rank));
         board.sort_unstable_by_key(|c| (c.suit, c.rank));
         sorted = [preflop, board].concat();
@@ -249,11 +249,10 @@ impl FastHandTable {
 
     pub fn hand_strength(&self, hand: &[Card]) -> i32 {
         let compact = cards2bitmap(hand);
-        let strength = self
+        let strength = *self
             .strengths
             .get(&compact)
-            .expect(&format!("{} not in FastHandTable", compact))
-            .clone();
+            .unwrap_or_else(|| panic!("{}", "{compact} not in FastHandTable"));
         strength
     }
 
@@ -309,15 +308,15 @@ pub fn hand_strength(cards: &[Card]) -> i32 {
 // is how the length is determined. This byte representation allows for a
 // small memory footprint without needing to use Rust's lifetime parameters.
 pub fn card(hand: u64, card_index: i32) -> i32 {
-    ((hand & 0xFF << 8 * card_index) >> 8 * card_index) as i32
+    ((hand & 0xFF << (8 * card_index)) >> (8 * card_index)) as i32
 }
 
 pub fn suit(card: i32) -> i32 {
-    card / 15 as i32
+    card / 15_i32
 }
 
 pub fn rank(card: i32) -> i32 {
-    card % 15 as i32
+    card % 15_i32
 }
 
 pub fn len(hand: u64) -> i32 {
@@ -367,7 +366,7 @@ pub fn str2hand(hand_str: &str) -> u64 {
             _ => panic!("bad card string"),
         };
         let card = (15 * suit + rank) as u64;
-        result += card << 4 * i
+        result += card << (4 * i)
     }
     result
 }
@@ -413,8 +412,8 @@ pub fn hand2cards(hand: u64) -> Vec<Card> {
         let suit = suit(card(hand, i)) as u8;
         let rank = rank(card(hand, i)) as u8;
         result.push(Card {
-            suit: suit,
-            rank: rank,
+            suit,
+            rank,
         });
     }
     result
@@ -426,7 +425,7 @@ pub fn cards2hand(cards: &[Card]) -> u64 {
     let mut result = 0;
     for (i, card) in cards.iter().enumerate() {
         let card = (15 * card.suit + card.rank) as u64;
-        result += card << 8 * i;
+        result += card << (8 * i);
     }
     result
 }
@@ -481,10 +480,10 @@ fn load_isomorphic(n_cards: usize, path: &str) -> HashSet<u64> {
             isomorphic = deal_isomorphic(n_cards, true);
             let mut buffer = File::create(path).unwrap();
             for hand in &isomorphic {
-                buffer.write(hand2str(hand.clone()).as_bytes()).unwrap();
+                buffer.write(hand2str(*hand).as_bytes()).unwrap();
                 buffer.write(b"\n").unwrap();
             }
-            println!("[INFO] Wrote isomorphic hands to {}.", path);
+            println!("[INFO] Wrote isomorphic hands to {path}.");
         }
     };
     isomorphic
@@ -536,7 +535,7 @@ pub fn expected_hs2(hand: u64) -> f64 {
     let mut sum = 0.0;
     let mut count = 0.0;
     let mut deck = deck();
-    deck.retain(|c| !hand.contains(&c));
+    deck.retain(|c| !hand.contains(c));
 
     if hand.len() == 7 {
         let equity = EQUITY_TABLE.lookup(&hand);
@@ -551,17 +550,17 @@ pub fn expected_hs2(hand: u64) -> f64 {
         sum += equity.powi(2);
         count += 1.0;
     }
-    let average = sum / count;
-    average
+    
+    sum / count
 }
 
 fn river_equity(hand: Vec<Card>) -> f64 {
     // fn river_equity(hand: &[Card]) -> f64 {
     let mut deck = deck();
     // Remove the already-dealt cards from the deck
-    deck.retain(|c| !hand.contains(&c));
+    deck.retain(|c| !hand.contains(c));
 
-    let board = (&hand[2..]).to_vec();
+    let board = hand[2..].to_vec();
     let mut n_wins = 0.0;
     let mut n_runs = 0;
 
@@ -581,8 +580,8 @@ fn river_equity(hand: Vec<Card>) -> f64 {
             n_wins += 0.5;
         }
     }
-    let equity = n_wins / (n_runs as f64);
-    equity
+    
+    n_wins / (n_runs as f64)
 }
 
 // There are multiple places where I have to serialize a HashMap of cards->i32
@@ -607,7 +606,7 @@ impl EquityTable {
         match File::open(EQUITY_TABLE_PATH) {
             Err(_e) => {
                 let table = EquityTable::create();
-                EquityTable { table: table }
+                EquityTable { table }
             }
             Ok(file) => {
                 // Read from the file
@@ -624,13 +623,13 @@ impl EquityTable {
                     table.insert(hand, equity);
                 }
                 println!("[INFO] Done loading the equity lookup table.");
-                EquityTable { table: table }
+                EquityTable { table }
             }
         }
     }
 
     fn create() -> HashMap<u64, f64> {
-        let isomorphic: Vec<u64> = load_river_isomorphic().iter().map(|x| x.clone()).collect();
+        let isomorphic: Vec<u64> = load_river_isomorphic().iter().copied().collect();
 
         println!("[INFO] Creating the river equity lookup table...");
         let chunk_size = isomorphic.len() / NUM_THREADS;
@@ -655,7 +654,7 @@ impl EquityTable {
                         thread_pbar_tx
                             .send(1)
                             .expect("could not send pbar increment");
-                        (h.clone(), river_equity(hand2cards(h.clone())))
+                        (*h, river_equity(hand2cards(*h)))
                     })
                     .collect();
                 thread_tx.send(equities).expect("Could not send the equity");
@@ -686,9 +685,9 @@ impl EquityTable {
         // Serialize the equity table and construct the HashMap to return
         let mut buffer = File::create(EQUITY_TABLE_PATH).unwrap();
         for (hand, equity) in &equities {
-            let to_write = format!("{} {}\n", hand2str(hand.clone()), equity);
+            let to_write = format!("{} {}\n", hand2str(*hand), equity);
             buffer.write(to_write.as_bytes()).unwrap();
-            table.insert(hand.clone(), equity.clone());
+            table.insert(*hand, *equity);
         }
 
         println!("[INFO] Done creating the river equity lookup table.");
@@ -697,9 +696,8 @@ impl EquityTable {
 
     pub fn lookup(&self, hand: &[Card]) -> f64 {
         let hand = cards2hand(&isomorphic_hand(hand, true));
-        self.table
+        *self.table
             .get(&hand)
-            .expect(&format!("{} not in equity table", hand2str(hand)))
-            .clone()
+            .unwrap_or_else(|| panic!("{} not in equity table", hand2str(hand)))
     }
 }
