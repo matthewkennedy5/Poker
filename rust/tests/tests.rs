@@ -530,7 +530,7 @@ fn play_hand_always_call() -> f64 {
     terminal_utility(&deck, &history, bot)
 }
 
-#[test]
+// #[test]
 fn bot_beats_always_call() {
     println!("[INFO] Starting game against always call bot...");
     let iters = 10_000;

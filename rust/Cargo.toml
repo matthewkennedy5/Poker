@@ -36,6 +36,8 @@ incremental = true
 debug = true
 opt-level = 0
 
+[profile.bench]
+
 [[bench]]
 name="benches"
 harness=false
@@ -55,4 +57,3 @@ path="src/bin/exploit.rs"
 [[bin]]
 name = "preflop-chart"
 path="src/bin/preflop_chart.rs"
-
