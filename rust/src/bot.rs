@@ -8,11 +8,13 @@ use moka::sync::Cache;
 use std::collections::HashMap;
 use dashmap::DashMap;
 
+type PreflopCache = Cache<(i32, ActionHistory), HashMap<Action, f64>>;
+
 pub struct Bot {
     // Right now the blueprint stores the mixed strategy for each infoset. To reduce
     // memory usage, we could pre-sample actions and just store a mapping of infoset -> action.
     blueprint: Nodes,
-    preflop_cache: Cache<(Vec<Card>, Vec<Card>, ActionHistory), Action>,
+    preflop_cache: PreflopCache,
 }
 
 impl Bot {
@@ -20,26 +22,33 @@ impl Bot {
         let blueprint = load_nodes(&CONFIG.nodes_path);
         Bot {
             blueprint,
-            preflop_cache: Cache::new(10_000),
+            preflop_cache: Cache::new(100_000),
         }
     }
 
     pub fn get_action(&self, hand: &[Card], board: &[Card], history: &ActionHistory) -> Action {
         // TODO: This actually should cache strategies, not actions, but let's check the
         // speedup anyway
-        let key = (hand.to_vec(), board.to_vec(), history.clone());
-        match self.preflop_cache.get(&key) {
-            Some(action) => action,
+        let key = (ABSTRACTION.bin(hand), history.clone());
+        // TODO: Make a custom type for the HashMap<Action, f64>
+        let strategy: HashMap<Action, f64> = match self.preflop_cache.get(&key) {
+            Some(s) => s,
             None => {
                 let strategy = self.get_strategy(hand, board, history);
-                let action = sample_action_from_strategy(&strategy);
                 if history.street == PREFLOP {
-                    self.preflop_cache.insert(key, action.clone());
+                    self.preflop_cache.insert(key, strategy.clone());
                 }
-                action
+                strategy
             }
-        }
+        };
+        let action = sample_action_from_strategy(&strategy);
+        action
     }
+
+    // START HERE: You should see a significant speedup of the slumbot game if the preflop cache is working
+    // Right now it's 30s/hand, I'd expect it to get down to 10s/hand once the preflop cache is warmed up. 
+    // Also see what happens with your strategy training. Does it work? 
+    // Bigger problem: why is client_pos always 0? I'm always the out of position player? What?
 
     // Wrapper for the real time solving for the bot's strategy
     // TODO: Refactor this to maybe just input an infoset, or just a hand. The hole and board inputs add complexity

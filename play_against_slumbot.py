@@ -332,7 +332,7 @@ def BotAction(response):
             json = response.json()
             break
         except:
-            time.sleep(1)
+            time.sleep(10)
 
     action = json['action']
     amount = json['amount']
@@ -393,7 +393,7 @@ def Login(username, password):
     response = requests.post(f'https://{host}/api/login', json=data)
     success = getattr(response, 'status_code') == 200
     if not success:
-        print('Status code: %s' % repr(response.status_code))
+        print('Login failed: status code: %s' % repr(response.status_code))
         try:
             print('Error response: %s' % repr(response.json()))
         except ValueError:
@@ -417,9 +417,13 @@ def Login(username, password):
     return token
 
 
-def play_hand(dummy):
-    _, hand_winnings = PlayHand(None)
-    return hand_winnings
+def play_hands(num_hands):
+    token = None
+    scores = []
+    for i in trange(num_hands, smoothing=0):
+        token, score = PlayHand(token)
+        scores.append(score)
+    return scores
 
 
 def main():
@@ -436,12 +440,14 @@ def main():
         token = None
     
     num_hands = args.num_hands
+    num_procs = 100
+    hands_per_cpu = int(num_hands / num_procs)
+    input =[hands_per_cpu for p in range(num_procs)]
+
     scores = []
-    with mp.Pool(1) as pool:
-        for score in tqdm(pool.imap(play_hand, range(num_hands)), 
-                          total=num_hands,
-                          smoothing=0):
-            scores.append(score)
+    with mp.Pool(num_procs) as pool:
+        for score_list in tqdm(pool.imap(play_hands, input), total=num_hands, smoothing=0):
+            scores += score_list
 
     mean = np.mean(scores) / BIG_BLIND
     std = np.std(scores) / BIG_BLIND

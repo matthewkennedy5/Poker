@@ -411,6 +411,16 @@ fn no_bet_zero() {
 }
 
 #[test]
+fn slumbot_bet_size() {
+    let actions: Vec<Action> = vec![
+        Action{ action: ActionType::Bet, amount: 250 },
+        Action{ action: ActionType::Bet, amount: 750 },
+        Action{ action: ActionType::Bet, amount: 4375 }
+    ];
+    assert!(!bot_strategy_contains_amount(7750, "Qh5s", "", actions));
+}
+
+#[test]
 fn history_all_in_size_allowed() {
     let actions: Vec<Action> = vec![
         Action {
@@ -547,9 +557,7 @@ fn bot_beats_always_call() {
     let mean = statistical::mean(&winnings);
     let std = statistical::standard_deviation(&winnings, Some(mean));
     let confidence = 1.96 * std / (iters as f64).sqrt();
-    println!(
-        "Score against check/call bot: {mean} +/- {confidence} BB/h\n"
-    );
+    println!("Score against check/call bot: {mean} +/- {confidence} BB/h\n");
 }
 
 // TODO: Write a test to make sure that the nodes contain all the infosets (no gaps)
@@ -577,17 +585,17 @@ fn cpu_action_backend() {
 fn more_action_translation() {
     let history = ActionHistory::from_strings(vec![
         // Preflop
-        "Bet 200",      // 250
-        "Bet 1000",     // 1250
-        "Call 800",     // 1000
-        // Flop         
-        "Call 0",       // 0
-        "Bet 1000",     // 1250
-        "Bet 3000",     // 3750
-        "Call 2000",    // 2500
-        // Turn         
-        "Bet 4000",     // 5000
-        "Call 4000",    // 5000
+        "Bet 200",  // 250
+        "Bet 1000", // 1250
+        "Call 800", // 1000
+        // Flop
+        "Call 0",    // 0
+        "Bet 1000",  // 1250
+        "Bet 3000",  // 3750
+        "Call 2000", // 2500
+        // Turn
+        "Bet 4000",  // 5000
+        "Call 4000", // 5000
         // River
         "Bet 8000",
         "Bet 12000",
