@@ -2,6 +2,7 @@ use crate::card_abstraction::Abstraction;
 use crate::card_utils::*;
 use crate::config::CONFIG;
 use once_cell::sync::Lazy;
+use dashmap::DashMap;
 use rand::{prelude::SliceRandom, thread_rng};
 use std::{cmp::Eq, collections::HashMap, fmt, hash::Hash};
 
@@ -20,6 +21,8 @@ pub const FOLD: Action = Action {
 pub const ALL_IN: f64 = -1.0;
 
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
+
+pub type Nodes = DashMap<InfoSet, Node>;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ActionType {
@@ -451,7 +454,7 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
 }
 
 pub fn lookup_or_new(
-    nodes: &HashMap<InfoSet, Node>,
+    nodes: &Nodes,
     infoset: &InfoSet,
     bet_abstraction: &Vec<Vec<f64>>,
 ) -> Node {
@@ -636,7 +639,7 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
 
 // For making preflop charts
 // TODO: Use a bot instance -- this shouldnt depend on the node implementation. Orthogonality!
-// pub fn write_preflop_strategy(nodes: &HashMap<InfoSet, Node>, path: &str) {
+// pub fn write_preflop_strategy(nodes: &Nodes, path: &str) {
 //     let mut preflop_strategy: HashMap<String, HashMap<String, f64>> = HashMap::new();
 //     for (infoset, node) in nodes {
 //         if infoset.history.is_empty() {

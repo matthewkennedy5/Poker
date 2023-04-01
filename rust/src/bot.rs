@@ -5,11 +5,12 @@ use crate::trainer::*;
 use crate::trainer_utils::*;
 use moka::sync::Cache;
 use std::collections::HashMap;
+use dashmap::DashMap;
 
 pub struct Bot {
     // Right now the blueprint stores the mixed strategy for each infoset. To reduce
     // memory usage, we could pre-sample actions and just store a mapping of infoset -> action.
-    blueprint: HashMap<InfoSet, Node>,
+    blueprint: Nodes,
     preflop_cache: Cache<(Vec<Card>, Vec<Card>, ActionHistory), Action>,
 }
 
@@ -133,8 +134,8 @@ impl Bot {
         opp_range: &Range,
         opp_action: Action,
         iters: u64,
-    ) -> HashMap<InfoSet, Node> {
-        let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
+    ) -> Nodes {
+        let mut nodes: Nodes = DashMap::new();
         let mut bet_abstraction = CONFIG.bet_abstraction.clone();
         let pot_frac = (opp_action.amount as f64) / (history.pot() as f64);
         if opp_action.action == ActionType::Bet

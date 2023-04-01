@@ -13,6 +13,7 @@ extern crate rand;
 extern crate rayon;
 extern crate serde;
 extern crate serde_json;
+extern crate dashmap;
 
 mod backend;
 mod bot;

@@ -4,7 +4,9 @@ use crate::card_utils::Card;
 use crate::config::CONFIG;
 use crate::exploiter::*;
 use crate::trainer_utils::*;
+use dashmap::DashMap;
 use rand::prelude::*;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Write};
@@ -31,7 +33,7 @@ use std::io::{BufReader, Write};
 
 // pub fn train_until_convergence() -> u64 {
 //     let deck = card_utils::deck();
-//     let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
+//     let mut nodes: Nodes = HashMap::new();
 //     let starting_infoset = InfoSet::from_hand(
 //         &card_utils::str2cards("AsAh"),
 //         &Vec::new(),
@@ -63,7 +65,7 @@ use std::io::{BufReader, Write};
 
 pub fn train(iters: u64) {
     let deck = card_utils::deck();
-    let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
+    let mut nodes: Nodes = DashMap::new();
     println!("[INFO] Beginning training.");
     let bar = card_utils::pbar(iters);
     for i in 1..iters + 1 {
@@ -86,17 +88,26 @@ pub fn train(iters: u64) {
     serialize_nodes(&nodes);
 }
 
-pub fn load_nodes(path: &str) -> HashMap<InfoSet, Node> {
+pub fn load_nodes(path: &str) -> Nodes {
     println!("[INFO] Loading strategy at {path} ...");
     let file = File::open(path).expect("Nodes file not found");
     let reader = BufReader::new(file);
-    let nodes = bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
+    let hashmap: HashMap<InfoSet, Node> =
+        bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
+    let nodes: Nodes = hashmap
+        .into_iter()
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect();
     println!("[INFO] Done loading strategy");
     nodes
 }
 
-fn serialize_nodes(nodes: &HashMap<InfoSet, Node>) {
-    let bincode: Vec<u8> = bincode::serialize(nodes).unwrap();
+fn serialize_nodes(nodes: &Nodes) {
+    let nodes: HashMap<InfoSet, Node> = nodes
+        .into_iter()
+        .map(|entry| (entry.key().clone(), entry.value().clone()))
+        .collect();
+    let bincode: Vec<u8> = bincode::serialize(&nodes).unwrap();
     let mut file = File::create(&CONFIG.nodes_path).unwrap();
     file.write_all(&bincode).unwrap();
     println!("[INFO] Saved strategy.");
@@ -105,15 +116,14 @@ fn serialize_nodes(nodes: &HashMap<InfoSet, Node>) {
 pub fn cfr_iteration(
     deck: &[Card],
     history: &ActionHistory,
-    nodes: &mut HashMap<InfoSet, Node>,
+    nodes: &Nodes,
     bet_abstraction: &Vec<Vec<f64>>,
 ) {
-    let mut rng = rand::thread_rng();
-    let mut deck = deck.to_vec();
-    for player in [DEALER, OPPONENT].iter() {
-        deck.shuffle(&mut rng);
-        iterate(*player, &deck, history, [1.0, 1.0], nodes, bet_abstraction);
-    }
+    [DEALER, OPPONENT].par_iter().for_each(|&player| {
+        let mut deck = deck.to_vec();
+        deck.shuffle(&mut rand::thread_rng());
+        iterate(player, &deck, history, [1.0, 1.0], nodes, bet_abstraction);
+    });
 }
 
 pub fn iterate(
@@ -121,7 +131,7 @@ pub fn iterate(
     deck: &[Card],
     history: &ActionHistory,
     weights: [f64; 2],
-    nodes: &mut HashMap<InfoSet, Node>,
+    nodes: &Nodes,
     bet_abstraction: &Vec<Vec<f64>>,
 ) -> f64 {
     if history.hand_over() {

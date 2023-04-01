@@ -23,8 +23,8 @@ const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
 
 pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(FastHandTable::new);
 static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(EquityTable::new);
-static ISOMORPHIC_HAND_CACHE: Lazy<Cache<(Vec<Card>, bool), Vec<Card>>> =
-    Lazy::new(|| Cache::new(10_000));
+type IsomorphicHandCache = Cache<(Vec<Card>, bool), Vec<Card>>;
+static ISOMORPHIC_HAND_CACHE: Lazy<IsomorphicHandCache> = Lazy::new(|| Cache::new(10_000));
 
 pub const CLUBS: i32 = 0;
 pub const DIAMONDS: i32 = 1;
@@ -124,10 +124,7 @@ pub fn deck() -> Vec<Card> {
     let ranks = std::ops::Range { start: 2, end: 15 };
     for rank in ranks {
         for suit in 0..4 {
-            deck.push(Card {
-                rank,
-                suit,
-            });
+            deck.push(Card { rank, suit });
         }
     }
     deck
@@ -411,10 +408,7 @@ pub fn hand2cards(hand: u64) -> Vec<Card> {
     for i in 0..len(hand) {
         let suit = suit(card(hand, i)) as u8;
         let rank = rank(card(hand, i)) as u8;
-        result.push(Card {
-            suit,
-            rank,
-        });
+        result.push(Card { suit, rank });
     }
     result
 }
@@ -550,7 +544,7 @@ pub fn expected_hs2(hand: u64) -> f64 {
         sum += equity.powi(2);
         count += 1.0;
     }
-    
+
     sum / count
 }
 
@@ -580,7 +574,7 @@ fn river_equity(hand: Vec<Card>) -> f64 {
             n_wins += 0.5;
         }
     }
-    
+
     n_wins / (n_runs as f64)
 }
 
@@ -630,20 +624,15 @@ impl EquityTable {
 
     fn create() -> HashMap<u64, f64> {
         let isomorphic: Vec<u64> = load_river_isomorphic().iter().copied().collect();
-
         println!("[INFO] Creating the river equity lookup table...");
         let chunk_size = isomorphic.len() / NUM_THREADS;
-
         let chunks: Vec<Vec<u64>> = isomorphic
             .chunks(chunk_size)
             .map(|s| s.to_owned())
             .collect();
         let mut handles = Vec::new();
-
         let (tx, rx) = mpsc::channel();
-
         let (pbar_tx, pbar_rx) = mpsc::channel();
-
         for chunk in chunks {
             let thread_tx = tx.clone();
             let thread_pbar_tx = pbar_tx.clone();
@@ -660,7 +649,6 @@ impl EquityTable {
                 thread_tx.send(equities).expect("Could not send the equity");
             }));
         }
-
         let bar = pbar(isomorphic.len() as u64);
         for _i in 0..isomorphic.len() {
             let increment = pbar_rx.recv().unwrap();
@@ -669,7 +657,6 @@ impl EquityTable {
         bar.finish();
 
         let mut equities: Vec<(u64, f64)> = Vec::new();
-
         for _i in 0..handles.len() {
             let mut result = rx.recv().expect("Could not receive result");
             equities.append(&mut result);
@@ -678,7 +665,6 @@ impl EquityTable {
         for handle in handles {
             handle.join().expect("Could not join the threads");
         }
-
         let mut table = HashMap::new();
 
         println!("[INFO] Writing to disk");
@@ -696,7 +682,8 @@ impl EquityTable {
 
     pub fn lookup(&self, hand: &[Card]) -> f64 {
         let hand = cards2hand(&isomorphic_hand(hand, true));
-        *self.table
+        *self
+            .table
             .get(&hand)
             .unwrap_or_else(|| panic!("{} not in equity table", hand2str(hand)))
     }

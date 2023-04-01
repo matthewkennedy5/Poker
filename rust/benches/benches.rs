@@ -1,9 +1,10 @@
 use criterion::*;
 use optimus::*;
-use std::{collections::HashMap, time::Duration};
+use std::time::Duration;
+use dashmap::DashMap;
 
 fn bench_cfr(c: &mut Criterion) {
-    let mut nodes: HashMap<InfoSet, Node> = HashMap::new();
+    let mut nodes: Nodes = DashMap::new();
     let mut group = c.benchmark_group("cfr");
     group.warm_up_time(Duration::new(90, 0));
     group.bench_function("cfr", |b| {
@@ -11,7 +12,7 @@ fn bench_cfr(c: &mut Criterion) {
             cfr_iteration(
                 &deck(),
                 &ActionHistory::new(),
-                &mut nodes,
+                &nodes,
                 &CONFIG.bet_abstraction,
             )
         })
