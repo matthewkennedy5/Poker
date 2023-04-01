@@ -3,6 +3,7 @@ use crate::config::CONFIG;
 use crate::ranges::*;
 use crate::trainer::*;
 use crate::trainer_utils::*;
+use rayon::prelude::*;
 use moka::sync::Cache;
 use std::collections::HashMap;
 use dashmap::DashMap;
@@ -135,7 +136,7 @@ impl Bot {
         opp_action: Action,
         iters: u64,
     ) -> Nodes {
-        let mut nodes: Nodes = DashMap::new();
+        let nodes: Nodes = DashMap::new();
         let mut bet_abstraction = CONFIG.bet_abstraction.clone();
         let pot_frac = (opp_action.amount as f64) / (history.pot() as f64);
         if opp_action.action == ActionType::Bet
@@ -145,13 +146,13 @@ impl Bot {
             bet_abstraction[history.street].push(pot_frac);
         }
         bet_abstraction[history.street].push(pot_frac);
-        for _i in 0..iters {
+        (0..iters).into_par_iter().for_each(|_i| {
             let opp_hand = opp_range.sample_hand();
             let mut deck = card_utils::deck();
             // Remove opponent's cards (blockers) from the deck
             deck.retain(|card| !opp_hand.contains(card));
-            cfr_iteration(&deck, history, &mut nodes, &bet_abstraction);
-        }
+            cfr_iteration(&deck, history, &nodes, &bet_abstraction);
+        });
         nodes
     }
 }

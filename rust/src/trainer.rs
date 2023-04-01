@@ -65,14 +65,14 @@ use std::io::{BufReader, Write};
 
 pub fn train(iters: u64) {
     let deck = card_utils::deck();
-    let mut nodes: Nodes = DashMap::new();
+    let nodes: Nodes = DashMap::new();
     println!("[INFO] Beginning training.");
     let bar = card_utils::pbar(iters);
-    for i in 1..iters + 1 {
+    (1..iters + 1).into_par_iter().for_each(|i| {
         cfr_iteration(
             &deck,
             &ActionHistory::new(),
-            &mut nodes,
+            &nodes,
             &CONFIG.bet_abstraction,
         );
         if i % CONFIG.eval_every == 0 {
@@ -81,7 +81,7 @@ pub fn train(iters: u64) {
             exploitability(&bot, CONFIG.lbr_iters);
         }
         bar.inc(1);
-    }
+    });
     bar.finish();
 
     println!("{} nodes reached.", nodes.len());
@@ -119,7 +119,7 @@ pub fn cfr_iteration(
     nodes: &Nodes,
     bet_abstraction: &Vec<Vec<f64>>,
 ) {
-    [DEALER, OPPONENT].par_iter().for_each(|&player| {
+    [DEALER, OPPONENT].iter().for_each(|&player| {
         let mut deck = deck.to_vec();
         deck.shuffle(&mut rand::thread_rng());
         iterate(player, &deck, history, [1.0, 1.0], nodes, bet_abstraction);

@@ -47,6 +47,8 @@ SMALL_BLIND = 50
 BIG_BLIND = 100
 STACK_SIZE = 20000
 
+PRINT = True
+
 def ParseAction(action):
     """
     Returns a dict with information about the action passed in.
@@ -330,7 +332,6 @@ def BotAction(response):
             json = response.json()
             break
         except:
-            print("Error:", data)
             time.sleep(1)
 
     action = json['action']
@@ -353,10 +354,10 @@ def PlayHand(token):
     new_token = r.get('token')
     if new_token:
         token = new_token
-    # print('Token: %s' % token)
     while True:
-        # print('-----------------')
-        # print(repr(r))
+        if PRINT:
+            print('-----------------')
+            print(repr(r))
         action = r.get('action')
         client_pos = r.get('client_pos')
         hole_cards = r.get('hole_cards')
@@ -368,7 +369,8 @@ def PlayHand(token):
         # print('Client hole cards: %s' % repr(hole_cards))
         # print('Board: %s' % repr(board))
         if winnings is not None:
-            # print('Hand winnings: %i' % winnings)
+            if PRINT:
+                print('Hand winnings: %i' % winnings)
             return (token, winnings)
         # Need to check or call
         a = ParseAction(action)
@@ -377,7 +379,8 @@ def PlayHand(token):
             sys.exit(-1)
         incr = BotAction(r)
 
-        # print('Sending incremental action: %s' % incr)
+        if PRINT:
+            print('Sending incremental action: %s' % incr)
         r = Act(token, incr)
         
     # Should never get here
@@ -434,7 +437,7 @@ def main():
     
     num_hands = args.num_hands
     scores = []
-    with mp.Pool(mp.cpu_count()) as pool:
+    with mp.Pool(1) as pool:
         for score in tqdm(pool.imap(play_hand, range(num_hands)), 
                           total=num_hands,
                           smoothing=0):
