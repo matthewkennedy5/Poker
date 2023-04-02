@@ -14,6 +14,7 @@ use std::{
     thread,
     time::Duration,
 };
+use smallvec::{SmallVec, ToSmallVec};
 
 const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.bin";
 const EQUITY_TABLE_PATH: &str = "products/equity_table.txt";
@@ -23,8 +24,9 @@ const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
 
 pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(FastHandTable::new);
 static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(EquityTable::new);
-type IsomorphicHandCache = Cache<(Vec<Card>, bool), Vec<Card>>;
-static ISOMORPHIC_HAND_CACHE: Lazy<IsomorphicHandCache> = Lazy::new(|| Cache::new(10_000));
+type SmallVecHand = SmallVec<[Card; 7]>;
+type IsomorphicHandCache = Cache<(SmallVecHand, bool), SmallVecHand>;
+static ISOMORPHIC_HAND_CACHE: Lazy<IsomorphicHandCache> = Lazy::new(|| Cache::new(100_000));
 
 pub const CLUBS: i32 = 0;
 pub const DIAMONDS: i32 = 1;
@@ -33,7 +35,7 @@ pub const SPADES: i32 = 3;
 
 const NUM_THREADS: usize = 100; // Number of threads to use in parallel loops
 
-#[derive(Hash, Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Hash, Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Card {
     pub rank: u8,
     pub suit: u8,
@@ -175,36 +177,37 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
 // for example a 5-card flush of hearts is essentially the same as a 5-card
 // flush of diamonds. This function maps the set of all hands to the much
 // smaller set of distinct isomorphic hands.
-fn sort_isomorphic(cards: &[Card], streets: bool) -> Vec<Card> {
-    let mut sorted;
+fn sort_isomorphic(cards: &[Card], streets: bool) -> SmallVecHand {
+    let mut sorted: SmallVecHand = SmallVec::with_capacity(7);
     if streets && cards.len() > 2 {
-        let mut preflop = cards[..2].to_vec();
-        let mut board = cards[2..].to_vec();
-        preflop.sort_unstable_by_key(|c| (c.suit, c.rank));
-        board.sort_unstable_by_key(|c| (c.suit, c.rank));
-        sorted = [preflop, board].concat();
+        let mut preflop: SmallVecHand = cards[..2].to_smallvec();
+        let mut board: SmallVecHand = cards[2..].to_smallvec();
+        preflop.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
+        board.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
+        sorted.extend(preflop);
+        sorted.extend(board);
     } else {
-        sorted = cards.to_vec();
+        sorted = cards.to_smallvec();
         sorted.sort_unstable_by_key(|c| (c.suit, c.rank));
     }
     sorted
 }
 
 // https://stackoverflow.com/a/3831682
-pub fn isomorphic_hand(cards: &[Card], streets: bool) -> Vec<Card> {
-    let inputs = (cards.to_vec(), streets);
+pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVec<[Card; 7]> {
+    let inputs = (cards.to_smallvec(), streets);
     if let Some(iso) = ISOMORPHIC_HAND_CACHE.get(&inputs) {
         return iso;
     }
 
     let cards = sort_isomorphic(cards, streets);
 
-    let mut by_suits: Vec<Vec<u8>> = vec![Vec::new(); 4];
+    let mut by_suits: SmallVec<[SmallVec<[u8; 7]>; 4]> = smallvec![smallvec![0; 7]; 4];
     for card in &cards {
         by_suits[card.suit as usize].push(card.rank);
     }
 
-    let mut suit_indices: Vec<usize> = (0..4).collect();
+    let mut suit_indices: SmallVec<[usize; 4]> = (0..4).collect();
     suit_indices.sort_unstable_by(|a, b| {
         let a_len = by_suits[*a].len();
         let b_len = by_suits[*b].len();
@@ -220,7 +223,7 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> Vec<Card> {
         suit_mapping[old_suit] = new_suit;
     }
 
-    let mut isomorphic: Vec<Card> = cards
+    let mut isomorphic: SmallVec<[Card; 7]> = cards
         .into_iter()
         .map(|card| Card {
             rank: card.rank,
