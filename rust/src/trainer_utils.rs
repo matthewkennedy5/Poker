@@ -196,34 +196,6 @@ impl ActionHistory {
         self.stacks[self.player]
     }
 
-    // // Returns a vector of the possible next actions after this state, that are
-    // // allowed in our action abstraction.
-    // pub fn next_actions(&self, bet_abstraction: &[Vec<f64>]) -> Vec<Action> {
-    //     // Add all the potential bet sizes in the abstraction, and call and fold actions.
-    //     // Then later we filter out the illegal actions.
-    //     let mut candidate_actions = Vec::new();
-    //     let pot = self.pot();
-    //     for fraction in bet_abstraction[self.street].iter() {
-    //         let bet = if fraction == &ALL_IN {
-    //             self.stacks[self.player]
-    //         } else {
-    //             (*fraction * (pot as f64)) as i32
-    //         };
-    //         candidate_actions.push(Action {
-    //             action: ActionType::Bet,
-    //             amount: bet,
-    //         });
-    //     }
-    //     candidate_actions.push(Action {
-    //         action: ActionType::Call,
-    //         amount: self.to_call(),
-    //     });
-    //     candidate_actions.push(FOLD);
-    //     candidate_actions.retain(|a| self.is_legal_next_action(a));
-
-    //     candidate_actions
-    // }
-
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
     pub fn next_actions(&self, bet_abstraction: &[Vec<f64>]) -> SmallVec<[Action; NUM_ACTIONS]> {

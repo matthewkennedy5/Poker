@@ -4,7 +4,7 @@ use std::time::Duration;
 use dashmap::DashMap;
 
 fn bench_cfr(c: &mut Criterion) {
-    let mut nodes: Nodes = DashMap::new();
+    let nodes: Nodes = DashMap::new();
     let mut group = c.benchmark_group("cfr");
     group.warm_up_time(Duration::new(90, 0));
     group.bench_function("cfr", |b| {

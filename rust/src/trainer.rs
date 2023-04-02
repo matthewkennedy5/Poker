@@ -162,7 +162,7 @@ pub fn iterate(
         return 0.0;
     }
     let actions = infoset.next_actions(bet_abstraction);
-    let strategy: Vec<f64> = node.current_strategy(weights[player]);
+    let strategy = node.current_strategy(weights[player]);
     let mut utilities: Vec<f64> = Vec::new();
     let mut node_utility = 0.0;
 
