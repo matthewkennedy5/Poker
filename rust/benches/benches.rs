@@ -32,6 +32,6 @@ fn bench_isomorphic_hand(c: &mut Criterion) {
 criterion_group!(
     name=benches;
     config=Criterion::default().configure_from_args();
-    targets=bench_cfr, bench_isomorphic_hand
+    targets=bench_cfr, bench_isomorphic_hand 
 );
 criterion_main!(benches);

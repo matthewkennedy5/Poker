@@ -69,7 +69,7 @@ pub fn train(iters: u64) {
     let nodes: Nodes = DashMap::new();
     println!("[INFO] Beginning training.");
     let bar = card_utils::pbar(iters);
-    (1..iters + 1).into_iter().for_each(|i| {
+    (1..iters + 1).into_par_iter().for_each(|i| {
         cfr_iteration(
             &deck,
             &ActionHistory::new(),

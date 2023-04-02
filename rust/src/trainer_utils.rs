@@ -434,7 +434,7 @@ impl InfoSet {
         }
     }
 
-    pub fn next_actions(&self, bet_abstraction: &Vec<Vec<f64>>) -> SmallVec<[Action; NUM_ACTIONS]> {
+    pub fn next_actions(&self, bet_abstraction: &[Vec<f64>]) -> SmallVec<[Action; NUM_ACTIONS]> {
         self.history.next_actions(bet_abstraction)
     }
 }
@@ -479,7 +479,7 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(infoset: &InfoSet, bet_abstraction: &Vec<Vec<f64>>) -> Node {
+    pub fn new(infoset: &InfoSet, bet_abstraction: &[Vec<f64>]) -> Node {
         // Create a HashMap of action -> 0.0 to initialize the regrets and
         // cumulative strategy sum
         let actions = infoset.next_actions(bet_abstraction);

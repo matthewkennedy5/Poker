@@ -122,7 +122,7 @@ impl fmt::Display for Card {
 }
 
 pub fn deck() -> Vec<Card> {
-    let mut deck = Vec::new();
+    let mut deck = Vec::with_capacity(52);
     let ranks = std::ops::Range { start: 2, end: 15 };
     for rank in ranks {
         for suit in 0..4 {

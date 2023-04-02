@@ -107,7 +107,7 @@ impl Bot {
 
         let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
 
-        let nodes = self.solve_subgame(
+        let nodes = Bot::solve_subgame(
             &subgame_root,
             &opp_range,
             history.last_action().unwrap(),
@@ -141,8 +141,7 @@ impl Bot {
     //
     // Returns:
     //      nodes: The solved CFR tree nodes for each infoset in the subgame
-    fn solve_subgame(
-        &self,
+    pub fn solve_subgame(
         history: &ActionHistory,
         opp_range: &Range,
         opp_action: Action,
