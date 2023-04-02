@@ -54,7 +54,7 @@ impl fmt::Display for Action {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ActionHistory {
-    history: Vec<Vec<Action>>, // Each index is a street
+    history: SmallVec<[SmallVec<[Action; 10]>; 4]>, // Each index is a street
     last_action: Option<Action>,
     pub street: usize,
     pub player: usize,
@@ -64,7 +64,7 @@ pub struct ActionHistory {
 impl ActionHistory {
     pub fn new() -> ActionHistory {
         ActionHistory {
-            history: vec![Vec::new(); 4],
+            history: smallvec![SmallVec::with_capacity(10); 4],
             street: PREFLOP,
             last_action: None,
             player: DEALER,
