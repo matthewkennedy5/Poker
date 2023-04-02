@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = {version = "1.0", features = ["derive"]}
+serde = {version = "*", features = ["derive"]}
 serde_json = "*"
 itertools = "*"
 indicatif = "*"
@@ -24,13 +24,13 @@ actix-cors = "*"
 toml = "*"
 rs_poker = "1.0.0"
 moka = "*"
-criterion = { version = "0.4", features = ["html_reports"] }
+criterion = { version = "*", features = ["html_reports"] }
 dashmap = "*"
 smallvec = { version = "*", features = ["serde"] }
 
 [profile.release]
 debug = true
-debug-assertions = true
+debug-assertions = false
 incremental = true
 # lto = true
 
