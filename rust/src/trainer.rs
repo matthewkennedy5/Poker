@@ -10,6 +10,7 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Write};
+use smallvec::SmallVec;
 
 // fn check_convergence(prev_node: &Node, curr_node: &Node) -> bool {
 //     if curr_node.t < 1000.0 {
@@ -163,7 +164,7 @@ pub fn iterate(
     }
     let actions = infoset.next_actions(bet_abstraction);
     let strategy = node.current_strategy(weights[player]);
-    let mut utilities: Vec<f64> = Vec::new();
+    let mut utilities: SmallVec<[f64; NUM_ACTIONS]> = SmallVec::with_capacity(NUM_ACTIONS);
     let mut node_utility = 0.0;
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.

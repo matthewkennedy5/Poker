@@ -20,7 +20,9 @@ pub const FOLD: Action = Action {
     amount: 0,
 };
 pub const ALL_IN: f64 = -1.0;
-pub const NUM_ACTIONS: usize = 10;  // Upper limit on branching factor of blueprint game tree
+
+// Upper limit on branching factor of blueprint game tree. For setting the SmallVec size.
+pub const NUM_ACTIONS: usize = 10;  
 
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 
@@ -492,14 +494,14 @@ impl Node {
     // Returns the current strategy for this node, and updates the cumulative strategy
     // as a side effect.
     // Input: prob is the probability of reaching this node
-    pub fn current_strategy(&mut self, prob: f64) -> Vec<f64> {
+    pub fn current_strategy(&mut self, prob: f64) -> SmallVec<[f64; NUM_ACTIONS]> {
         // Normalize the regrets for this iteration of CFR
-        let positive_regrets: Vec<f64> = self
+        let positive_regrets: SmallVec<[f64; NUM_ACTIONS]> = self
             .regrets
             .iter()
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
-        let regret_norm: Vec<f64> = normalize_vec(&positive_regrets);
+        let regret_norm: SmallVec<[f64; NUM_ACTIONS]>= normalize_smallvec(&positive_regrets);
         for i in 0..regret_norm.len() {
             // Add this action's probability to the cumulative strategy sum using DCFR+ update rules
             let new_prob = regret_norm[i] * prob;
@@ -512,8 +514,8 @@ impl Node {
         regret_norm
     }
 
-    pub fn cumulative_strategy(&self) -> Vec<f64> {
-        normalize_vec(&self.strategy_sum)
+    pub fn cumulative_strategy(&self) -> SmallVec<[f64; NUM_ACTIONS]> {
+        normalize_smallvec(&self.strategy_sum)
     }
 
     pub fn add_regret(&mut self, action_index: usize, regret: f64) {
@@ -550,12 +552,12 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64>
     map
 }
 
-fn normalize_vec(v: &[f64]) -> Vec<f64> {
+fn normalize_smallvec(v: &[f64]) -> SmallVec<[f64; NUM_ACTIONS]> {
     for elem in v {
         assert!(*elem >= 0.0);
     }
     let sum: f64 = v.iter().sum();
-    let norm: Vec<f64> = v
+    let norm: SmallVec<[f64; NUM_ACTIONS]> = v
         .iter()
         .map(|e| {
             if sum == 0.0 {
@@ -579,7 +581,7 @@ fn normalize_vec(v: &[f64]) -> Vec<f64> {
 // Randomly sample an action given the strategy at this node.
 pub fn sample_action_from_node(node: &mut Node) -> Action {
     let strategy = node.current_strategy(0.0);
-    let action_indexes: Vec<usize> = (0..node.actions.len()).collect();
+    let action_indexes: SmallVec<[usize; NUM_ACTIONS]> = (0..node.actions.len()).collect();
     let index: usize = *action_indexes
         .choose_weighted(&mut thread_rng(), |i| strategy[(*i)])
         .unwrap_or_else(|_| panic!("Invalid strategy distribution: {:?}", &strategy));

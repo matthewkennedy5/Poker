@@ -81,7 +81,7 @@ impl Bot {
         let translated = history.translate(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(hole, board, &translated);
         let node = lookup_or_new(&self.blueprint, &infoset, &CONFIG.bet_abstraction);
-        let node_strategy: Vec<f64> = node.cumulative_strategy();
+        let node_strategy: Vec<f64> = node.cumulative_strategy().to_vec();
 
         let mut adjusted_strategy: HashMap<Action,f64> = HashMap::new();
         for (action, prob) in node.actions.iter().zip(node_strategy.iter()) {
@@ -121,7 +121,7 @@ impl Bot {
         let node = lookup_or_new(&nodes, &infoset, &CONFIG.bet_abstraction);
 
         let mut strategy: HashMap<Action, f64> = HashMap::new();
-        let probs: Vec<f64> = node.cumulative_strategy();
+        let probs: Vec<f64> = node.cumulative_strategy().to_vec();
         for (action, prob) in node.actions.iter().zip(probs.iter()) {
             strategy.insert(action.clone(), *prob);
         }
