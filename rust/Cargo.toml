@@ -26,6 +26,7 @@ rs_poker = "1.0.0"
 moka = "*"
 criterion = { version = "0.4", features = ["html_reports"] }
 dashmap = "*"
+smallvec = { version = "*", features = ["serde"] }
 
 [profile.release]
 debug = true

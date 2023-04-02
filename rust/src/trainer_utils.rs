@@ -5,6 +5,7 @@ use once_cell::sync::Lazy;
 use dashmap::DashMap;
 use rand::{prelude::SliceRandom, thread_rng};
 use std::{cmp::Eq, collections::HashMap, fmt, hash::Hash};
+use smallvec::SmallVec;
 
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
@@ -19,6 +20,7 @@ pub const FOLD: Action = Action {
     amount: 0,
 };
 pub const ALL_IN: f64 = -1.0;
+pub const NUM_ACTIONS: usize = 10;  // Upper limit on branching factor of blueprint game tree
 
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 
@@ -194,31 +196,61 @@ impl ActionHistory {
         self.stacks[self.player]
     }
 
+    // // Returns a vector of the possible next actions after this state, that are
+    // // allowed in our action abstraction.
+    // pub fn next_actions(&self, bet_abstraction: &[Vec<f64>]) -> Vec<Action> {
+    //     // Add all the potential bet sizes in the abstraction, and call and fold actions.
+    //     // Then later we filter out the illegal actions.
+    //     let mut candidate_actions = Vec::new();
+    //     let pot = self.pot();
+    //     for fraction in bet_abstraction[self.street].iter() {
+    //         let bet = if fraction == &ALL_IN {
+    //             self.stacks[self.player]
+    //         } else {
+    //             (*fraction * (pot as f64)) as i32
+    //         };
+    //         candidate_actions.push(Action {
+    //             action: ActionType::Bet,
+    //             amount: bet,
+    //         });
+    //     }
+    //     candidate_actions.push(Action {
+    //         action: ActionType::Call,
+    //         amount: self.to_call(),
+    //     });
+    //     candidate_actions.push(FOLD);
+    //     candidate_actions.retain(|a| self.is_legal_next_action(a));
+
+    //     candidate_actions
+    // }
+
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
-    pub fn next_actions(&self, bet_abstraction: &[Vec<f64>]) -> Vec<Action> {
+    pub fn next_actions(&self, bet_abstraction: &[Vec<f64>]) -> SmallVec<[Action; NUM_ACTIONS]> {
         // Add all the potential bet sizes in the abstraction, and call and fold actions.
         // Then later we filter out the illegal actions.
-        let mut candidate_actions = Vec::new();
         let pot = self.pot();
-        for fraction in bet_abstraction[self.street].iter() {
-            let bet = if fraction == &ALL_IN {
-                self.stacks[self.player]
-            } else {
-                (*fraction * (pot as f64)) as i32
-            };
-            candidate_actions.push(Action {
-                action: ActionType::Bet,
-                amount: bet,
-            });
-        }
+        let mut candidate_actions: SmallVec<[Action; NUM_ACTIONS]> = bet_abstraction[self.street]
+            .iter()
+            .map(|fraction| {
+                let bet_size = if fraction == &ALL_IN {
+                    self.stacks[self.player]
+                } else {
+                    (*fraction * (pot as f64)) as i32
+                };
+                Action {
+                    action: ActionType::Bet,
+                    amount: bet_size
+                }
+            })
+            .collect();
+
         candidate_actions.push(Action {
             action: ActionType::Call,
             amount: self.to_call(),
         });
         candidate_actions.push(FOLD);
         candidate_actions.retain(|a| self.is_legal_next_action(a));
-
         candidate_actions
     }
 
@@ -428,7 +460,7 @@ impl InfoSet {
         }
     }
 
-    pub fn next_actions(&self, bet_abstraction: &Vec<Vec<f64>>) -> Vec<Action> {
+    pub fn next_actions(&self, bet_abstraction: &Vec<Vec<f64>>) -> SmallVec<[Action; NUM_ACTIONS]> {
         self.history.next_actions(bet_abstraction)
     }
 }
@@ -466,9 +498,9 @@ pub fn lookup_or_new(
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
-    pub regrets: Vec<f64>,
-    strategy_sum: Vec<f64>,
-    pub actions: Vec<Action>,
+    pub regrets: SmallVec<[f64; NUM_ACTIONS]>,
+    strategy_sum: SmallVec<[f64; NUM_ACTIONS]>,
+    pub actions: SmallVec<[Action; NUM_ACTIONS]>,
     pub t: f64,
 }
 
@@ -478,8 +510,8 @@ impl Node {
         // cumulative strategy sum
         let actions = infoset.next_actions(bet_abstraction);
         Node {
-            regrets: vec![0.0; actions.len()],
-            strategy_sum: vec![0.0; actions.len()],
+            regrets: smallvec![0.0; actions.len()],
+            strategy_sum: smallvec![0.0; actions.len()],
             actions,
             t: 0.0,
         }

@@ -14,6 +14,8 @@ extern crate rayon;
 extern crate serde;
 extern crate serde_json;
 extern crate dashmap;
+#[macro_use]
+extern crate smallvec;
 
 mod backend;
 mod bot;

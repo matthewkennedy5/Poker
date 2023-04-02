@@ -17,6 +17,9 @@ pub struct Bot {
     preflop_cache: PreflopCache,
 }
 
+// TODO: Better cache strategy on preflop?
+// Always cache <=1 move histories, precompute? Seems like that's most of the waiting time. 
+
 impl Bot {
     pub fn new() -> Bot {
         let blueprint = load_nodes(&CONFIG.nodes_path);
