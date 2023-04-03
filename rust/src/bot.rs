@@ -48,11 +48,6 @@ impl Bot {
         action
     }
 
-    // START HERE: You should see a significant speedup of the slumbot game if the preflop cache is working
-    // Right now it's 30s/hand, I'd expect it to get down to 10s/hand once the preflop cache is warmed up. 
-    // Also see what happens with your strategy training. Does it work? 
-    // Bigger problem: why is client_pos always 0? I'm always the out of position player? What?
-
     // Wrapper for the real time solving for the bot's strategy
     // TODO: Refactor this to maybe just input an infoset, or just a hand. The hole and board inputs add complexity
     // since it's different than the rest of the codebase.
@@ -110,8 +105,9 @@ impl Bot {
         let nodes = Bot::solve_subgame(
             &subgame_root,
             &opp_range,
-            history.last_action().unwrap(),
+            &history.last_action().unwrap(),
             CONFIG.subgame_iters,
+            CONFIG.depth_limit
         );
 
         // That gives us our strategy in response to their action.
@@ -144,8 +140,9 @@ impl Bot {
     pub fn solve_subgame(
         history: &ActionHistory,
         opp_range: &Range,
-        opp_action: Action,
+        opp_action: &Action,
         iters: u64,
+        depth_limit: i32
     ) -> Nodes {
         let nodes: Nodes = DashMap::new();
         let mut bet_abstraction = CONFIG.bet_abstraction.clone();
@@ -162,7 +159,7 @@ impl Bot {
             let mut deck = card_utils::deck();
             // Remove opponent's cards (blockers) from the deck
             deck.retain(|card| !opp_hand.contains(card));
-            cfr_iteration(&deck, history, &nodes, &bet_abstraction);
+            cfr_iteration(&deck, history, &nodes, &bet_abstraction, depth_limit);
         });
         nodes
     }

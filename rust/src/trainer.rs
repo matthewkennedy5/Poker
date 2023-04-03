@@ -7,10 +7,10 @@ use crate::trainer_utils::*;
 use dashmap::DashMap;
 use rand::prelude::*;
 use rayon::prelude::*;
+use smallvec::SmallVec;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Write};
-use smallvec::SmallVec;
 
 // fn check_convergence(prev_node: &Node, curr_node: &Node) -> bool {
 //     if curr_node.t < 1000.0 {
@@ -75,6 +75,7 @@ pub fn train(iters: u64) {
             &ActionHistory::new(),
             &nodes,
             &CONFIG.bet_abstraction,
+            -1,
         );
         if i % CONFIG.eval_every == 0 {
             serialize_nodes(&nodes);
@@ -119,11 +120,20 @@ pub fn cfr_iteration(
     history: &ActionHistory,
     nodes: &Nodes,
     bet_abstraction: &Vec<Vec<f64>>,
+    depth_limit: i32,
 ) {
     [DEALER, OPPONENT].iter().for_each(|&player| {
         let mut deck = deck.to_vec();
         deck.shuffle(&mut rand::thread_rng());
-        iterate(player, &deck, history, [1.0, 1.0], nodes, bet_abstraction);
+        iterate(
+            player,
+            &deck,
+            history,
+            [1.0, 1.0],
+            nodes,
+            bet_abstraction,
+            depth_limit,
+        );
     });
 }
 
@@ -133,7 +143,8 @@ pub fn iterate(
     history: &ActionHistory,
     weights: [f64; 2],
     nodes: &Nodes,
-    bet_abstraction: &Vec<Vec<f64>>,
+    bet_abstraction: &[Vec<f64>],
+    remaining_depth: i32,
 ) -> f64 {
     if history.hand_over() {
         return terminal_utility(deck, history, player);
@@ -145,11 +156,25 @@ pub fn iterate(
     let mut infoset = InfoSet::from_deck(deck, &history);
     let mut node = lookup_or_new(nodes, &infoset, bet_abstraction);
 
+    // Depth limited solving - just sample actions until the end of the game to estimate the utility
+    // TODO: Let the opponent choose between several strategies
+    if remaining_depth == 0 {
+        loop {
+            infoset = InfoSet::from_deck(deck, &history);
+            node = lookup_or_new(nodes, &infoset, bet_abstraction);
+            let action = sample_action_from_node(&mut node, true);
+            history.add(&action);
+            if history.hand_over() {
+                return terminal_utility(deck, &history, player);
+            }
+        }
+    }
+
     // If it's not our turn, we sample the other player's action from their
     // current policy, and load our node.
     let opponent = 1 - player;
     if history.player == opponent {
-        history.add(&sample_action_from_node(&mut node));
+        history.add(&sample_action_from_node(&mut node, false));
         if history.hand_over() {
             return terminal_utility(deck, &history, player);
         }
@@ -183,6 +208,7 @@ pub fn iterate(
             new_weights,
             nodes,
             bet_abstraction,
+            remaining_depth - 1,
         );
         utilities.push(utility);
         node_utility += prob * utility;

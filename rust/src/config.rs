@@ -39,6 +39,7 @@ pub struct Config {
     // Real time solving
     pub subgame_solving: bool,
     pub subgame_iters: u64,
+    pub depth_limit: i32,
 
     // Preflop chart
     pub preflop_strategy_path: String,

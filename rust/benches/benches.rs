@@ -3,6 +3,8 @@ use optimus::*;
 use std::time::Duration;
 use dashmap::DashMap;
 
+// TODO: add a bench for the realtime solving time
+
 fn bench_cfr(c: &mut Criterion) {
     let nodes: Nodes = DashMap::new();
     let mut group = c.benchmark_group("cfr");
@@ -14,6 +16,7 @@ fn bench_cfr(c: &mut Criterion) {
                 &ActionHistory::new(),
                 &nodes,
                 &CONFIG.bet_abstraction,
+                -1
             )
         })
     });

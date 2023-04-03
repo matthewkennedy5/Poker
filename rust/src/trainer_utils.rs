@@ -462,7 +462,7 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
 pub fn lookup_or_new(
     nodes: &Nodes,
     infoset: &InfoSet,
-    bet_abstraction: &Vec<Vec<f64>>,
+    bet_abstraction: &[Vec<f64>],
 ) -> Node {
     match nodes.get(infoset) {
         Some(n) => n.clone(),
@@ -578,9 +578,12 @@ fn normalize_smallvec(v: &[f64]) -> SmallVec<[f64; NUM_ACTIONS]> {
     norm
 }
 
-// Randomly sample an action given the strategy at this node.
-pub fn sample_action_from_node(node: &mut Node) -> Action {
-    let strategy = node.current_strategy(0.0);
+// Randomly sample an action given the current strategy at this node.
+pub fn sample_action_from_node(node: &mut Node, cumulative: bool) -> Action {
+    let strategy = match cumulative {
+        true => node.cumulative_strategy(),
+        false => node.current_strategy(0.0),
+    };
     let action_indexes: SmallVec<[usize; NUM_ACTIONS]> = (0..node.actions.len()).collect();
     let index: usize = *action_indexes
         .choose_weighted(&mut thread_rng(), |i| strategy[(*i)])
