@@ -3,7 +3,6 @@ use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use rs_poker::core::{Hand, Rank, Rankable};
 use serde::{Deserialize, Serialize};
-use std::sync::mpsc;
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -12,6 +11,7 @@ use std::{
     path::Path,
     thread,
     time::Duration,
+    sync::mpsc,
 };
 use smallvec::{SmallVec, ToSmallVec};
 
@@ -21,10 +21,11 @@ const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
 
-pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(FastHandTable::new);
-static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(EquityTable::new);
 type SmallVecHand = SmallVec<[Card; 7]>;
 type IsomorphicHandCache = Cache<(SmallVecHand, bool), SmallVecHand>;
+
+pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(FastHandTable::new);
+static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(EquityTable::new);
 static ISOMORPHIC_HAND_CACHE: Lazy<IsomorphicHandCache> = Lazy::new(|| Cache::new(100_000));
 
 pub const CLUBS: i32 = 0;
