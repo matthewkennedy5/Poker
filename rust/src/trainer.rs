@@ -11,58 +11,6 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
 
-// fn check_convergence(prev_node: &Node, curr_node: &Node) -> bool {
-//     if curr_node.t < 1000.0 {
-//         return false;
-//     }
-//     let curr_strat = curr_node.cumulative_strategy();
-//     let prev_strat = prev_node.cumulative_strategy();
-//     for (action, prob) in &curr_strat {
-//         let prev_prob = prev_strat.get(&action).unwrap();
-//         if (prob - prev_prob).abs() > 0.01 {
-//             return false;
-//         }
-//         if prob.clone() == 1.0 / (curr_strat.len() as f64) {
-//             // If the strategy is a uniform probability distribution, then it's stable but hasn't
-//             // been trained yet
-//             return false;
-//         }
-//     }
-//     return true;
-// }
-
-// pub fn train_until_convergence() -> u64 {
-//     let deck = card_utils::deck();
-//     let mut nodes: Nodes = HashMap::new();
-//     let starting_infoset = InfoSet::from_hand(
-//         &card_utils::str2cards("AsAh"),
-//         &Vec::new(),
-//         &ActionHistory::new(),
-//     );
-//     let mut prev_node = Node::new(&starting_infoset, &CONFIG.bet_abstraction);
-//     let mut counter: i32 = 1;
-//     println!("[INFO] Beginning training.");
-//     let bar = card_utils::pbar(1_000_000);
-//     loop {
-//         cfr_iteration(
-//             &deck,
-//             &ActionHistory::new(),
-//             &mut nodes,
-//             &CONFIG.bet_abstraction,
-//         );
-//         let node = lookup_or_new(&nodes, &starting_infoset, &CONFIG.bet_abstraction);
-//         println!("{}, {}: {:?}", counter, node.t, node.regrets);
-//         if check_convergence(&prev_node, &node) {
-//             break;
-//         }
-//         prev_node = node.clone();
-//         counter += 1;
-//         bar.inc(1);
-//     }
-//     bar.finish();
-//     counter as u64
-// }
-
 pub fn train(iters: u64) {
     let deck = card_utils::deck();
     let nodes: Nodes = DashMap::new();
