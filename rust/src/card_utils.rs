@@ -33,8 +33,6 @@ pub const DIAMONDS: i32 = 1;
 pub const HEARTS: i32 = 2;
 pub const SPADES: i32 = 3;
 
-const NUM_THREADS: usize = 100; // Number of threads to use in parallel loops
-
 #[derive(Hash, Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Card {
     pub rank: u8,
@@ -628,7 +626,7 @@ impl EquityTable {
     fn create() -> HashMap<u64, f64> {
         let isomorphic: Vec<u64> = load_river_isomorphic().iter().copied().collect();
         println!("[INFO] Creating the river equity lookup table...");
-        let chunk_size = isomorphic.len() / NUM_THREADS;
+        let chunk_size = isomorphic.len() / 100;
         let chunks: Vec<Vec<u64>> = isomorphic
             .chunks(chunk_size)
             .map(|s| s.to_owned())

@@ -9,9 +9,9 @@ use moka::sync::Cache;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::SmallVec;
-use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Write};
+use std::io::{BufReader, BufWriter, Write};
+
 
 // fn check_convergence(prev_node: &Node, curr_node: &Node) -> bool {
 //     if curr_node.t < 1000.0 {
@@ -101,9 +101,9 @@ pub fn load_nodes(path: &str) -> Nodes {
     println!("[INFO] Loading strategy at {path} ...");
     let file = File::open(path).expect("Nodes file not found");
     let reader = BufReader::new(file);
-    let hashmap: HashMap<InfoSet, Node> =
+    let nodes_vec: Vec<(InfoSet, Node)> =
         bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
-    let nodes: Nodes = hashmap
+    let nodes: Nodes = nodes_vec
         .into_iter()
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect();
@@ -111,14 +111,15 @@ pub fn load_nodes(path: &str) -> Nodes {
     nodes
 }
 
-fn serialize_nodes(nodes: &Nodes) {
-    let nodes: HashMap<InfoSet, Node> = nodes
+pub fn serialize_nodes(nodes: &Nodes) {
+    let nodes_vec: Vec<(InfoSet, Node)> = nodes
         .into_iter()
         .map(|entry| (entry.key().clone(), entry.value().clone()))
         .collect();
-    let bincode: Vec<u8> = bincode::serialize(&nodes).unwrap();
-    let mut file = File::create(&CONFIG.nodes_path).unwrap();
-    file.write_all(&bincode).unwrap();
+    let file = File::create(&CONFIG.nodes_path).unwrap();
+    let mut buf_writer = BufWriter::new(file);
+    bincode::serialize_into(&mut buf_writer, &nodes_vec).expect("Failed to serialize nodes");
+    buf_writer.flush().unwrap();
     println!("[INFO] Saved strategy.");
 }
 
