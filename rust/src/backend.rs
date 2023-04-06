@@ -91,9 +91,10 @@ async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responde
         1 => "opponent",
         _ => panic!("Bad player ID"),
     };
+    let stack_sizes = history.stack_sizes();
     let stacks = StacksJSON {
-        dealer: history.stacks[DEALER],
-        opponent: history.stacks[OPPONENT],
+        dealer: stack_sizes[DEALER],
+        opponent: stack_sizes[OPPONENT],
     };
 
     let mut winnings = 0.0;

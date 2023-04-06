@@ -414,9 +414,18 @@ fn no_bet_zero() {
 #[test]
 fn slumbot_bet_size() {
     let actions: Vec<Action> = vec![
-        Action{ action: ActionType::Bet, amount: 250 },
-        Action{ action: ActionType::Bet, amount: 750 },
-        Action{ action: ActionType::Bet, amount: 4375 }
+        Action {
+            action: ActionType::Bet,
+            amount: 250,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 750,
+        },
+        Action {
+            action: ActionType::Bet,
+            amount: 4375,
+        },
     ];
     assert!(!bot_strategy_contains_amount(7750, "Qh5s", "", actions));
 }
@@ -607,11 +616,14 @@ fn more_action_translation() {
 #[test]
 fn depth_limited_solving() {
     // Depth-limited solving should output a similar strategy to solving to the end of the game.
-    let action = Action {action: ActionType::Bet, amount: 300 };
+    let action = Action {
+        action: ActionType::Bet,
+        amount: 300,
+    };
     let history = ActionHistory::new();
     let solve_spot = |iters, depth| {
         let nodes = Bot::solve_subgame(&history, &Range::new(), &action, iters, depth);
-        // This tests how we respond when we have As6c on the preflop and the opponent 
+        // This tests how we respond when we have As6c on the preflop and the opponent
         // opens with Bet 200
         let infoset = InfoSet::from_hand(
             &str2cards("As6c"),
@@ -646,12 +658,25 @@ fn depth_limited_solving() {
         });
     }
 
-
     let depth_strat = solve_spot(10_000_000, 5);
     assert!(
-        full_strat.iter().zip(depth_strat.iter()).all(|(a, b)| {
-            (a - b).abs() < 0.1
-        }),
-        "{:?}", actions
+        full_strat
+            .iter()
+            .zip(depth_strat.iter())
+            .all(|(a, b)| { (a - b).abs() < 0.1 }),
+        "{:?}",
+        actions
+    );
+}
+
+#[test]
+fn blinds_stack_sizes() {
+    let history = ActionHistory::new();
+    assert_eq!(
+        history.stack_sizes(),
+        [
+            CONFIG.stack_size - CONFIG.small_blind,
+            CONFIG.stack_size - CONFIG.big_blind
+        ]
     );
 }

@@ -59,7 +59,7 @@ pub struct ActionHistory {
     last_action: Option<Action>,
     pub street: usize,
     pub player: usize,
-    pub stacks: [i32; 2],
+    stacks: [i32; 2],
 }
 
 impl ActionHistory {
