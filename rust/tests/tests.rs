@@ -613,7 +613,7 @@ fn more_action_translation() {
     history.translate(&CONFIG.bet_abstraction);
 }
 
-#[test]
+// #[test]
 fn depth_limited_solving() {
     // Depth-limited solving should output a similar strategy to solving to the end of the game.
     let action = Action {

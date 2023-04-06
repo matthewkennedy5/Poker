@@ -155,10 +155,15 @@ impl ActionHistory {
         self.last_action.clone()
     }
 
-    // TODO: The stack sizes should reflect that the blinds are posted in the beginning. So they start
-    // as like 19000 or whatever.
     pub fn stack_sizes(&self) -> [i32; 2] {
-        self.stacks
+        let mut stacks = self.stacks;
+        if stacks[DEALER] == CONFIG.stack_size {
+            stacks[DEALER] -= CONFIG.small_blind;
+        }
+        if stacks[OPPONENT] == CONFIG.stack_size {
+            stacks[OPPONENT] -= CONFIG.big_blind;
+        }
+        stacks
     }
 
     pub fn pot(&self) -> i32 {
