@@ -42,7 +42,7 @@ impl Range {
     // Performs a Bayesian update of our beliefs about the opponent's range
     pub fn update<F>(&mut self, action: &Action, get_strategy: F)
     where
-        F: Fn(&Vec<Card>) -> HashMap<Action, f64>,
+        F: Fn(&Vec<Card>) -> Strategy,
     {
         let mut new_range = self.range.clone();
         for (hole, prob) in self.range.clone() {
@@ -81,7 +81,7 @@ impl Range {
         get_strategy: F,
     ) -> Range
     where
-        F: Fn(&[Card], &[Card], &ActionHistory) -> HashMap<Action, f64>,
+        F: Fn(&[Card], &[Card], &ActionHistory) -> Strategy,
     {
         let mut opp_range = Range::new();
         let mut history_iter = ActionHistory::new();

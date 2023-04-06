@@ -8,7 +8,7 @@ use moka::sync::Cache;
 use std::collections::HashMap;
 use dashmap::DashMap;
 
-type PreflopCache = Cache<(i32, ActionHistory), HashMap<Action, f64>>;
+type PreflopCache = Cache<(i32, ActionHistory), Strategy>;
 
 pub struct Bot {
     // Right now the blueprint stores the mixed strategy for each infoset. To reduce
@@ -32,8 +32,7 @@ impl Bot {
         // TODO: This actually should cache strategies, not actions, but let's check the
         // speedup anyway
         let key = (ABSTRACTION.bin(hand), history.clone());
-        // TODO: Make a custom type for the HashMap<Action, f64>
-        let strategy: HashMap<Action, f64> = match self.preflop_cache.get(&key) {
+        let strategy: Strategy = match self.preflop_cache.get(&key) {
             Some(s) => s,
             None => {
                 let strategy = self.get_strategy(hand, board, history);
@@ -55,7 +54,7 @@ impl Bot {
         hole: &[Card],
         board: &[Card],
         history: &ActionHistory,
-    ) -> HashMap<Action, f64> {
+    ) -> Strategy {
         if !self.subgame_solving || history.is_empty() {
             self.get_strategy_action_translation(hole, board, history)
         } else {
@@ -68,7 +67,7 @@ impl Bot {
         hole: &[Card],
         board: &[Card],
         history: &ActionHistory,
-    ) -> HashMap<Action, f64> {
+    ) -> Strategy {
         assert!(hole.len() == 2);
         // Only look at board cards for this street
         let board = &board[..board_length(history.street)];
@@ -91,7 +90,7 @@ impl Bot {
         hole: &[Card],
         board: &[Card],
         history: &ActionHistory,
-    ) -> HashMap<Action, f64> {
+    ) -> Strategy {
         let subgame_root: ActionHistory = history.without_last_action();
         let translated = subgame_root.translate(&CONFIG.bet_abstraction);
 
@@ -117,7 +116,7 @@ impl Bot {
         let infoset = InfoSet::from_hand(hole, board, &this_history);
         let node = lookup_or_new(&nodes, &infoset, &CONFIG.bet_abstraction);
 
-        let mut strategy: HashMap<Action, f64> = HashMap::new();
+        let mut strategy: Strategy = HashMap::new();
         let probs: Vec<f64> = node.cumulative_strategy().to_vec();
         for (action, prob) in node.actions.iter().zip(probs.iter()) {
             strategy.insert(action.clone(), *prob);

@@ -592,7 +592,7 @@ pub fn sample_action_from_node(node: &mut Node, cumulative: bool) -> Action {
     node.actions.get(index).unwrap().clone()
 }
 
-pub fn sample_action_from_strategy(strategy: &HashMap<Action, f64>) -> Action {
+pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
     let actions: Vec<&Action> = strategy.keys().collect();
     let mut rng = thread_rng();
     let action = (*actions
