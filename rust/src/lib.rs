@@ -6,7 +6,7 @@ extern crate actix_files;
 extern crate actix_rt;
 extern crate actix_web;
 extern crate bincode;
-extern crate bio;
+// extern crate bio;
 extern crate indicatif;
 extern crate itertools;
 extern crate rand;

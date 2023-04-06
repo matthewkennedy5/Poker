@@ -13,7 +13,6 @@ itertools = "*"
 indicatif = "*"
 rand = "*"
 rayon = "*"
-bio = "*"
 bincode = "*"
 statistical = "*"
 once_cell = "*"
@@ -57,4 +56,3 @@ path="src/bin/exploit.rs"
 [[bin]]
 name = "preflop-chart"
 path="src/bin/preflop_chart.rs"
-

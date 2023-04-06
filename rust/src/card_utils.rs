@@ -1,5 +1,4 @@
 use crate::itertools::Itertools;
-use bio::stats::combinatorics::combinations;
 use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use rs_poker::core::{Hand, Rank, Rankable};
@@ -496,7 +495,6 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
     let deck = deck();
 
     if preserve_streets {
-        let bar = pbar((combinations(52, 2) * combinations(50, (n_cards - 2) as u64)) as u64);
         for preflop in deck.iter().combinations(2) {
             let mut rest_of_deck = deck.clone();
             rest_of_deck.retain(|c| !preflop.contains(&c));
@@ -504,20 +502,15 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
                 let cards = [deepcopy(&preflop), deepcopy(&board)].concat();
                 let hand = cards2hand(&isomorphic_hand(&cards, true));
                 isomorphic.insert(hand);
-                bar.inc(1);
             }
         }
-        bar.finish();
     } else {
-        let bar = pbar(combinations(52, n_cards as u64) as u64);
         let hands = deck.iter().combinations(n_cards);
         for hand in hands {
             let cards = deepcopy(&hand);
             let hand = cards2hand(&isomorphic_hand(&cards, false));
             isomorphic.insert(hand);
-            bar.inc(1);
         }
-        bar.finish();
     }
     isomorphic
 }
