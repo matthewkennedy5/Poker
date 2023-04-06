@@ -528,14 +528,12 @@ pub fn expected_hs2(hand: u64) -> f64 {
 
     if hand.len() == 7 {
         let equity = EQUITY_TABLE.lookup(&hand);
-        // let equity = river_equity(hand);
         return equity.powi(2);
     }
 
     for rollout in deck.iter().combinations(7 - hand.len()) {
         let full_hand = [hand.clone(), deepcopy(&rollout)].concat();
         let equity = EQUITY_TABLE.lookup(&full_hand);
-        // let equity = river_equity(full_hand);
         sum += equity.powi(2);
         count += 1.0;
     }

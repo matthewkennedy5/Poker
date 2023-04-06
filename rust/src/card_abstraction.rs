@@ -6,7 +6,7 @@
 
 use crate::card_utils::*;
 use crate::config::CONFIG;
-use crate::rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{collections::HashMap, fs::File};
 
 const FLOP_PATH: &str = "products/flop_abstraction.bin";
@@ -95,8 +95,8 @@ fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<(u64, f64)> {
     };
 
     // Cluster the hands based on E[HS^2] percentile bucketing.
-    let bar = pbar(isomorphic_hands.len() as u64);
     // Calculate all E[HS^2] values in parallel
+    let bar = pbar(isomorphic_hands.len() as u64);
     let mut hand_ehs2: Vec<(u64, f64)> = isomorphic_hands
         .par_iter()
         .map(|h| {
@@ -105,8 +105,8 @@ fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<(u64, f64)> {
             (*h, ehs2)
         })
         .collect();
+    bar.finish_with_message("Done");
 
-    bar.finish();
     hand_ehs2.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
     hand_ehs2
 }

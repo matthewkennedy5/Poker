@@ -680,3 +680,13 @@ fn blinds_stack_sizes() {
         ]
     );
 }
+
+#[test]
+fn isomorphic_hands() {
+    let flop = load_flop_isomorphic();
+    let turn = load_turn_isomorphic();
+    let river = load_river_isomorphic();
+    assert_eq!(flop.len(), 1342562);
+    assert_eq!(turn.len(), 14403610);
+    assert_eq!(river.len(), 125756657);
+}
