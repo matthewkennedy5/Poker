@@ -13,12 +13,10 @@ type PreflopCache = Cache<(i32, ActionHistory), HashMap<Action, f64>>;
 pub struct Bot {
     // Right now the blueprint stores the mixed strategy for each infoset. To reduce
     // memory usage, we could pre-sample actions and just store a mapping of infoset -> action.
-    blueprint: Nodes,
-    preflop_cache: PreflopCache,
+    pub blueprint: Nodes,
+    pub preflop_cache: PreflopCache,
+    pub subgame_solving: bool
 }
-
-// TODO: Better cache strategy on preflop?
-// Always cache <=1 move histories, precompute? Seems like that's most of the waiting time. 
 
 impl Bot {
     pub fn new() -> Bot {
@@ -26,6 +24,7 @@ impl Bot {
         Bot {
             blueprint,
             preflop_cache: Cache::new(100_000),
+            subgame_solving: CONFIG.subgame_solving
         }
     }
 
@@ -57,7 +56,7 @@ impl Bot {
         board: &[Card],
         history: &ActionHistory,
     ) -> HashMap<Action, f64> {
-        if !CONFIG.subgame_solving || history.is_empty() {
+        if !self.subgame_solving || history.is_empty() {
             self.get_strategy_action_translation(hole, board, history)
         } else {
             self.unsafe_nested_subgame_solving(hole, board, history)
@@ -84,7 +83,9 @@ impl Bot {
         }
         adjusted_strategy
     }
-
+    
+    // TODO: I think you should also your hand (hole and board) to the card abstraction here. That way you 
+    // perfectly understand the cards on the table when computing your strategy.  
     fn unsafe_nested_subgame_solving(
         &self,
         hole: &[Card],

@@ -5,6 +5,7 @@ use crate::config::CONFIG;
 use crate::exploiter::*;
 use crate::trainer_utils::*;
 use dashmap::DashMap;
+use moka::sync::Cache;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -68,23 +69,29 @@ pub fn train(iters: u64) {
     let deck = card_utils::deck();
     let nodes: Nodes = DashMap::new();
     println!("[INFO] Beginning training.");
-    let bar = card_utils::pbar(iters);
-    (1..iters + 1).into_par_iter().for_each(|i| {
-        cfr_iteration(
-            &deck,
-            &ActionHistory::new(),
-            &nodes,
-            &CONFIG.bet_abstraction,
-            -1,
-        );
-        if i % CONFIG.eval_every == 0 {
-            serialize_nodes(&nodes);
-            // let bot = Bot::new();
-            // exploitability(&bot, CONFIG.lbr_iters);
-        }
-        bar.inc(1);
-    });
-    bar.finish();
+    let num_epochs = iters / CONFIG.eval_every;
+    for epoch in 0..num_epochs {
+        println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
+        let bar = card_utils::pbar(CONFIG.eval_every);
+        (0..CONFIG.eval_every).into_par_iter().for_each(|i| {
+            cfr_iteration(
+                &deck,
+                &ActionHistory::new(),
+                &nodes,
+                &CONFIG.bet_abstraction,
+                -1,
+            );
+            bar.inc(1);
+        });
+        bar.finish_with_message("Done");
+        serialize_nodes(&nodes);
+        let bot = Bot {
+            blueprint: nodes.clone(),
+            preflop_cache: Cache::new(10_000),
+            subgame_solving: false,
+        };
+        exploitability(&bot, CONFIG.lbr_iters);
+    }
 
     println!("{} nodes reached.", nodes.len());
     serialize_nodes(&nodes);
@@ -162,6 +169,8 @@ pub fn iterate(
         loop {
             infoset = InfoSet::from_deck(deck, &history);
             node = lookup_or_new(nodes, &infoset, bet_abstraction);
+            // TODO: Right now node will just be a uniform distribution strategy because it's not
+            // trained. I think instead you want to sample the action from the blueprint.
             let action = sample_action_from_node(&mut node, true);
             history.add(&action);
             if history.hand_over() {
