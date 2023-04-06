@@ -19,7 +19,7 @@ struct HandCompJSON {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct ActionJSON {
     action: String,
-    amount: i32,
+    amount: Amount,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -52,11 +52,11 @@ async fn get_cpu_action(infoset: web::Json<InfoSetJSON>) -> impl Responder {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct HistoryInfo {
-    pot: i32,
+    pot: Amount,
     street: String,
-    callAmount: i32,
-    minBetAmount: i32,
-    allInAmount: i32,
+    callAmount: Amount,
+    minBetAmount: Amount,
+    allInAmount: Amount,
     whoseTurn: String,
     stacks: StacksJSON,
     winnings: f64,
@@ -64,8 +64,8 @@ struct HistoryInfo {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct StacksJSON {
-    dealer: i32,
-    opponent: i32,
+    dealer: Amount,
+    opponent: Amount,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

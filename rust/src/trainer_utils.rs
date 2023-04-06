@@ -28,6 +28,7 @@ pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 
 pub type Nodes = DashMap<InfoSet, Node>;
 pub type Strategy = HashMap<Action, f64>;
+pub type Amount = u16;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ActionType {
@@ -39,7 +40,7 @@ pub enum ActionType {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Action {
     pub action: ActionType,
-    pub amount: i32,
+    pub amount: Amount,
 }
 
 impl fmt::Display for Action {
@@ -59,7 +60,7 @@ pub struct ActionHistory {
     last_action: Option<Action>,
     pub street: usize,
     pub player: usize,
-    stacks: [i32; 2],
+    stacks: [Amount; 2],
 }
 
 impl ActionHistory {
@@ -85,7 +86,7 @@ impl ActionHistory {
                 "Fold" => ActionType::Fold,
                 _ => panic!("Bad action string"),
             };
-            let amount: i32 = tokens[1].parse().expect("Bad action amount");
+            let amount = tokens[1].parse().expect("Bad action amount");
             history.add(&Action {
                 action,
                 amount,
@@ -155,7 +156,7 @@ impl ActionHistory {
         self.last_action.clone()
     }
 
-    pub fn stack_sizes(&self) -> [i32; 2] {
+    pub fn stack_sizes(&self) -> [Amount; 2] {
         let mut stacks = self.stacks;
         if stacks[DEALER] == CONFIG.stack_size {
             stacks[DEALER] -= CONFIG.small_blind;
@@ -166,7 +167,7 @@ impl ActionHistory {
         stacks
     }
 
-    pub fn pot(&self) -> i32 {
+    pub fn pot(&self) -> Amount {
         let pot = 2 * CONFIG.stack_size - self.stacks[0] - self.stacks[1];
         if pot == 0 {
             CONFIG.big_blind
@@ -176,7 +177,7 @@ impl ActionHistory {
     }
 
     // Returns the amount needed to call, so 0 for checking
-    pub fn to_call(&self) -> i32 {
+    pub fn to_call(&self) -> Amount {
         if self.street == PREFLOP && self.history[PREFLOP].is_empty() {
             CONFIG.big_blind
         } else {
@@ -184,7 +185,7 @@ impl ActionHistory {
         }
     }
 
-    pub fn min_bet(&self) -> i32 {
+    pub fn min_bet(&self) -> Amount {
         if self.history[PREFLOP].is_empty() {
             CONFIG.big_blind
         } else if self.history[self.street].is_empty() {
@@ -200,7 +201,7 @@ impl ActionHistory {
         }
     }
 
-    pub fn max_bet(&self) -> i32 {
+    pub fn max_bet(&self) -> Amount {
         self.stacks[self.player]
     }
 
@@ -216,7 +217,7 @@ impl ActionHistory {
                 let bet_size = if fraction == &ALL_IN {
                     self.stacks[self.player]
                 } else {
-                    (*fraction * (pot as f64)) as i32
+                    (*fraction * (pot as f64)) as Amount
                 };
                 Action {
                     action: ActionType::Bet,
@@ -366,8 +367,8 @@ impl fmt::Display for ActionHistory {
     }
 }
 
-// Returns the element which is closest in log space to the input
-fn find_closest_log(v: Vec<i32>, n: i32) -> i32 {
+// Returns the element which is closest in log space to the input amount
+fn find_closest_log(v: Vec<Amount>, n: Amount) -> Amount {
     assert!(!v.is_empty());
     let log_n = (n as f64).ln();
     let mut closest_v = 0;
@@ -645,16 +646,24 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
     if player_strength > opponent_strength {
         (pot / 2) as f64
     } else if player_strength < opponent_strength {
-        return (-pot / 2) as f64;
+        return -(pot as f64) / 2.0;
     } else {
         // It's a tie: player_strength == opponent_strength
         return 0.0;
     }
 }
 
+// The Nodes have a bunch of extra information we don't care about when we're done with training.
+
+// pub fn write_blueprint(nodes: &Nodes) {
+//     START HERE
+// }
+
 // For making preflop charts
-// TODO: Use a bot instance -- this shouldnt depend on the node implementation. Orthogonality!
-// pub fn write_preflop_strategy(nodes: &Nodes, path: &str) {
+// TODO: Fix
+// pub fn write_preflop_strategy<F>(get_strategy: F, path: &str) 
+// where F: Fn(&[Card], &[Card], ActionHistory) -> Strategy
+// {
 //     let mut preflop_strategy: HashMap<String, HashMap<String, f64>> = HashMap::new();
 //     for (infoset, node) in nodes {
 //         if infoset.history.is_empty() {

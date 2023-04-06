@@ -173,7 +173,7 @@ fn high_pair_beats_low_pair() {
 
 // Helper function for tests that get the bot's response at a certain spot
 fn bot_strategy_contains_amount(
-    amount: i32,
+    amount: Amount,
     hole: &str,
     board: &str,
     actions: Vec<Action>,
@@ -186,7 +186,7 @@ fn bot_strategy_contains_amount(
     let board = str2cards(board);
     let strategy = BOT.get_strategy(&hole, &board, &history);
     println!("{strategy:?}");
-    let amounts: Vec<i32> = strategy.keys().map(|action| action.amount).collect();
+    let amounts: Vec<Amount> = strategy.keys().map(|action| action.amount).collect();
     amounts.contains(&amount)
 }
 
