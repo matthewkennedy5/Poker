@@ -1,11 +1,9 @@
-use crate::bot::Bot;
 use crate::card_utils;
 use crate::card_utils::Card;
 use crate::config::CONFIG;
 use crate::exploiter::*;
 use crate::trainer_utils::*;
 use dashmap::DashMap;
-use moka::sync::Cache;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -85,12 +83,7 @@ pub fn train(iters: u64) {
         });
         bar.finish_with_message("Done");
         serialize_nodes(&nodes);
-        let bot = Bot {
-            blueprint: nodes.clone(),
-            preflop_cache: Cache::new(10_000),
-            subgame_solving: false,
-        };
-        exploitability(&bot, CONFIG.lbr_iters);
+        blueprint_exploitability(&nodes, CONFIG.lbr_iters);
     }
 
     println!("{} nodes reached.", nodes.len());

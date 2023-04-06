@@ -27,6 +27,7 @@ pub const NUM_ACTIONS: usize = 10;
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 
 pub type Nodes = DashMap<InfoSet, Node>;
+pub type Strategy = HashMap<Action, f64>;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ActionType {
