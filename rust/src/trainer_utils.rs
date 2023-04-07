@@ -22,7 +22,7 @@ pub const FOLD: Action = Action {
 pub const ALL_IN: f64 = -1.0;
 
 // Upper limit on branching factor of blueprint game tree. For setting the SmallVec size.
-pub const NUM_ACTIONS: usize = 10;  
+pub const NUM_ACTIONS: usize = 5;  
 
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 

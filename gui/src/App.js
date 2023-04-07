@@ -122,11 +122,11 @@ class App extends Component {
     }
 
   getCPUActionText = () => {
-      if (this.state.game.winner === "human") {
-          return "Human wins $" + this.state.game.pot;
-      } else if (this.state.game.winner === "cpu") {
-          return "CPU wins $" + this.state.game.pot;
-      }
+    //   if (this.state.game.winner === "human") {
+    //       return "Human wins $" + this.state.game.pot;
+    //   } else if (this.state.game.winner === "cpu") {
+    //       return "CPU wins $" + this.state.game.pot;
+    //   }
       let action = this.state.game.getPrevCPUAction();
       let text = "CPU ";
       if (action === undefined) {
