@@ -74,9 +74,9 @@ impl Bot {
         let translated = history.translate(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(hole, board, &translated);
         let node = lookup_or_new(&self.blueprint, &infoset, &CONFIG.bet_abstraction);
-        let node_strategy: Vec<f64> = node.cumulative_strategy().to_vec();
+        let node_strategy: Vec<f32> = node.cumulative_strategy().to_vec();
 
-        let mut adjusted_strategy: HashMap<Action,f64> = HashMap::new();
+        let mut adjusted_strategy: HashMap<Action,f32> = HashMap::new();
         for (action, prob) in node.actions.iter().zip(node_strategy.iter()) {
             adjusted_strategy.insert(history.adjust_action(action), *prob);
         }
@@ -117,7 +117,7 @@ impl Bot {
         let node = lookup_or_new(&nodes, &infoset, &CONFIG.bet_abstraction);
 
         let mut strategy: Strategy = HashMap::new();
-        let probs: Vec<f64> = node.cumulative_strategy().to_vec();
+        let probs: Vec<f32> = node.cumulative_strategy().to_vec();
         for (action, prob) in node.actions.iter().zip(probs.iter()) {
             strategy.insert(action.clone(), *prob);
         }
@@ -146,7 +146,7 @@ impl Bot {
     ) -> Nodes {
         let nodes: Nodes = DashMap::new();
         let mut bet_abstraction = CONFIG.bet_abstraction.clone();
-        let pot_frac = (opp_action.amount as f64) / (history.pot() as f64);
+        let pot_frac = (opp_action.amount as f32) / (history.pot() as f32);
         if opp_action.action == ActionType::Bet
             && !bet_abstraction[history.street].contains(&pot_frac)
         {

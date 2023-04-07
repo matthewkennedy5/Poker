@@ -19,7 +19,7 @@ pub const FOLD: Action = Action {
     action: ActionType::Fold,
     amount: 0,
 };
-pub const ALL_IN: f64 = -1.0;
+pub const ALL_IN: f32 = -1.0;
 
 // Upper limit on branching factor of blueprint game tree. For setting the SmallVec size.
 pub const NUM_ACTIONS: usize = 5;  
@@ -27,7 +27,7 @@ pub const NUM_ACTIONS: usize = 5;
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 
 pub type Nodes = DashMap<InfoSet, Node>;
-pub type Strategy = HashMap<Action, f64>;
+pub type Strategy = HashMap<Action, f32>;
 pub type Amount = u16;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
@@ -213,7 +213,7 @@ impl ActionHistory {
 
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
-    pub fn next_actions(&self, bet_abstraction: &[Vec<f64>]) -> SmallVec<[Action; NUM_ACTIONS]> {
+    pub fn next_actions(&self, bet_abstraction: &[Vec<f32>]) -> SmallVec<[Action; NUM_ACTIONS]> {
         // Add all the potential bet sizes in the abstraction, and call and fold actions.
         // Then later we filter out the illegal actions.
         let pot = self.pot();
@@ -223,7 +223,7 @@ impl ActionHistory {
                 let bet_size = if fraction == &ALL_IN {
                     self.stacks[self.player]
                 } else {
-                    (*fraction * (pot as f64)) as Amount
+                    (*fraction * (pot as f32)) as Amount
                 };
                 Action {
                     action: ActionType::Bet,
@@ -272,7 +272,7 @@ impl ActionHistory {
     // current history, with actions mapped to those of the given bet abstraction.
     // This assumes that folding and calling are always going to be implicitly
     // allowed in the abstraction.
-    pub fn translate(&self, bet_abstraction: &Vec<Vec<f64>>) -> ActionHistory {
+    pub fn translate(&self, bet_abstraction: &Vec<Vec<f32>>) -> ActionHistory {
         let mut translated = ActionHistory::new();
         let mut untranslated = ActionHistory::new();
         for action in self.get_actions() {
@@ -364,11 +364,11 @@ impl fmt::Display for ActionHistory {
 // Returns the element which is closest in log space to the input amount
 fn find_closest_log(v: Vec<Amount>, n: Amount) -> Amount {
     assert!(!v.is_empty());
-    let log_n = (n as f64).ln();
+    let log_n = (n as f32).ln();
     let mut closest_v = 0;
-    let mut log_closest_diff = f64::MAX;
+    let mut log_closest_diff = f32::MAX;
     for candidate in v {
-        let log_candidate_diff = ((candidate as f64).ln() - log_n).abs();
+        let log_candidate_diff = ((candidate as f32).ln() - log_n).abs();
         if log_candidate_diff < log_closest_diff {
             closest_v = candidate;
             log_closest_diff = log_candidate_diff;
@@ -435,7 +435,7 @@ impl InfoSet {
         }
     }
 
-    pub fn next_actions(&self, bet_abstraction: &[Vec<f64>]) -> SmallVec<[Action; NUM_ACTIONS]> {
+    pub fn next_actions(&self, bet_abstraction: &[Vec<f32>]) -> SmallVec<[Action; NUM_ACTIONS]> {
         self.history.next_actions(bet_abstraction)
     }
 }
@@ -463,7 +463,7 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
 pub fn lookup_or_new(
     nodes: &Nodes,
     infoset: &InfoSet,
-    bet_abstraction: &[Vec<f64>],
+    bet_abstraction: &[Vec<f32>],
 ) -> Node {
     match nodes.get(infoset) {
         Some(n) => n.clone(),
@@ -473,17 +473,18 @@ pub fn lookup_or_new(
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
-    pub regrets: [f64; NUM_ACTIONS],  // 8 * 5 + 8 + 8 = 56 bytes
-    strategy_sum: [f64; NUM_ACTIONS],    // 56 bytes
+    pub regrets: [f32; NUM_ACTIONS],  // 8 * 5 + 8 + 8 = 56 bytes
+    strategy_sum: [f32; NUM_ACTIONS],    // 56 bytes
     // Depending on the action history, there may be fewer than NUM_ACTIONS legal next actions at
     // this spot. In that case, the trailing extra elements of regrets and strategy_sum will just
     // be zeros. actions.len() is the source of truth for the branching factor at this node. 
     pub actions: SmallVec<[Action; NUM_ACTIONS]>,
-    pub t: f64,     // 8 bytes
+    // pub children: SmallVec<[usize; NUM_ACTIONS]>,
+    pub t: f32,     // 8 bytes
 }
 
 impl Node {
-    pub fn new(infoset: &InfoSet, bet_abstraction: &[Vec<f64>]) -> Node {
+    pub fn new(infoset: &InfoSet, bet_abstraction: &[Vec<f32>]) -> Node {
         let actions = infoset.next_actions(bet_abstraction);
         Node {
             regrets: [0.0; NUM_ACTIONS],
@@ -496,14 +497,14 @@ impl Node {
     // Returns the current strategy for this node, and updates the cumulative strategy
     // as a side effect.
     // Input: prob is the probability of reaching this node
-    pub fn current_strategy(&mut self, prob: f64) -> SmallVec<[f64; NUM_ACTIONS]> {
+    pub fn current_strategy(&mut self, prob: f32) -> SmallVec<[f32; NUM_ACTIONS]> {
         // Normalize the regrets for this iteration of CFR
-        let positive_regrets: SmallVec<[f64; NUM_ACTIONS]> = self
+        let positive_regrets: SmallVec<[f32; NUM_ACTIONS]> = self
             .regrets
             .iter()
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
-        let regret_norm: SmallVec<[f64; NUM_ACTIONS]>= normalize_smallvec(&positive_regrets);
+        let regret_norm: SmallVec<[f32; NUM_ACTIONS]>= normalize_smallvec(&positive_regrets);
         for i in 0..regret_norm.len() {
             // Add this action's probability to the cumulative strategy sum using DCFR+ update rules
             let new_prob = regret_norm[i] * prob;
@@ -516,11 +517,11 @@ impl Node {
         regret_norm
     }
 
-    pub fn cumulative_strategy(&self) -> SmallVec<[f64; NUM_ACTIONS]> {
+    pub fn cumulative_strategy(&self) -> SmallVec<[f32; NUM_ACTIONS]> {
         normalize_smallvec(&self.strategy_sum)
     }
 
-    pub fn add_regret(&mut self, action_index: usize, regret: f64) {
+    pub fn add_regret(&mut self, action_index: usize, regret: f32) {
         let mut accumulated_regret = self.regrets[action_index] + regret;
         // Update the accumulated regret according to Discounted Counterfactual
         // Regret Minimization rules
@@ -535,7 +536,7 @@ impl Node {
 
 // Normalizes the values of a HashMap so that its elements sum to 1.
 // TODO: Remove this in favor of normalize_vec
-pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64> {
+pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f32>) -> HashMap<T, f32> {
     let mut map = map.clone();
     let mut sum = 0.0;
     for elem in map.values() {
@@ -544,7 +545,7 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64>
     for (action, val) in map.clone() {
         let newval = if sum == 0.0 {
             // If all values are 0, then just return a uniform distribution
-            1.0 / map.len() as f64
+            1.0 / map.len() as f32
         } else {
             // Otherwise normalize based on the sum.
             val / sum
@@ -554,23 +555,23 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64>
     map
 }
 
-fn normalize_smallvec(v: &[f64]) -> SmallVec<[f64; NUM_ACTIONS]> {
+fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
     for elem in v {
         assert!(*elem >= 0.0);
     }
-    let sum: f64 = v.iter().sum();
-    let norm: SmallVec<[f64; NUM_ACTIONS]> = v
+    let sum: f32 = v.iter().sum();
+    let norm: SmallVec<[f32; NUM_ACTIONS]> = v
         .iter()
         .map(|e| {
             if sum == 0.0 {
                 // If all values are 0, then just return a uniform distribution
-                1.0 / v.len() as f64
+                1.0 / v.len() as f32
             } else {
                 e / sum
             }
         })
         .collect();
-    let norm_sum: f64 = norm.iter().sum();
+    let norm_sum: f32 = norm.iter().sum();
     assert!(
         (norm_sum - 1.0).abs() < 1e-6,
         "Sum of normalized vector: {}. Input vector: {:?}",
@@ -605,19 +606,19 @@ pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
 
 // Assuming history represents a terminal state (someone folded, or it's a showdown),
 // return the utility, in chips, that the given player gets.
-pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -> f64 {
+pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -> f32 {
     let opponent = 1 - player;
     if history.last_action().unwrap().action == ActionType::Fold {
         // Someone folded -- assign the chips to the winner.
         let winner = history.player;
         let folder = 1 - winner;
-        let mut winnings: f64 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
+        let mut winnings: f32 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f32;
 
         // If someone folded on the first preflop round, they lose their blind
         if winnings == 0.0 {
             winnings += match folder {
-                DEALER => CONFIG.small_blind as f64,
-                OPPONENT => CONFIG.big_blind as f64,
+                DEALER => CONFIG.small_blind as f32,
+                OPPONENT => CONFIG.big_blind as f32,
                 _ => panic!("Bad player number"),
             };
         }
@@ -639,9 +640,9 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
     let opponent_strength = FAST_HAND_TABLE.hand_strength(&opponent_hand);
 
     if player_strength > opponent_strength {
-        (pot / 2) as f64
+        (pot / 2) as f32
     } else if player_strength < opponent_strength {
-        return -(pot as f64) / 2.0;
+        return -(pot as f32) / 2.0;
     } else {
         // It's a tie: player_strength == opponent_strength
         return 0.0;
@@ -659,11 +660,11 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
 // pub fn write_preflop_strategy<F>(get_strategy: F, path: &str) 
 // where F: Fn(&[Card], &[Card], ActionHistory) -> Strategy
 // {
-//     let mut preflop_strategy: HashMap<String, HashMap<String, f64>> = HashMap::new();
+//     let mut preflop_strategy: HashMap<String, HashMap<String, f32>> = HashMap::new();
 //     for (infoset, node) in nodes {
 //         if infoset.history.is_empty() {
 //             let hand = Abstraction::preflop_hand(infoset.card_bucket);
-//             let strategy: HashMap<String, f64> = node
+//             let strategy: HashMap<String, f32> = node
 //                 .cumulative_strategy()
 //                 .iter()
 //                 .map(|(action, prob)| (action.to_string(), *prob))

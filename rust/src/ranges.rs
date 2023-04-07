@@ -7,11 +7,11 @@ use crate::trainer_utils::*;
 
 // If a hand's probability is below PROB_CUTOFF in the range, just skip it since it has a negligible
 // contribution to the range.
-pub const PROB_CUTOFF: f64 = 0.0001;
+pub const PROB_CUTOFF: f32 = 0.0001;
 
 #[derive(Debug)]
 pub struct Range {
-    pub range: HashMap<Vec<Card>, f64>,
+    pub range: HashMap<Vec<Card>, f32>,
 }
 
 impl Range {
@@ -60,7 +60,7 @@ impl Range {
         self.range = normalize(&new_range);
     }
 
-    pub fn hand_prob(&self, hand: &[Card]) -> f64 {
+    pub fn hand_prob(&self, hand: &[Card]) -> f32 {
         *self.range.get(hand).unwrap()
     }
 

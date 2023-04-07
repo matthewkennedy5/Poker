@@ -68,7 +68,7 @@ pub fn cfr_iteration(
     deck: &[Card],
     history: &ActionHistory,
     nodes: &Nodes,
-    bet_abstraction: &Vec<Vec<f64>>,
+    bet_abstraction: &Vec<Vec<f32>>,
     depth_limit: i32,
 ) {
     [DEALER, OPPONENT].iter().for_each(|&player| {
@@ -90,11 +90,11 @@ pub fn iterate(
     player: usize,
     deck: &[Card],
     history: &ActionHistory,
-    weights: [f64; 2],
+    weights: [f32; 2],
     nodes: &Nodes,
-    bet_abstraction: &[Vec<f64>],
+    bet_abstraction: &[Vec<f32>],
     remaining_depth: i32,
-) -> f64 {
+) -> f32 {
     if history.hand_over() {
         return terminal_utility(deck, history, player);
     }
@@ -140,7 +140,7 @@ pub fn iterate(
     }
     let actions = infoset.next_actions(bet_abstraction);
     let strategy = node.current_strategy(weights[player]);
-    let mut utilities: SmallVec<[f64; NUM_ACTIONS]> = SmallVec::with_capacity(NUM_ACTIONS);
+    let mut utilities: SmallVec<[f32; NUM_ACTIONS]> = SmallVec::with_capacity(NUM_ACTIONS);
     let mut node_utility = 0.0;
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.
