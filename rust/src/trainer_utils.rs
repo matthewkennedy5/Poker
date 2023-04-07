@@ -55,22 +55,25 @@ impl fmt::Display for Action {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
+    // history: SmallVec<[SmallVec<[Action; 2]>; 4]>, // Each index is a street
 pub struct ActionHistory {
-    history: SmallVec<[SmallVec<[Action; 10]>; 4]>, // Each index is a street
-    last_action: Option<Action>,
+    history: SmallVec<[Action; 10]>,
+    last_action: Option<Action>,    // TODO: Can remove this too
+    current_street_length: u8,
+    stacks: [Amount; 2],
     pub street: usize,
     pub player: usize,
-    stacks: [Amount; 2],
 }
 
 impl ActionHistory {
     pub fn new() -> ActionHistory {
         ActionHistory {
-            history: smallvec![SmallVec::with_capacity(10); 4],
-            street: PREFLOP,
+            history: SmallVec::with_capacity(10),
             last_action: None,
-            player: DEALER,
+            current_street_length: 0,
             stacks: [CONFIG.stack_size, CONFIG.stack_size],
+            street: PREFLOP,
+            player: DEALER,
         }
     }
 
@@ -128,12 +131,15 @@ impl ActionHistory {
             self
         );
         let action = action.clone();
-        self.stacks[self.player] -= action.amount;
+        self.stacks[self.player as usize] -= action.amount;
         self.player = 1 - self.player;
         self.last_action = Some(action.clone());
-        self.history[self.street].push(action);
-        if self.stacks[0] == self.stacks[1] && self.history[self.street].len() >= 2 {
+        self.history.push(action);
+        self.current_street_length += 1;
+        // The street is over if both players have acted and the bet sizes are equal
+        if self.stacks[0] == self.stacks[1] && self.current_street_length >= 2 {
             self.street += 1;
+            self.current_street_length = 0;
             self.player = OPPONENT;
         }
     }
@@ -178,7 +184,7 @@ impl ActionHistory {
 
     // Returns the amount needed to call, so 0 for checking
     pub fn to_call(&self) -> Amount {
-        if self.street == PREFLOP && self.history[PREFLOP].is_empty() {
+        if self.street == PREFLOP && self.history.is_empty() {
             CONFIG.big_blind
         } else {
             self.stacks[self.player] - self.stacks[1 - self.player]
@@ -186,9 +192,9 @@ impl ActionHistory {
     }
 
     pub fn min_bet(&self) -> Amount {
-        if self.history[PREFLOP].is_empty() {
+        if self.history.is_empty() {
             CONFIG.big_blind
-        } else if self.history[self.street].is_empty() {
+        } else if self.current_street_length == 0 {
             0
         } else {
             let last_action: Action = self.last_action.clone().unwrap();
@@ -236,31 +242,28 @@ impl ActionHistory {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.history[PREFLOP].len() == 0
+        self.history.is_empty()
     }
 
     pub fn without_last_action(&self) -> ActionHistory {
         if self.is_empty() {
             panic!("Can't remove last action from empty history");
         }
-        // Remove the last action from the history
-        let mut prev_history = self.clone();
-        if prev_history.history[self.street].is_empty() {
-            prev_history.street -= 1;
-        }
-        prev_history.history[prev_history.street].pop();
 
         // There's a lot of complex rules, so just create a new history and add all the actions
         // in prev_history.
+        let prev_history = &self.history[..self.history.len()-1];
         let mut history = ActionHistory::new();
-        for action in prev_history.get_actions() {
+        for action in prev_history {
             history.add(&action);
         }
 
         // Check that we recover the original history when we add back the last action
-        let mut added = history.clone();
-        added.add(&self.last_action().unwrap());
-        assert!(added == self.clone());
+        assert!({
+            let mut added = history.clone();
+            added.add(&self.last_action().unwrap());
+            added == self.clone()
+        });
 
         history
     }
@@ -343,25 +346,16 @@ impl ActionHistory {
     }
 
     pub fn get_actions(&self) -> Vec<Action> {
-        let mut actions = Vec::new();
-        for street in self.history.clone() {
-            for action in street {
-                actions.push(action);
-            }
-        }
-        actions
+        self.history.to_vec()
     }
 }
 
 impl fmt::Display for ActionHistory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut result = String::new();
-        for street in &self.history {
-            for action in street {
-                result.push_str(&action.to_string());
-                result.push(',');
-            }
-            result.push(';');
+        for action in &self.history {
+            result.push_str(&action.to_string());
+            result.push(',');
         }
         write!(f, "{result}")
     }

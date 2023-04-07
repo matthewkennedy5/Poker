@@ -192,7 +192,6 @@ fn bot_strategy_contains_amount(
 
 #[test]
 fn negative_bet_size() {
-    // TODO: this is giving a stack overflow error for some reason
     let actions = vec![
         Action {
             action: ActionType::Call,
