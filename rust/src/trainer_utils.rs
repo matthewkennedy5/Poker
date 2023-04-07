@@ -473,20 +473,21 @@ pub fn lookup_or_new(
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
-    pub regrets: SmallVec<[f64; NUM_ACTIONS]>,
-    strategy_sum: SmallVec<[f64; NUM_ACTIONS]>,
+    pub regrets: [f64; NUM_ACTIONS],  // 8 * 5 + 8 + 8 = 56 bytes
+    strategy_sum: [f64; NUM_ACTIONS],    // 56 bytes
+    // Depending on the action history, there may be fewer than NUM_ACTIONS legal next actions at
+    // this spot. In that case, the trailing extra elements of regrets and strategy_sum will just
+    // be zeros. actions.len() is the source of truth for the branching factor at this node. 
     pub actions: SmallVec<[Action; NUM_ACTIONS]>,
-    pub t: f64,
+    pub t: f64,     // 8 bytes
 }
 
 impl Node {
     pub fn new(infoset: &InfoSet, bet_abstraction: &[Vec<f64>]) -> Node {
-        // Create a HashMap of action -> 0.0 to initialize the regrets and
-        // cumulative strategy sum
         let actions = infoset.next_actions(bet_abstraction);
         Node {
-            regrets: smallvec![0.0; actions.len()],
-            strategy_sum: smallvec![0.0; actions.len()],
+            regrets: [0.0; NUM_ACTIONS],
+            strategy_sum: [0.0; NUM_ACTIONS],
             actions,
             t: 0.0,
         }

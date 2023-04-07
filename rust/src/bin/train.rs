@@ -3,7 +3,7 @@ use optimus::*;
 use std::mem::size_of_val;
 
 fn main() {
-    // train(CONFIG.train_iters);
+    train(CONFIG.train_iters);
 
     let infoset = InfoSet::from_hand(
         &str2cards("AsAd"),
