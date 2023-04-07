@@ -681,11 +681,54 @@ fn blinds_stack_sizes() {
 }
 
 #[test]
-fn isomorphic_hands() {
+fn isomorphic_hand_len() {
     let flop = load_flop_isomorphic();
     let turn = load_turn_isomorphic();
     let river = load_river_isomorphic();
     assert_eq!(flop.len(), 1342562);
     assert_eq!(turn.len(), 14403610);
     assert_eq!(river.len(), 125756657);
+}
+
+// Returns all the descendant action histories of history (not including terminal actions)
+fn all_histories(history: &ActionHistory) -> Vec<ActionHistory> {
+    let mut all: Vec<ActionHistory> = vec![history.clone()];
+    for next in history.next_actions(&CONFIG.bet_abstraction) {
+        let mut child_history = history.clone();
+        if !child_history.hand_over() {
+            child_history.add(&next);
+            all.extend(all_histories(&child_history));
+        }
+    }
+    all
+}
+
+// Fully populate the nodes to check if it will fit in memory. If not, the test will crash
+// because the computer ran out of memory.
+#[test]
+fn node_memory_stress_test() {
+    let nodes: Nodes = dashmap::DashMap::new();
+    let histories = all_histories(&ActionHistory::new());
+    println!("All histories: {}", histories.len());
+    // Assuming there's 169 preflop buckets, and the same number of buckets for flop, turn, and river.
+    // this could change in the future. 
+    let bar = pbar((histories.len() as i32 * CONFIG.flop_buckets) as u64);
+    histories.into_par_iter().for_each(|history| {
+        if history.street == PREFLOP {
+            for bucket in 0..169 {
+                let infoset = InfoSet { history: history.clone(), card_bucket: bucket };
+                let node = Node::new(&infoset, &CONFIG.bet_abstraction);
+                nodes.insert(infoset, node);
+                bar.inc(1);
+            }
+        } else {
+            for bucket in 0..CONFIG.flop_buckets {
+                let infoset = InfoSet { history: history.clone(), card_bucket: bucket };
+                let node = Node::new(&infoset, &CONFIG.bet_abstraction);
+                nodes.insert(infoset, node);
+                bar.inc(1);
+            }
+        }
+    });
+    bar.finish_with_message("Success!");
 }

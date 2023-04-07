@@ -216,6 +216,10 @@ impl ActionHistory {
     pub fn next_actions(&self, bet_abstraction: &[Vec<f32>]) -> SmallVec<[Action; NUM_ACTIONS]> {
         // Add all the potential bet sizes in the abstraction, and call and fold actions.
         // Then later we filter out the illegal actions.
+        assert!(self.street <= RIVER + 1);
+        if self.hand_over() {
+            return smallvec![];
+        }
         let pot = self.pot();
         let mut candidate_actions: SmallVec<[Action; NUM_ACTIONS]> = bet_abstraction[self.street]
             .iter()
