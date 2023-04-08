@@ -27,6 +27,7 @@ fn check_infoset_node_size() {
 }
 
 fn main() {
-    check_t();
+    // check_t();
     // train(CONFIG.train_iters);
+    check_infoset_node_size();
 }

@@ -55,10 +55,9 @@ impl fmt::Display for Action {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
-    // history: SmallVec<[SmallVec<[Action; 2]>; 4]>, // Each index is a street
 pub struct ActionHistory {
     history: SmallVec<[Action; 10]>,
-    last_action: Option<Action>,    // TODO: Can remove this too
+    last_action: Option<Action>,
     current_street_length: u8,
     stacks: [Amount; 2],
     pub street: usize,
@@ -477,8 +476,8 @@ pub fn lookup_or_new(
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
-    pub regrets: [f32; NUM_ACTIONS],  // 8 * 5 + 8 + 8 = 56 bytes
-    strategy_sum: [f32; NUM_ACTIONS],    // 56 bytes
+    pub regrets: [f32; NUM_ACTIONS], 
+    strategy_sum: [f32; NUM_ACTIONS],
     // Depending on the action history, there may be fewer than NUM_ACTIONS legal next actions at
     // this spot. In that case, the trailing extra elements of regrets and strategy_sum will just
     // be zeros. actions.len() is the source of truth for the branching factor at this node. 

@@ -3,7 +3,6 @@ use crate::card_utils::Card;
 use crate::config::CONFIG;
 use crate::exploiter::*;
 use crate::trainer_utils::*;
-use dashmap::DashMap;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -13,7 +12,8 @@ use std::io::{BufReader, BufWriter, Write};
 
 pub fn train(iters: u64) {
     let deck = card_utils::deck();
-    let nodes: Nodes = DashMap::new();
+    // let nodes: Nodes = DashMap::new();
+    let nodes = load_nodes(&CONFIG.nodes_path);
     println!("[INFO] Beginning training.");
     let num_epochs = iters / CONFIG.eval_every;
     for epoch in 0..num_epochs {
