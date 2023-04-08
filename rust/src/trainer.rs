@@ -44,11 +44,13 @@ pub fn load_nodes(path: &str) -> Nodes {
     let reader = BufReader::new(file);
     let nodes_vec: Vec<(InfoSet, Node)> =
         bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
-    let nodes: Nodes = nodes_vec
-        .into_iter()
-        .map(|(key, value)| (key.clone(), value.clone()))
-        .collect();
-    println!("[INFO] Done loading strategy");
+    let nodes = Nodes::new();
+    nodes_vec.into_par_iter()
+             .for_each(|(key, value)| {
+                nodes.insert(key.clone(), value.clone());
+             });
+    let len = nodes.len();
+    println!("[INFO] Done loading strategy: {len} nodes.");
     nodes
 }
 
