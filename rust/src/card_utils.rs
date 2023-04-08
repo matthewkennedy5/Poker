@@ -251,7 +251,7 @@ impl FastHandTable {
         let strength = *self
             .strengths
             .get(&compact)
-            .unwrap_or_else(|| panic!("{compact} not in FastHandTable"));
+            .unwrap_or_else(|| panic!("{} not in FastHandTable", cards2str(hand)));
         strength
     }
 

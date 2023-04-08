@@ -33,9 +33,11 @@ fn bench_isomorphic_hand(c: &mut Criterion) {
 }
 
 fn bench_win_probability_rollout(c: &mut Criterion) {
-    let opp_range = Range::new();
+    let mut opp_range = Range::new();
     let exploiter_hole = str2cards("8dTd");
     let board = str2cards("Ad7c8c");
+    opp_range.remove_blockers(&exploiter_hole);
+    opp_range.remove_blockers(&board);
     let mut group = c.benchmark_group("win_probability_rollout");
     group.warm_up_time(Duration::new(90, 0));
     group.bench_function("win_probability_rollout", |b| {
