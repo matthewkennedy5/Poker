@@ -1,5 +1,6 @@
 use crate::card_abstraction::Abstraction;
 use crate::card_utils::*;
+use crate::nodes::*;
 use crate::config::CONFIG;
 use once_cell::sync::Lazy;
 use dashmap::DashMap;
@@ -21,12 +22,8 @@ pub const FOLD: Action = Action {
 };
 pub const ALL_IN: f32 = -1.0;
 
-// Upper limit on branching factor of blueprint game tree. For setting the SmallVec size.
-pub const NUM_ACTIONS: usize = 5;  
-
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 
-pub type Nodes = DashMap<InfoSet, Node>;
 pub type Strategy = HashMap<Action, f32>;
 pub type Amount = u16;
 
@@ -474,68 +471,6 @@ pub fn lookup_or_new(
     }
 }
 
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct Node {
-    pub regrets: [f32; NUM_ACTIONS], 
-    strategy_sum: [f32; NUM_ACTIONS],
-    // Depending on the action history, there may be fewer than NUM_ACTIONS legal next actions at
-    // this spot. In that case, the trailing extra elements of regrets and strategy_sum will just
-    // be zeros. actions.len() is the source of truth for the branching factor at this node. 
-    pub actions: SmallVec<[Action; NUM_ACTIONS]>,
-    // pub children: SmallVec<[usize; NUM_ACTIONS]>,
-    pub t: f32,     // 8 bytes
-}
-
-impl Node {
-    pub fn new(infoset: &InfoSet, bet_abstraction: &[Vec<f32>]) -> Node {
-        let actions = infoset.next_actions(bet_abstraction);
-        Node {
-            regrets: [0.0; NUM_ACTIONS],
-            strategy_sum: [0.0; NUM_ACTIONS],
-            actions,
-            t: 0.0,
-        }
-    }
-
-    // Returns the current strategy for this node, and updates the cumulative strategy
-    // as a side effect.
-    // Input: prob is the probability of reaching this node
-    pub fn current_strategy(&mut self, prob: f32) -> SmallVec<[f32; NUM_ACTIONS]> {
-        // Normalize the regrets for this iteration of CFR
-        let positive_regrets: SmallVec<[f32; NUM_ACTIONS]> = self
-            .regrets
-            .iter()
-            .map(|r| if *r >= 0.0 { *r } else { 0.0 })
-            .collect();
-        let regret_norm: SmallVec<[f32; NUM_ACTIONS]>= normalize_smallvec(&positive_regrets);
-        for i in 0..regret_norm.len() {
-            // Add this action's probability to the cumulative strategy sum using DCFR+ update rules
-            let new_prob = regret_norm[i] * prob;
-            let weight = if self.t < 100.0 { 0.0 } else { self.t - 100.0 };
-            self.strategy_sum[i] += weight * new_prob;
-        }
-        if prob > 0.0 {
-            self.t += 1.0;
-        }
-        regret_norm
-    }
-
-    pub fn cumulative_strategy(&self) -> SmallVec<[f32; NUM_ACTIONS]> {
-        normalize_smallvec(&self.strategy_sum)
-    }
-
-    pub fn add_regret(&mut self, action_index: usize, regret: f32) {
-        let mut accumulated_regret = self.regrets[action_index] + regret;
-        // Update the accumulated regret according to Discounted Counterfactual
-        // Regret Minimization rules
-        if accumulated_regret >= 0.0 {
-            accumulated_regret *= self.t.powf(CONFIG.alpha) / (self.t.powf(CONFIG.alpha) + 1.0);
-        } else {
-            accumulated_regret *= self.t.powf(CONFIG.beta) / (self.t.powf(CONFIG.beta) + 1.0);
-        }
-        self.regrets[action_index] = accumulated_regret;
-    }
-}
 
 // Normalizes the values of a HashMap so that its elements sum to 1.
 // TODO: Remove this in favor of normalize_vec
@@ -558,7 +493,7 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f32>) -> HashMap<T, f32>
     map
 }
 
-fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
+pub fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
     for elem in v {
         assert!(*elem >= 0.0);
     }

@@ -3,6 +3,7 @@ use crate::config::CONFIG;
 use crate::ranges::*;
 use crate::trainer::*;
 use crate::trainer_utils::*;
+use crate::nodes::*;
 use rayon::prelude::*;
 use moka::sync::Cache;
 use std::collections::HashMap;
@@ -144,7 +145,7 @@ impl Bot {
         iters: u64,
         depth_limit: i32
     ) -> Nodes {
-        let nodes: Nodes = DashMap::new();
+        let nodes: Nodes = Nodes::new();
         let mut bet_abstraction = CONFIG.bet_abstraction.clone();
         let pot_frac = (opp_action.amount as f32) / (history.pot() as f32);
         if opp_action.action == ActionType::Bet

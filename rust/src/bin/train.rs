@@ -5,7 +5,7 @@ use std::mem::size_of_val;
 fn check_t() {
     let nodes = load_nodes(&CONFIG.nodes_path);
     let t: Vec<f32> = nodes.iter().map(|entry| {
-        entry.value().t
+        entry.t
     }).collect();
     let mean = statistical::mean(&t);
     let median = statistical::median(&t);
@@ -28,6 +28,6 @@ fn check_infoset_node_size() {
 
 fn main() {
     // check_t();
-    // train(CONFIG.train_iters);
-    check_infoset_node_size();
+    train(CONFIG.train_iters);
+    // check_infoset_node_size();
 }

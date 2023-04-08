@@ -3,6 +3,7 @@ use crate::card_utils::Card;
 use crate::config::CONFIG;
 use crate::exploiter::*;
 use crate::trainer_utils::*;
+use crate::nodes::*;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -42,27 +43,22 @@ pub fn load_nodes(path: &str) -> Nodes {
     println!("[INFO] Loading strategy at {path} ...");
     let file = File::open(path).expect("Nodes file not found");
     let reader = BufReader::new(file);
-    let nodes_vec: Vec<(InfoSet, Node)> =
-        bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
-    let nodes = Nodes::new();
-    nodes_vec.into_par_iter()
-             .for_each(|(key, value)| {
-                nodes.insert(key.clone(), value.clone());
-             });
+    let nodes: Nodes = bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
     let len = nodes.len();
     println!("[INFO] Done loading strategy: {len} nodes.");
     nodes
 }
 
 pub fn serialize_nodes(nodes: &Nodes) {
-    let nodes_vec: Vec<(InfoSet, Node)> = nodes
-        .into_iter()
-        .map(|entry| (entry.key().clone(), entry.value().clone()))
-        .collect();
+    // let nodes_vec: Vec<(InfoSet, Node)> = nodes
+    //     .into_iter()
+    //     .map(|entry| (entry.key().clone(), entry.value().clone()))
+    //     .collect();
     let file = File::create(&CONFIG.nodes_path).unwrap();
     let mut buf_writer = BufWriter::new(file);
-    bincode::serialize_into(&mut buf_writer, &nodes_vec).expect("Failed to serialize nodes");
+    bincode::serialize_into(&mut buf_writer, &nodes).expect("Failed to serialize nodes");
     buf_writer.flush().unwrap();
+
     println!("[INFO] Saved strategy.");
 }
 
@@ -81,7 +77,7 @@ pub fn cfr_iteration(
             &deck,
             history,
             [1.0, 1.0],
-            nodes,
+            &nodes,
             bet_abstraction,
             depth_limit,
         );

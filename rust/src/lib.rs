@@ -25,6 +25,7 @@ mod config;
 mod exploiter;
 mod ranges;
 mod trainer;
+mod nodes;
 mod trainer_utils;
 
 // TODO: Only expose public functions (dont use wildcard)
@@ -37,3 +38,4 @@ pub use exploiter::*;
 pub use ranges::*;
 pub use trainer::*;
 pub use trainer_utils::*;
+pub use nodes::*;
