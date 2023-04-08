@@ -4,7 +4,7 @@ use crate::config::CONFIG;
 use once_cell::sync::Lazy;
 use dashmap::DashMap;
 use rand::{prelude::SliceRandom, thread_rng};
-use std::{cmp::Eq, collections::HashMap, fmt, hash::Hash};
+use std::{io::Write, fs::File, cmp::Eq, collections::HashMap, fmt, hash::Hash};
 use smallvec::SmallVec;
 
 pub const PREFLOP: usize = 0;
@@ -659,25 +659,23 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
 // }
 
 // For making preflop charts
-// TODO: Fix
-// pub fn write_preflop_strategy<F>(get_strategy: F, path: &str) 
-// where F: Fn(&[Card], &[Card], ActionHistory) -> Strategy
-// {
-//     let mut preflop_strategy: HashMap<String, HashMap<String, f32>> = HashMap::new();
-//     for (infoset, node) in nodes {
-//         if infoset.history.is_empty() {
-//             let hand = Abstraction::preflop_hand(infoset.card_bucket);
-//             let strategy: HashMap<String, f32> = node
-//                 .cumulative_strategy()
-//                 .iter()
-//                 .map(|(action, prob)| (action.to_string(), *prob))
-//                 .collect();
+pub fn write_preflop_strategy(nodes: &Nodes, path: &str) 
+{
+    let mut preflop_strategy: HashMap<String, HashMap<String, f32>> = HashMap::new();
+    for elem in nodes {
+        let infoset = elem.key();
+        let node = elem.value();
+        if infoset.history.is_empty() {
+            let hand = Abstraction::preflop_hand(infoset.card_bucket);
+            let strategy: HashMap<String, f32> = node.actions.iter().zip(node.cumulative_strategy().iter())
+                .map(|(action, prob)| (action.to_string(), *prob))
+                .collect();
 
-//             preflop_strategy.insert(hand, strategy);
-//         }
-//     }
-//     // Write the preflop strategy to a JSON
-//     let json = serde_json::to_string_pretty(&preflop_strategy).unwrap();
-//     let mut file = File::create(&path).unwrap();
-//     file.write(json.as_bytes()).unwrap();
-// }
+            preflop_strategy.insert(hand, strategy);
+        }
+    }
+    // Write the preflop strategy to a JSON
+    let json = serde_json::to_string_pretty(&preflop_strategy).unwrap();
+    let mut file = File::create(&path).unwrap();
+    file.write(json.as_bytes()).unwrap();
+}

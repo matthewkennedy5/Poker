@@ -1,12 +1,17 @@
 use optimus::*;
+use rand::Rng;
 
 use std::mem::size_of_val;
 
 fn check_t() {
     let nodes = load_nodes(&CONFIG.nodes_path);
-    let t: Vec<f32> = nodes.iter().map(|entry| {
-        entry.value().t
-    }).collect();
+    let mut rng = rand::thread_rng();
+    let mut t: Vec<f32> = Vec::with_capacity(nodes.len() / 1000);
+    for (_, node) in nodes {
+        if rng.gen_bool(0.001) {
+            t.push(node.t);
+        }
+    }
     let mean = statistical::mean(&t);
     let median = statistical::median(&t);
     let std = statistical::standard_deviation(&t, Some(mean));
@@ -27,7 +32,7 @@ fn check_infoset_node_size() {
 }
 
 fn main() {
-    // check_t();
+    check_t();
     // train(CONFIG.train_iters);
-    check_infoset_node_size();
+    // check_infoset_node_size();
 }
