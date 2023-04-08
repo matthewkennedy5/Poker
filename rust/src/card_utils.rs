@@ -1,5 +1,4 @@
 use crate::itertools::Itertools;
-use dashmap::DashMap;
 use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use rs_poker::core::{Hand, Rank, Rankable};
@@ -22,7 +21,7 @@ const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
 
-type SmallVecHand = SmallVec<[Card; 7]>;
+pub type SmallVecHand = SmallVec<[Card; 7]>;
 type IsomorphicHandCache = Cache<(SmallVecHand, bool), SmallVecHand>;
 
 pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(FastHandTable::new);
