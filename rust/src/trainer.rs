@@ -11,10 +11,13 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
 
-pub fn train(iters: u64) {
+pub fn train(iters: u64, warm_start: bool) {
     let deck = card_utils::deck();
-    // let nodes: Nodes = DashMap::new();
-    let nodes = load_nodes(&CONFIG.nodes_path);
+    let nodes = if warm_start {
+        load_nodes(&CONFIG.nodes_path)
+    } else {
+        Nodes::new()
+    };
     println!("[INFO] Beginning training.");
     let num_epochs = iters / CONFIG.eval_every;
     for epoch in 0..num_epochs {

@@ -28,6 +28,6 @@ fn check_infoset_node_size() {
 
 fn main() {
     // check_t();
-    train(CONFIG.train_iters);
+    train(CONFIG.train_iters, CONFIG.warm_start);
     // check_infoset_node_size();
 }
