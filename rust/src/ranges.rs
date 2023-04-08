@@ -9,7 +9,7 @@ use crate::trainer_utils::*;
 // contribution to the range.
 pub const PROB_CUTOFF: f32 = 0.0001;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Range {
     pub range: HashMap<Vec<Card>, f32>,
 }

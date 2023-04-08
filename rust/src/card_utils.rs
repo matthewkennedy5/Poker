@@ -1,19 +1,20 @@
 use crate::itertools::Itertools;
+use dashmap::DashMap;
 use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use rs_poker::core::{Hand, Rank, Rankable};
 use serde::{Deserialize, Serialize};
+use smallvec::{SmallVec, ToSmallVec};
 use std::{
     collections::{HashMap, HashSet},
     fmt,
     fs::File,
     io::{BufRead, BufReader, Write},
     path::Path,
+    sync::mpsc,
     thread,
     time::Duration,
-    sync::mpsc,
 };
-use smallvec::{SmallVec, ToSmallVec};
 
 const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.bin";
 const EQUITY_TABLE_PATH: &str = "products/equity_table.txt";
@@ -250,7 +251,7 @@ impl FastHandTable {
         let strength = *self
             .strengths
             .get(&compact)
-            .unwrap_or_else(|| panic!("{}", "{compact} not in FastHandTable"));
+            .unwrap_or_else(|| panic!("{compact} not in FastHandTable"));
         strength
     }
 
