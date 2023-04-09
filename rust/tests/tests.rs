@@ -692,13 +692,14 @@ fn isomorphic_hand_len() {
 
 // Returns all the descendant action histories of history (not including terminal actions)
 fn all_histories(history: &ActionHistory) -> Vec<ActionHistory> {
+    if history.hand_over() {
+        return Vec::new();
+    }
     let mut all: Vec<ActionHistory> = vec![history.clone()];
     for next in history.next_actions(&CONFIG.bet_abstraction) {
         let mut child_history = history.clone();
-        if !child_history.hand_over() {
-            child_history.add(&next);
-            all.extend(all_histories(&child_history));
-        }
+        child_history.add(&next);
+        all.extend(all_histories(&child_history));
     }
     all
 }
