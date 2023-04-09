@@ -484,6 +484,20 @@ fn load_isomorphic(n_cards: usize, path: &str) -> HashSet<u64> {
     isomorphic
 }
 
+pub fn isomorphic_preflop_hands() -> HashSet<Vec<Card>> {
+    let mut preflop_hands: HashSet<Vec<Card>> = HashSet::new();
+    for i in 2..15 {
+        for j in i..15 {
+            preflop_hands.insert(vec![Card {rank: i as u8, suit: CLUBS as u8}, Card {rank: j as u8, suit: DIAMONDS as u8}]);
+            if i != j {
+                preflop_hands.insert(vec![Card {rank: i as u8, suit: CLUBS as u8}, Card {rank: j as u8, suit: CLUBS as u8}]);
+            }
+        }
+    }
+    assert_eq!(preflop_hands.len(), 169);
+    preflop_hands
+}
+
 pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
     match n_cards {
         5 => println!("[INFO] Finding all isomorphic flop hands."),

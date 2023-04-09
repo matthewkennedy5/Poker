@@ -707,16 +707,7 @@ fn all_histories(history: &ActionHistory) -> Vec<ActionHistory> {
 // Test that all canonical preflop hands are put in a different bin.  
 #[test] 
 fn test_preflop_buckets() {
-    let mut preflop_hands: HashSet<Vec<Card>> = HashSet::new();
-    for i in 2..15 {
-        for j in i..15 {
-            preflop_hands.insert(vec![Card {rank: i as u8, suit: CLUBS as u8}, Card {rank: j as u8, suit: DIAMONDS as u8}]);
-            if i != j {
-                preflop_hands.insert(vec![Card {rank: i as u8, suit: CLUBS as u8}, Card {rank: j as u8, suit: CLUBS as u8}]);
-            }
-        }
-    }
-    assert_eq!(preflop_hands.len(), 169);
+    let preflop_hands = isomorphic_preflop_hands();
     let buckets: Vec<i32> = preflop_hands.iter().map(|h| ABSTRACTION.bin(h)).collect();
     let buckets_set: HashSet<i32> = buckets.iter().map(|b| b.clone()).collect();
     assert_eq!(buckets.len(), buckets_set.len());
@@ -736,14 +727,14 @@ fn node_memory_stress_test() {
         if history.street == PREFLOP {
             for bucket in 0..169 {
                 let infoset = InfoSet { history: history.clone(), card_bucket: bucket };
-                let node = Node::new();
+                let node = Node::new(infoset.next_actions(&CONFIG.bet_abstraction).len());
                 nodes.insert(infoset, node);
                 bar.inc(1);
             }
         } else {
             for bucket in 0..CONFIG.flop_buckets {
                 let infoset = InfoSet { history: history.clone(), card_bucket: bucket };
-                let node = Node::new();
+                let node = Node::new(infoset.next_actions(&CONFIG.bet_abstraction).len());
                 nodes.insert(infoset, node);
                 bar.inc(1);
             }

@@ -459,7 +459,7 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
 pub fn lookup_or_new(nodes: &Nodes, infoset: &InfoSet, bet_abstraction: &[Vec<f32>]) -> Node {
     let node = match nodes.get(infoset) {
         Some(n) => n.clone(),
-        None => Node::new(),
+        None => Node::new(infoset.next_actions(bet_abstraction).len()),
     };
     node
 }
@@ -583,30 +583,3 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
     }
 }
 
-// The Nodes have a bunch of extra information we don't care about when we're done with training.
-
-// pub fn write_blueprint(nodes: &Nodes) {
-//     START HERE
-// }
-
-// For making preflop charts
-// TODO: Fix, and make this orthogonal to the nodes reprsentation (i.e. use Bot)
-// pub fn write_preflop_strategy(nodes: &Nodes, path: &str) 
-// {
-//     let mut preflop_strategy: HashMap<String, HashMap<String, f32>> = HashMap::new();
-//     for elem in nodes {
-//         let infoset = elem.key();
-//         let node = elem.value();
-//         if infoset.history.is_empty() {
-//             let hand = Abstraction::preflop_hand(infoset.card_bucket);
-//             let strategy: HashMap<String, f32> = node.actions.iter().zip(node.cumulative_strategy().iter())
-//                 .map(|(action, prob)| (action.to_string(), *prob))
-//                 .collect();
-//             preflop_strategy.insert(hand, strategy);
-//         }
-//     }
-//     // Write the preflop strategy to a JSON
-//     let json = serde_json::to_string_pretty(&preflop_strategy).unwrap();
-//     let mut file = File::create(&path).unwrap();
-//     file.write(json.as_bytes()).unwrap();
-// }

@@ -36,21 +36,6 @@ impl Abstraction {
         }
     }
 
-    // Inverse lookup - returns a hand in the given bin. Inverse of preflop_bin
-    pub fn preflop_hand(bin: i32) -> String {
-        let suited: bool = bin % 2 == 1;
-        let rank_bin = (if suited { bin - 1 } else { bin }) / 2;
-        let rank1 = rank_bin / 100;
-        let rank2 = rank_bin % 100;
-        let hand = format!(
-            "{}{}{}",
-            rank_str(rank1 as u8),
-            rank_str(rank2 as u8),
-            if suited { "s" } else { "o" }
-        );
-        hand
-    }
-
     // Map each possible preflop hand to an integer in (0..169)
     fn preflop_bin(cards: &[Card]) -> i32 {
         let mut cards = cards.to_vec();

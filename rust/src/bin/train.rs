@@ -17,12 +17,13 @@ use std::mem::size_of_val;
 // }
 
 fn check_infoset_node_size() {
+    let opening_history = ActionHistory::new();
     let infoset = InfoSet::from_hand(
         &str2cards("AsAd"),
         &str2cards(""),
-        &ActionHistory::new()
+        &opening_history
     );
-    let node = Node::new();
+    let node = Node::new(opening_history.next_actions(&CONFIG.bet_abstraction).len());
     println!("InfoSet size: {}", size_of_val(&infoset));
     println!("Node size: {}", size_of_val(&node));
 }

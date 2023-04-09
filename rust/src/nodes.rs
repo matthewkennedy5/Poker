@@ -41,7 +41,8 @@ impl Nodes {
             } else {
                 panic!("Bad street")
             } as usize;
-            self.dashmap.insert(history.clone(), vec![Node::new(); n_buckets]);
+            let new_node = Node::new(history.next_actions(&CONFIG.bet_abstraction).len());
+            self.dashmap.insert(history.clone(), vec![new_node; n_buckets]);
         }
         let mut nodes = self.dashmap.get_mut(&history).unwrap();
         let bucket_index = infoset.card_bucket as usize;
@@ -62,15 +63,17 @@ impl Nodes {
 pub struct Node {
     pub regrets: [f32; NUM_ACTIONS],
     strategy_sum: [f32; NUM_ACTIONS],
-    pub t: f32 
+    pub t: f32,
+    num_actions: usize
 }
 
 impl Node {
-    pub fn new() -> Node {
+    pub fn new(num_actions: usize) -> Node {
         Node {
             regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
             t: 0.0,
+            num_actions: num_actions
         }
     }
 
@@ -82,6 +85,7 @@ impl Node {
         let positive_regrets: SmallVec<[f32; NUM_ACTIONS]> = self
             .regrets
             .iter()
+            .take(self.num_actions)
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
         let regret_norm: SmallVec<[f32; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
@@ -98,10 +102,11 @@ impl Node {
     }
 
     pub fn cumulative_strategy(&self) -> SmallVec<[f32; NUM_ACTIONS]> {
-        normalize_smallvec(&self.strategy_sum)
+        normalize_smallvec(&self.strategy_sum[..self.num_actions])
     }
 
     pub fn add_regret(&mut self, action_index: usize, regret: f32) {
+        assert!(action_index < self.num_actions);
         let mut accumulated_regret = self.regrets[action_index] + regret;
         // Update the accumulated regret according to Discounted Counterfactual
         // Regret Minimization rules
