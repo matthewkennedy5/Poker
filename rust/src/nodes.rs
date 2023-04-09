@@ -60,17 +60,19 @@ impl Nodes {
         for action in infoset.history.get_actions() {
             let next_actions = current_history.next_actions(&self.bet_abstraction);
             let child_index = next_actions.iter().position(|a| a.clone() == action).unwrap();
-            current_history.add(&action);
             if current_node.children.is_empty() {
                 // If the children aren't initialized yet, intiialize the GameTreeNode children.
                 // This will create a bunch of new Nodes because it creates a Node for each card
                 // bucket in each GameTreeNode.
                 let children: Vec<Box<GameTreeNode>> = next_actions.iter().map(|a| {
-                    Box::new(GameTreeNode::new(&current_history, &self.bet_abstraction))
+                    let mut next_history = current_history.clone();
+                    next_history.add(&a);
+                    Box::new(GameTreeNode::new(&next_history, &self.bet_abstraction))
                 }).collect();  
                 current_node.children = children;
             }
             current_node = current_node.children.get_mut(child_index).unwrap();
+            current_history.add(&action);
         }
         // Insert the node at the card_bucket index in the GameTreeNode's vec
         if infoset.card_bucket >= current_node.nodes.len() as i32 {
@@ -80,7 +82,7 @@ impl Nodes {
     }
 
     pub fn len(&self) -> usize {
-        panic!("Not implemented")
+        self.iter().count()
     }
 
     pub fn iter(&self) -> Iter<Node> {
@@ -103,6 +105,9 @@ struct GameTreeNode {
 
 impl GameTreeNode {
     fn new(history: &ActionHistory, bet_abstraction: &[Vec<f32>]) -> GameTreeNode {
+        if history.hand_over() {
+            return GameTreeNode { nodes: Vec::new(), children: Vec::new() };
+        }
         let new_node = Node::new(history, bet_abstraction);
         let n_buckets = if history.street == PREFLOP {
             169
