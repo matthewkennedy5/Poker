@@ -465,12 +465,13 @@ pub fn lookup_or_new(
     infoset: &InfoSet,
     bet_abstraction: &[Vec<f32>],
 ) -> Node {
-    match nodes.get(infoset) {
+    let node = match nodes.get(infoset) {
         Some(n) => n.clone(),
-        None => Node::new(infoset, bet_abstraction),
-    }
+        None => Node::new(&infoset.history, bet_abstraction),
+    };
+    assert_eq!(node.actions, infoset.history.next_actions(bet_abstraction));
+    node
 }
-
 
 // Normalizes the values of a HashMap so that its elements sum to 1.
 // TODO: Remove this in favor of normalize_vec

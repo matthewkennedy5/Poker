@@ -21,7 +21,7 @@ fn check_infoset_node_size() {
         &str2cards(""),
         &ActionHistory::new()
     );
-    let node = Node::new(&infoset, &CONFIG.bet_abstraction);
+    let node = Node::new(&infoset.history, &CONFIG.bet_abstraction);
     println!("InfoSet size: {}", size_of_val(&infoset));
     println!("Node size: {}", size_of_val(&node));
 }

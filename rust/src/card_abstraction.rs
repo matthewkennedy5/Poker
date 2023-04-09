@@ -51,16 +51,18 @@ impl Abstraction {
         hand
     }
 
+    // Map each possible preflop hand to an integer in (0..169)
     fn preflop_bin(cards: &[Card]) -> i32 {
         let mut cards = cards.to_vec();
         cards.sort_by_key(|c| c.rank);
-        let rank1 = cards[0].rank as i32;
-        let rank2 = cards[1].rank as i32;
-        let mut bin = 2 * (rank1 * 100 + rank2);
+        // Ranks start at 2, so shift it to start at 0
+        let rank1: i32 = cards[0].rank as i32 - 2;
+        let rank2: i32 = cards[1].rank as i32 - 2;
+        let mut bin = 2 * (rank1 * 13 + rank2);
         if cards[0].suit == cards[1].suit {
+            // Offset for suited hands
             bin += 1;
         }
-        assert!((404..=2829).contains(&bin));
         bin
     }
 

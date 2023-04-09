@@ -29,7 +29,7 @@ smallvec = { version = "*", features = ["serde"] }
 
 [profile.release]
 debug = true
-debug-assertions = false
+debug-assertions = true
 incremental = true
 # lto = true
 
