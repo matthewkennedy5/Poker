@@ -116,7 +116,7 @@ impl ActionHistory {
 
     // Add an new action to this history, and update the state
     pub fn add(&mut self, action: &Action) {
-        assert!(
+        debug_assert!(
             self.is_legal_next_action(action),
             "Action {:?} is illegal for history {:#?}",
             action,
@@ -208,7 +208,7 @@ impl ActionHistory {
     pub fn next_actions(&self, bet_abstraction: &[Vec<f32>]) -> SmallVec<[Action; NUM_ACTIONS]> {
         // Add all the potential bet sizes in the abstraction, and call and fold actions.
         // Then later we filter out the illegal actions.
-        assert!(self.street <= RIVER + 1);
+        debug_assert!(self.street <= RIVER + 1);
         if self.hand_over() {
             return smallvec![];
         }
@@ -255,7 +255,7 @@ impl ActionHistory {
         }
 
         // Check that we recover the original history when we add back the last action
-        assert!({
+        debug_assert!({
             let mut added = history.clone();
             added.add(&self.last_action().unwrap());
             added == self.clone()
@@ -315,7 +315,7 @@ impl ActionHistory {
             translated.add(&translated_action);
             untranslated.add(&action);
         }
-        assert!(
+        debug_assert!(
             translated.street == self.street,
             "Different streets: History: {}\nTranslated: {}",
             self,
@@ -359,7 +359,7 @@ impl fmt::Display for ActionHistory {
 
 // Returns the element which is closest in log space to the input amount
 fn find_closest_log(v: Vec<Amount>, n: Amount) -> Amount {
-    assert!(!v.is_empty());
+    debug_assert!(!v.is_empty());
     let log_n = (n as f32).ln();
     let mut closest_v = 0;
     let mut log_closest_diff = f32::MAX;
@@ -421,9 +421,9 @@ impl InfoSet {
     }
 
     pub fn from_hand(hole: &[Card], board: &[Card], history: &ActionHistory) -> InfoSet {
-        assert!(!board.contains(&hole[0]) && !board.contains(&hole[1]));
+        debug_assert!(!board.contains(&hole[0]) && !board.contains(&hole[1]));
         let board = &board[..board_length(history.street)];
-        assert!(board.len() == board_length(history.street));
+        debug_assert!(board.len() == board_length(history.street));
         let hand = [hole, board].concat();
         InfoSet {
             history: history.clone(),
@@ -487,7 +487,7 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f32>) -> HashMap<T, f32>
 
 pub fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
     for elem in v {
-        assert!(*elem >= 0.0);
+        debug_assert!(*elem >= 0.0);
     }
     let sum: f32 = v.iter().sum();
     let norm: SmallVec<[f32; NUM_ACTIONS]> = v
@@ -502,7 +502,7 @@ pub fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
         })
         .collect();
     let norm_sum: f32 = norm.iter().sum();
-    assert!(
+    debug_assert!(
         (norm_sum - 1.0).abs() < 1e-6,
         "Sum of normalized vector: {}. Input vector: {:?}",
         norm_sum,

@@ -68,7 +68,7 @@ impl Bot {
         board: &[Card],
         history: &ActionHistory,
     ) -> Strategy {
-        assert!(hole.len() == 2);
+        debug_assert!(hole.len() == 2);
         // Only look at board cards for this street
         let board = &board[..board_length(history.street)];
         let translated = history.translate(&CONFIG.bet_abstraction);

@@ -7,7 +7,7 @@ use std::time::Duration;
 fn bench_cfr(c: &mut Criterion) {
     let nodes: Nodes = Nodes::new();
     let mut group = c.benchmark_group("cfr");
-    group.warm_up_time(Duration::new(90, 0));
+    group.warm_up_time(Duration::new(300, 0));
     group.bench_function("cfr", |b| {
         b.iter(|| {
             cfr_iteration(

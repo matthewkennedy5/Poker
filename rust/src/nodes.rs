@@ -29,7 +29,7 @@ impl Nodes {
 
     pub fn get(&self, infoset: &InfoSet) -> Option<Node> {
         // The action history must be within the bet abstraction
-        assert!(infoset.history == infoset.history.translate(&self.bet_abstraction));
+        debug_assert!(infoset.history == infoset.history.translate(&self.bet_abstraction));
         // Traverse the action history tree to find the set of nodes corresponding to the 
         // infoset's history
         let root = self.root.read().unwrap();
@@ -51,7 +51,7 @@ impl Nodes {
     pub fn insert(&self, infoset: InfoSet, node: Node) {
         // Find the GameTreeNode for this ActionHistory, creating it if it doesn't exist
         // The action history must be within the bet abstraction
-        assert!(infoset.history == infoset.history.translate(&self.bet_abstraction));
+        debug_assert!(infoset.history == infoset.history.translate(&self.bet_abstraction));
         // Traverse the action history tree to find the set of nodes corresponding to the 
         // infoset's history
         let mut root = self.root.write().unwrap();
@@ -75,9 +75,6 @@ impl Nodes {
             current_history.add(&action);
         }
         // Insert the node at the card_bucket index in the GameTreeNode's vec
-        if infoset.card_bucket >= current_node.nodes.len() as i32 {
-            println!("{:?}, {:?}", infoset, infoset.history);
-        }
         current_node.nodes[infoset.card_bucket as usize] = node;
     }
 
