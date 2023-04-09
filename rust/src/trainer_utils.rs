@@ -1,12 +1,12 @@
 use crate::card_abstraction::Abstraction;
 use crate::card_utils::*;
-use crate::nodes::*;
 use crate::config::CONFIG;
-use once_cell::sync::Lazy;
+use crate::nodes::*;
 use dashmap::DashMap;
+use once_cell::sync::Lazy;
 use rand::{prelude::SliceRandom, thread_rng};
-use std::{cmp::Eq, collections::HashMap, fmt, hash::Hash};
 use smallvec::SmallVec;
+use std::{cmp::Eq, collections::HashMap, fmt, hash::Hash};
 
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
@@ -86,10 +86,7 @@ impl ActionHistory {
                 _ => panic!("Bad action string"),
             };
             let amount = tokens[1].parse().expect("Bad action amount");
-            history.add(&Action {
-                action,
-                amount,
-            });
+            history.add(&Action { action, amount });
         }
         history
     }
@@ -227,7 +224,7 @@ impl ActionHistory {
                 };
                 Action {
                     action: ActionType::Bet,
-                    amount: bet_size
+                    amount: bet_size,
                 }
             })
             .collect();
@@ -252,7 +249,7 @@ impl ActionHistory {
 
         // There's a lot of complex rules, so just create a new history and add all the actions
         // in prev_history.
-        let prev_history = &self.history[..self.history.len()-1];
+        let prev_history = &self.history[..self.history.len() - 1];
         let mut history = ActionHistory::new();
         for action in prev_history {
             history.add(&action);
@@ -392,7 +389,7 @@ pub fn get_hand(deck: &[Card], player: usize, street: usize) -> Vec<Card> {
         RIVER => &deck[4..9],
         _ => panic!("Invalid street"),
     };
-    
+
     [hole, board].concat()
 }
 
@@ -460,16 +457,11 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
     }
 }
 
-pub fn lookup_or_new(
-    nodes: &Nodes,
-    infoset: &InfoSet,
-    bet_abstraction: &[Vec<f32>],
-) -> Node {
+pub fn lookup_or_new(nodes: &Nodes, infoset: &InfoSet, bet_abstraction: &[Vec<f32>]) -> Node {
     let node = match nodes.get(infoset) {
         Some(n) => n.clone(),
         None => Node::new(&infoset.history, bet_abstraction),
     };
-    assert_eq!(node.actions, infoset.history.next_actions(bet_abstraction));
     node
 }
 
@@ -521,16 +513,20 @@ pub fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
 }
 
 // Randomly sample an action given the current strategy at this node.
-pub fn sample_action_from_node(node: &mut Node, cumulative: bool) -> Action {
+pub fn sample_action_from_node(
+    node: &mut Node,
+    actions: &SmallVec<[Action; NUM_ACTIONS]>,
+    cumulative: bool,
+) -> Action {
     let strategy = match cumulative {
         true => node.cumulative_strategy(),
         false => node.current_strategy(0.0),
     };
-    let action_indexes: SmallVec<[usize; NUM_ACTIONS]> = (0..node.actions.len()).collect();
+    let action_indexes: SmallVec<[usize; NUM_ACTIONS]> = (0..actions.len()).collect();
     let index: usize = *action_indexes
         .choose_weighted(&mut thread_rng(), |i| strategy[(*i)])
         .unwrap_or_else(|_| panic!("Invalid strategy distribution: {:?}", &strategy));
-    node.actions.get(index).unwrap().clone()
+    actions.get(index).unwrap().clone()
 }
 
 pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
@@ -539,7 +535,7 @@ pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
     let action = (*actions
         .choose_weighted(&mut rng, |a| strategy.get(a).unwrap())
         .unwrap())
-        .clone();
+    .clone();
     action
 }
 
@@ -596,7 +592,7 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
 
 // For making preflop charts
 // TODO: Fix
-// pub fn write_preflop_strategy<F>(get_strategy: F, path: &str) 
+// pub fn write_preflop_strategy<F>(get_strategy: F, path: &str)
 // where F: Fn(&[Card], &[Card], ActionHistory) -> Strategy
 // {
 //     let mut preflop_strategy: HashMap<String, HashMap<String, f32>> = HashMap::new();

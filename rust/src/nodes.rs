@@ -16,7 +16,7 @@ pub const NUM_ACTIONS: usize = 5;
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Nodes {
     root: RwLock<GameTreeNode>,
-    bet_abstraction: Vec<Vec<f32>>,
+    pub bet_abstraction: Vec<Vec<f32>>,
 }
 
 impl Nodes {
@@ -129,7 +129,7 @@ pub struct Node {
     // Depending on the action history, there may be fewer than NUM_ACTIONS legal next actions at
     // this spot. In that case, the trailing extra elements of regrets and strategy_sum will just
     // be zeros. actions.len() is the source of truth for the branching factor at this node.
-    pub actions: SmallVec<[Action; NUM_ACTIONS]>,   // TODO: See if you can get rid of actions as well
+    // pub actions: SmallVec<[Action; NUM_ACTIONS]>,   // TODO: See if you can get rid of actions as well
     pub t: f32 
 }
 
@@ -139,7 +139,7 @@ impl Node {
         Node {
             regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
-            actions,
+            // actions,
             t: 0.0,
         }
     }

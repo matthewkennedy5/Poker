@@ -77,8 +77,10 @@ impl Bot {
         let node = lookup_or_new(&self.blueprint, &infoset, &CONFIG.bet_abstraction);
         let node_strategy: Vec<f32> = node.cumulative_strategy().to_vec();
 
+        // TODO: Also should be DRY with blueprint_exploitability and below
         let mut adjusted_strategy: HashMap<Action,f32> = HashMap::new();
-        for (action, prob) in node.actions.iter().zip(node_strategy.iter()) {
+        let actions = infoset.next_actions(&CONFIG.bet_abstraction);
+        for (action, prob) in actions.iter().zip(node_strategy.iter()) {
             adjusted_strategy.insert(history.adjust_action(action), *prob);
         }
         adjusted_strategy
@@ -117,9 +119,11 @@ impl Bot {
         let infoset = InfoSet::from_hand(hole, board, &this_history);
         let node = lookup_or_new(&nodes, &infoset, &CONFIG.bet_abstraction);
 
+        // TODO: Refactor to be DRY with blueprint_exploitability in exploiter.rs
         let mut strategy: Strategy = HashMap::new();
         let probs: Vec<f32> = node.cumulative_strategy().to_vec();
-        for (action, prob) in node.actions.iter().zip(probs.iter()) {
+        let actions = infoset.next_actions(&CONFIG.bet_abstraction);
+        for (action, prob) in actions.iter().zip(probs.iter()) {
             strategy.insert(action.clone(), *prob);
         }
         strategy

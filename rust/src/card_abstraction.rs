@@ -58,11 +58,11 @@ impl Abstraction {
         // Ranks start at 2, so shift it to start at 0
         let rank1: i32 = cards[0].rank as i32 - 2;
         let rank2: i32 = cards[1].rank as i32 - 2;
-        let mut bin = 2 * (rank1 * 13 + rank2);
-        if cards[0].suit == cards[1].suit {
-            // Offset for suited hands
-            bin += 1;
-        }
+        let bin = if cards[0].suit == cards[1].suit {
+            rank1 * 13 + rank2
+        } else {
+            rank2 * 13 + rank1
+        };
         bin
     }
 

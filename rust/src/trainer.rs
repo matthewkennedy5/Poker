@@ -2,14 +2,13 @@ use crate::card_utils;
 use crate::card_utils::Card;
 use crate::config::CONFIG;
 use crate::exploiter::*;
-use crate::trainer_utils::*;
 use crate::nodes::*;
+use crate::trainer_utils::*;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::SmallVec;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
-
 
 pub fn train(iters: u64, warm_start: bool) {
     let deck = card_utils::deck();
@@ -114,7 +113,8 @@ pub fn iterate(
             node = lookup_or_new(nodes, &infoset, bet_abstraction);
             // TODO: Right now node will just be a uniform distribution strategy because it's not
             // trained. I think instead you want to sample the action from the blueprint.
-            let action = sample_action_from_node(&mut node, true);
+            let action =
+                sample_action_from_node(&mut node, &infoset.next_actions(bet_abstraction), true);
             history.add(&action);
             if history.hand_over() {
                 return terminal_utility(deck, &history, player);
@@ -126,7 +126,7 @@ pub fn iterate(
     // current policy, and load our node.
     let opponent = 1 - player;
     if history.player == opponent {
-        history.add(&sample_action_from_node(&mut node, false));
+        history.add(&sample_action_from_node(&mut node, &infoset.next_actions(bet_abstraction), false));
         if history.hand_over() {
             return terminal_utility(deck, &history, player);
         }
