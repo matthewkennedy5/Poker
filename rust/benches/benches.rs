@@ -1,14 +1,13 @@
 use criterion::*;
 use optimus::*;
 use std::time::Duration;
-use dashmap::DashMap;
 
 // TODO: add a bench for the realtime solving time
 
 fn bench_cfr(c: &mut Criterion) {
-    let nodes: Nodes = DashMap::new();
+    let nodes: Nodes = Nodes::new();
     let mut group = c.benchmark_group("cfr");
-    group.warm_up_time(Duration::new(90, 0));
+    group.warm_up_time(Duration::new(150, 0));
     group.bench_function("cfr", |b| {
         b.iter(|| {
             cfr_iteration(

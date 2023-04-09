@@ -3,10 +3,10 @@ use crate::config::CONFIG;
 use crate::ranges::*;
 use crate::trainer::*;
 use crate::trainer_utils::*;
+use crate::nodes::*;
 use rayon::prelude::*;
 use moka::sync::Cache;
 use std::collections::HashMap;
-use dashmap::DashMap;
 
 type PreflopCache = Cache<(i32, ActionHistory), Strategy>;
 
@@ -68,7 +68,7 @@ impl Bot {
         board: &[Card],
         history: &ActionHistory,
     ) -> Strategy {
-        assert!(hole.len() == 2);
+        debug_assert!(hole.len() == 2);
         // Only look at board cards for this street
         let board = &board[..board_length(history.street)];
         let translated = history.translate(&CONFIG.bet_abstraction);
@@ -76,8 +76,10 @@ impl Bot {
         let node = lookup_or_new(&self.blueprint, &infoset, &CONFIG.bet_abstraction);
         let node_strategy: Vec<f32> = node.cumulative_strategy().to_vec();
 
+        // TODO: Also should be DRY with blueprint_exploitability and below
         let mut adjusted_strategy: HashMap<Action,f32> = HashMap::new();
-        for (action, prob) in node.actions.iter().zip(node_strategy.iter()) {
+        let actions = infoset.next_actions(&CONFIG.bet_abstraction);
+        for (action, prob) in actions.iter().zip(node_strategy.iter()) {
             adjusted_strategy.insert(history.adjust_action(action), *prob);
         }
         adjusted_strategy
@@ -116,9 +118,11 @@ impl Bot {
         let infoset = InfoSet::from_hand(hole, board, &this_history);
         let node = lookup_or_new(&nodes, &infoset, &CONFIG.bet_abstraction);
 
+        // TODO: Refactor to be DRY with blueprint_exploitability in exploiter.rs
         let mut strategy: Strategy = HashMap::new();
         let probs: Vec<f32> = node.cumulative_strategy().to_vec();
-        for (action, prob) in node.actions.iter().zip(probs.iter()) {
+        let actions = infoset.next_actions(&CONFIG.bet_abstraction);
+        for (action, prob) in actions.iter().zip(probs.iter()) {
             strategy.insert(action.clone(), *prob);
         }
         strategy
@@ -144,7 +148,7 @@ impl Bot {
         iters: u64,
         depth_limit: i32
     ) -> Nodes {
-        let nodes: Nodes = DashMap::new();
+        let nodes: Nodes = Nodes::new();
         let mut bet_abstraction = CONFIG.bet_abstraction.clone();
         let pot_frac = (opp_action.amount as f32) / (history.pot() as f32);
         if opp_action.action == ActionType::Bet

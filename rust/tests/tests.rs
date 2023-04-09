@@ -1,8 +1,9 @@
+use std::collections::HashSet;
 use once_cell::sync::Lazy;
 #[cfg(test)]
 use optimus::*;
+use rayon::prelude::*;
 use rand::prelude::*;
-use rayon::iter::*;
 
 static BOT: Lazy<Bot> = Lazy::new(Bot::new);
 
@@ -702,11 +703,29 @@ fn all_histories(history: &ActionHistory) -> Vec<ActionHistory> {
     all
 }
 
+// Test that all canonical preflop hands are put in a different bin.  
+#[test] 
+fn test_preflop_buckets() {
+    let mut preflop_hands: HashSet<Vec<Card>> = HashSet::new();
+    for i in 2..15 {
+        for j in i..15 {
+            preflop_hands.insert(vec![Card {rank: i as u8, suit: CLUBS as u8}, Card {rank: j as u8, suit: DIAMONDS as u8}]);
+            if i != j {
+                preflop_hands.insert(vec![Card {rank: i as u8, suit: CLUBS as u8}, Card {rank: j as u8, suit: CLUBS as u8}]);
+            }
+        }
+    }
+    assert_eq!(preflop_hands.len(), 169);
+    let buckets: Vec<i32> = preflop_hands.iter().map(|h| ABSTRACTION.bin(h)).collect();
+    let buckets_set: HashSet<i32> = buckets.iter().map(|b| b.clone()).collect();
+    assert_eq!(buckets.len(), buckets_set.len());
+}
+
 // Fully populate the nodes to check if it will fit in memory. If not, the test will crash
 // because the computer ran out of memory.
 #[test]
 fn node_memory_stress_test() {
-    let nodes: Nodes = dashmap::DashMap::new();
+    let nodes: Nodes = Nodes::new();
     let histories = all_histories(&ActionHistory::new());
     println!("All histories: {}", histories.len());
     // Assuming there's 169 preflop buckets, and the same number of buckets for flop, turn, and river.
@@ -716,14 +735,14 @@ fn node_memory_stress_test() {
         if history.street == PREFLOP {
             for bucket in 0..169 {
                 let infoset = InfoSet { history: history.clone(), card_bucket: bucket };
-                let node = Node::new(&infoset, &CONFIG.bet_abstraction);
+                let node = Node::new();
                 nodes.insert(infoset, node);
                 bar.inc(1);
             }
         } else {
             for bucket in 0..CONFIG.flop_buckets {
                 let infoset = InfoSet { history: history.clone(), card_bucket: bucket };
-                let node = Node::new(&infoset, &CONFIG.bet_abstraction);
+                let node = Node::new();
                 nodes.insert(infoset, node);
                 bar.inc(1);
             }

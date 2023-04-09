@@ -1,8 +1,8 @@
 use crate::card_abstraction::Abstraction;
 use crate::card_utils::*;
 use crate::config::CONFIG;
+use crate::nodes::*;
 use once_cell::sync::Lazy;
-use dashmap::DashMap;
 use rand::{prelude::SliceRandom, thread_rng};
 use std::{io::Write, fs::File, cmp::Eq, collections::HashMap, fmt, hash::Hash};
 use smallvec::SmallVec;
@@ -21,12 +21,8 @@ pub const FOLD: Action = Action {
 };
 pub const ALL_IN: f32 = -1.0;
 
-// Upper limit on branching factor of blueprint game tree. For setting the SmallVec size.
-pub const NUM_ACTIONS: usize = 5;  
-
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 
-pub type Nodes = DashMap<InfoSet, Node>;
 pub type Strategy = HashMap<Action, f32>;
 pub type Amount = u16;
 
@@ -89,10 +85,7 @@ impl ActionHistory {
                 _ => panic!("Bad action string"),
             };
             let amount = tokens[1].parse().expect("Bad action amount");
-            history.add(&Action {
-                action,
-                amount,
-            });
+            history.add(&Action { action, amount });
         }
         history
     }
@@ -123,7 +116,7 @@ impl ActionHistory {
 
     // Add an new action to this history, and update the state
     pub fn add(&mut self, action: &Action) {
-        assert!(
+        debug_assert!(
             self.is_legal_next_action(action),
             "Action {:?} is illegal for history {:#?}",
             action,
@@ -215,7 +208,7 @@ impl ActionHistory {
     pub fn next_actions(&self, bet_abstraction: &[Vec<f32>]) -> SmallVec<[Action; NUM_ACTIONS]> {
         // Add all the potential bet sizes in the abstraction, and call and fold actions.
         // Then later we filter out the illegal actions.
-        assert!(self.street <= RIVER + 1);
+        debug_assert!(self.street <= RIVER + 1);
         if self.hand_over() {
             return smallvec![];
         }
@@ -230,7 +223,7 @@ impl ActionHistory {
                 };
                 Action {
                     action: ActionType::Bet,
-                    amount: bet_size
+                    amount: bet_size,
                 }
             })
             .collect();
@@ -255,14 +248,14 @@ impl ActionHistory {
 
         // There's a lot of complex rules, so just create a new history and add all the actions
         // in prev_history.
-        let prev_history = &self.history[..self.history.len()-1];
+        let prev_history = &self.history[..self.history.len() - 1];
         let mut history = ActionHistory::new();
         for action in prev_history {
             history.add(&action);
         }
 
         // Check that we recover the original history when we add back the last action
-        assert!({
+        debug_assert!({
             let mut added = history.clone();
             added.add(&self.last_action().unwrap());
             added == self.clone()
@@ -322,7 +315,7 @@ impl ActionHistory {
             translated.add(&translated_action);
             untranslated.add(&action);
         }
-        assert!(
+        debug_assert!(
             translated.street == self.street,
             "Different streets: History: {}\nTranslated: {}",
             self,
@@ -366,7 +359,7 @@ impl fmt::Display for ActionHistory {
 
 // Returns the element which is closest in log space to the input amount
 fn find_closest_log(v: Vec<Amount>, n: Amount) -> Amount {
-    assert!(!v.is_empty());
+    debug_assert!(!v.is_empty());
     let log_n = (n as f32).ln();
     let mut closest_v = 0;
     let mut log_closest_diff = f32::MAX;
@@ -395,7 +388,7 @@ pub fn get_hand(deck: &[Card], player: usize, street: usize) -> Vec<Card> {
         RIVER => &deck[4..9],
         _ => panic!("Invalid street"),
     };
-    
+
     [hole, board].concat()
 }
 
@@ -428,9 +421,9 @@ impl InfoSet {
     }
 
     pub fn from_hand(hole: &[Card], board: &[Card], history: &ActionHistory) -> InfoSet {
-        assert!(!board.contains(&hole[0]) && !board.contains(&hole[1]));
+        debug_assert!(!board.contains(&hole[0]) && !board.contains(&hole[1]));
         let board = &board[..board_length(history.street)];
-        assert!(board.len() == board_length(history.street));
+        debug_assert!(board.len() == board_length(history.street));
         let hand = [hole, board].concat();
         InfoSet {
             history: history.clone(),
@@ -463,78 +456,12 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
     }
 }
 
-pub fn lookup_or_new(
-    nodes: &Nodes,
-    infoset: &InfoSet,
-    bet_abstraction: &[Vec<f32>],
-) -> Node {
-    match nodes.get(infoset) {
+pub fn lookup_or_new(nodes: &Nodes, infoset: &InfoSet, bet_abstraction: &[Vec<f32>]) -> Node {
+    let node = match nodes.get(infoset) {
         Some(n) => n.clone(),
-        None => Node::new(infoset, bet_abstraction),
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct Node {
-    pub regrets: [f32; NUM_ACTIONS], 
-    strategy_sum: [f32; NUM_ACTIONS],
-    // Depending on the action history, there may be fewer than NUM_ACTIONS legal next actions at
-    // this spot. In that case, the trailing extra elements of regrets and strategy_sum will just
-    // be zeros. actions.len() is the source of truth for the branching factor at this node. 
-    pub actions: SmallVec<[Action; NUM_ACTIONS]>,
-    // pub children: SmallVec<[usize; NUM_ACTIONS]>,
-    pub t: f32,     // 8 bytes
-}
-
-impl Node {
-    pub fn new(infoset: &InfoSet, bet_abstraction: &[Vec<f32>]) -> Node {
-        let actions = infoset.next_actions(bet_abstraction);
-        Node {
-            regrets: [0.0; NUM_ACTIONS],
-            strategy_sum: [0.0; NUM_ACTIONS],
-            actions,
-            t: 0.0,
-        }
-    }
-
-    // Returns the current strategy for this node, and updates the cumulative strategy
-    // as a side effect.
-    // Input: prob is the probability of reaching this node
-    pub fn current_strategy(&mut self, prob: f32) -> SmallVec<[f32; NUM_ACTIONS]> {
-        // Normalize the regrets for this iteration of CFR
-        let positive_regrets: SmallVec<[f32; NUM_ACTIONS]> = self
-            .regrets
-            .iter()
-            .map(|r| if *r >= 0.0 { *r } else { 0.0 })
-            .collect();
-        let regret_norm: SmallVec<[f32; NUM_ACTIONS]>= normalize_smallvec(&positive_regrets);
-        for i in 0..regret_norm.len() {
-            // Add this action's probability to the cumulative strategy sum using DCFR+ update rules
-            let new_prob = regret_norm[i] * prob;
-            let weight = if self.t < 100.0 { 0.0 } else { self.t - 100.0 };
-            self.strategy_sum[i] += weight * new_prob;
-        }
-        if prob > 0.0 {
-            self.t += 1.0;
-        }
-        regret_norm
-    }
-
-    pub fn cumulative_strategy(&self) -> SmallVec<[f32; NUM_ACTIONS]> {
-        normalize_smallvec(&self.strategy_sum)
-    }
-
-    pub fn add_regret(&mut self, action_index: usize, regret: f32) {
-        let mut accumulated_regret = self.regrets[action_index] + regret;
-        // Update the accumulated regret according to Discounted Counterfactual
-        // Regret Minimization rules
-        if accumulated_regret >= 0.0 {
-            accumulated_regret *= self.t.powf(CONFIG.alpha) / (self.t.powf(CONFIG.alpha) + 1.0);
-        } else {
-            accumulated_regret *= self.t.powf(CONFIG.beta) / (self.t.powf(CONFIG.beta) + 1.0);
-        }
-        self.regrets[action_index] = accumulated_regret;
-    }
+        None => Node::new(),
+    };
+    node
 }
 
 // Normalizes the values of a HashMap so that its elements sum to 1.
@@ -558,9 +485,9 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f32>) -> HashMap<T, f32>
     map
 }
 
-fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
+pub fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
     for elem in v {
-        assert!(*elem >= 0.0);
+        debug_assert!(*elem >= 0.0);
     }
     let sum: f32 = v.iter().sum();
     let norm: SmallVec<[f32; NUM_ACTIONS]> = v
@@ -575,7 +502,7 @@ fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
         })
         .collect();
     let norm_sum: f32 = norm.iter().sum();
-    assert!(
+    debug_assert!(
         (norm_sum - 1.0).abs() < 1e-6,
         "Sum of normalized vector: {}. Input vector: {:?}",
         norm_sum,
@@ -585,16 +512,20 @@ fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
 }
 
 // Randomly sample an action given the current strategy at this node.
-pub fn sample_action_from_node(node: &mut Node, cumulative: bool) -> Action {
+pub fn sample_action_from_node(
+    node: &mut Node,
+    actions: &SmallVec<[Action; NUM_ACTIONS]>,
+    cumulative: bool,
+) -> Action {
     let strategy = match cumulative {
         true => node.cumulative_strategy(),
         false => node.current_strategy(0.0),
     };
-    let action_indexes: SmallVec<[usize; NUM_ACTIONS]> = (0..node.actions.len()).collect();
+    let action_indexes: SmallVec<[usize; NUM_ACTIONS]> = (0..actions.len()).collect();
     let index: usize = *action_indexes
         .choose_weighted(&mut thread_rng(), |i| strategy[(*i)])
         .unwrap_or_else(|_| panic!("Invalid strategy distribution: {:?}", &strategy));
-    node.actions.get(index).unwrap().clone()
+    actions.get(index).unwrap().clone()
 }
 
 pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
@@ -603,7 +534,7 @@ pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
     let action = (*actions
         .choose_weighted(&mut rng, |a| strategy.get(a).unwrap())
         .unwrap())
-        .clone();
+    .clone();
     action
 }
 
@@ -659,23 +590,23 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
 // }
 
 // For making preflop charts
-pub fn write_preflop_strategy(nodes: &Nodes, path: &str) 
-{
-    let mut preflop_strategy: HashMap<String, HashMap<String, f32>> = HashMap::new();
-    for elem in nodes {
-        let infoset = elem.key();
-        let node = elem.value();
-        if infoset.history.is_empty() {
-            let hand = Abstraction::preflop_hand(infoset.card_bucket);
-            let strategy: HashMap<String, f32> = node.actions.iter().zip(node.cumulative_strategy().iter())
-                .map(|(action, prob)| (action.to_string(), *prob))
-                .collect();
-
-            preflop_strategy.insert(hand, strategy);
-        }
-    }
-    // Write the preflop strategy to a JSON
-    let json = serde_json::to_string_pretty(&preflop_strategy).unwrap();
-    let mut file = File::create(&path).unwrap();
-    file.write(json.as_bytes()).unwrap();
-}
+// TODO: Fix, and make this orthogonal to the nodes reprsentation (i.e. use Bot)
+// pub fn write_preflop_strategy(nodes: &Nodes, path: &str) 
+// {
+//     let mut preflop_strategy: HashMap<String, HashMap<String, f32>> = HashMap::new();
+//     for elem in nodes {
+//         let infoset = elem.key();
+//         let node = elem.value();
+//         if infoset.history.is_empty() {
+//             let hand = Abstraction::preflop_hand(infoset.card_bucket);
+//             let strategy: HashMap<String, f32> = node.actions.iter().zip(node.cumulative_strategy().iter())
+//                 .map(|(action, prob)| (action.to_string(), *prob))
+//                 .collect();
+//             preflop_strategy.insert(hand, strategy);
+//         }
+//     }
+//     // Write the preflop strategy to a JSON
+//     let json = serde_json::to_string_pretty(&preflop_strategy).unwrap();
+//     let mut file = File::create(&path).unwrap();
+//     file.write(json.as_bytes()).unwrap();
+// }

@@ -2,6 +2,7 @@ use crate::card_utils;
 use crate::card_utils::Card;
 use crate::config::CONFIG;
 use crate::exploiter::*;
+use crate::nodes::*;
 use crate::trainer_utils::*;
 use rand::prelude::*;
 use rayon::prelude::*;
@@ -9,11 +10,13 @@ use smallvec::SmallVec;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
-
-pub fn train(iters: u64) {
+pub fn train(iters: u64, warm_start: bool) {
     let deck = card_utils::deck();
-    // let nodes: Nodes = DashMap::new();
-    let nodes = load_nodes(&CONFIG.nodes_path);
+    let nodes = if warm_start {
+        load_nodes(&CONFIG.nodes_path)
+    } else {
+        Nodes::new()
+    };
     println!("[INFO] Beginning training.");
     let num_epochs = iters / CONFIG.eval_every;
     for epoch in 0..num_epochs {
@@ -42,26 +45,16 @@ pub fn load_nodes(path: &str) -> Nodes {
     println!("[INFO] Loading strategy at {path} ...");
     let file = File::open(path).expect("Nodes file not found");
     let reader = BufReader::new(file);
-    let nodes_vec: Vec<(InfoSet, Node)> =
-        bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
-    let nodes = Nodes::new();
-    nodes_vec.into_par_iter()
-             .for_each(|(key, value)| {
-                nodes.insert(key.clone(), value.clone());
-             });
+    let nodes: Nodes = bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
     let len = nodes.len();
     println!("[INFO] Done loading strategy: {len} nodes.");
     nodes
 }
 
 pub fn serialize_nodes(nodes: &Nodes) {
-    let nodes_vec: Vec<(InfoSet, Node)> = nodes
-        .into_iter()
-        .map(|entry| (entry.key().clone(), entry.value().clone()))
-        .collect();
     let file = File::create(&CONFIG.nodes_path).unwrap();
     let mut buf_writer = BufWriter::new(file);
-    bincode::serialize_into(&mut buf_writer, &nodes_vec).expect("Failed to serialize nodes");
+    bincode::serialize_into(&mut buf_writer, &nodes).expect("Failed to serialize nodes");
     buf_writer.flush().unwrap();
     println!("[INFO] Saved strategy.");
 }
@@ -81,7 +74,7 @@ pub fn cfr_iteration(
             &deck,
             history,
             [1.0, 1.0],
-            nodes,
+            &nodes,
             bet_abstraction,
             depth_limit,
         );
@@ -115,7 +108,8 @@ pub fn iterate(
             node = lookup_or_new(nodes, &infoset, bet_abstraction);
             // TODO: Right now node will just be a uniform distribution strategy because it's not
             // trained. I think instead you want to sample the action from the blueprint.
-            let action = sample_action_from_node(&mut node, true);
+            let action =
+                sample_action_from_node(&mut node, &infoset.next_actions(bet_abstraction), true);
             history.add(&action);
             if history.hand_over() {
                 return terminal_utility(deck, &history, player);
@@ -127,7 +121,7 @@ pub fn iterate(
     // current policy, and load our node.
     let opponent = 1 - player;
     if history.player == opponent {
-        history.add(&sample_action_from_node(&mut node, false));
+        history.add(&sample_action_from_node(&mut node, &infoset.next_actions(bet_abstraction), false));
         if history.hand_over() {
             return terminal_utility(deck, &history, player);
         }
