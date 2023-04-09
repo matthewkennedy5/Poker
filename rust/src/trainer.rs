@@ -22,7 +22,7 @@ pub fn train(iters: u64, warm_start: bool) {
     for epoch in 0..num_epochs {
         println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
         let bar = card_utils::pbar(CONFIG.eval_every);
-        (0..CONFIG.eval_every).into_iter().for_each(|i| {
+        (0..CONFIG.eval_every).into_par_iter().for_each(|i| {
             cfr_iteration(
                 &deck,
                 &ActionHistory::new(),
@@ -37,7 +37,7 @@ pub fn train(iters: u64, warm_start: bool) {
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
     }
 
-    // println!("{} nodes reached.", nodes.len());
+    println!("{} nodes reached.", nodes.len());
     serialize_nodes(&nodes);
 }
 
@@ -52,15 +52,10 @@ pub fn load_nodes(path: &str) -> Nodes {
 }
 
 pub fn serialize_nodes(nodes: &Nodes) {
-    // let nodes_vec: Vec<(InfoSet, Node)> = nodes
-    //     .into_iter()
-    //     .map(|entry| (entry.key().clone(), entry.value().clone()))
-    //     .collect();
     let file = File::create(&CONFIG.nodes_path).unwrap();
     let mut buf_writer = BufWriter::new(file);
     bincode::serialize_into(&mut buf_writer, &nodes).expect("Failed to serialize nodes");
     buf_writer.flush().unwrap();
-
     println!("[INFO] Saved strategy.");
 }
 

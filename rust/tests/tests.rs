@@ -735,14 +735,14 @@ fn node_memory_stress_test() {
         if history.street == PREFLOP {
             for bucket in 0..169 {
                 let infoset = InfoSet { history: history.clone(), card_bucket: bucket };
-                let node = Node::new(&infoset.history, &CONFIG.bet_abstraction);
+                let node = Node::new();
                 nodes.insert(infoset, node);
                 bar.inc(1);
             }
         } else {
             for bucket in 0..CONFIG.flop_buckets {
                 let infoset = InfoSet { history: history.clone(), card_bucket: bucket };
-                let node = Node::new(&infoset.history, &CONFIG.bet_abstraction);
+                let node = Node::new();
                 nodes.insert(infoset, node);
                 bar.inc(1);
             }

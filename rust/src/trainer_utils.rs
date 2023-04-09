@@ -459,7 +459,7 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
 pub fn lookup_or_new(nodes: &Nodes, infoset: &InfoSet, bet_abstraction: &[Vec<f32>]) -> Node {
     let node = match nodes.get(infoset) {
         Some(n) => n.clone(),
-        None => Node::new(&infoset.history, bet_abstraction),
+        None => Node::new(),
     };
     node
 }

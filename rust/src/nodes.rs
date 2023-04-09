@@ -1,126 +1,60 @@
 use crate::config::CONFIG;
 use crate::trainer_utils::*;
 use smallvec::SmallVec;
-use std::slice::Iter;
-use std::sync::RwLock;
+use dashmap::DashMap;
 
 // Upper limit on branching factor of blueprint game tree. For setting the SmallVec size.
 pub const NUM_ACTIONS: usize = 5;
 
-// To efficiently store the CFR nodes during training, I'm storing them in the game tree, where each
-// GameTreeNode corresponds to an ActionHistory. Then each GameTreeNode contains a Vec with all the
-// Nodes (1 Node for each card abstraction bucket). This makes get() and insert() a little slower,
-// but saves memory by not needing to store the InfoSet key for each Node. For concurrency, there 
-// is a RwLock around the game tree. If the lock becomes a bottleneck, we can increase the
-// granularity by adding a RwLock for each TreeNode or something. 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Nodes {
-    root: RwLock<GameTreeNode>,
-    pub bet_abstraction: Vec<Vec<f32>>,
+    dashmap: DashMap<ActionHistory, Vec<Node>>,
 }
 
 impl Nodes {
     pub fn new() -> Nodes {
         Nodes {
-            root: RwLock::new(GameTreeNode::new(&ActionHistory::new(), &CONFIG.bet_abstraction)),
-            bet_abstraction: CONFIG.bet_abstraction.clone(),
+            dashmap: DashMap::new()
         }
     }
-
+    
     pub fn get(&self, infoset: &InfoSet) -> Option<Node> {
-        // The action history must be within the bet abstraction
-        debug_assert!(infoset.history == infoset.history.translate(&self.bet_abstraction));
-        // Traverse the action history tree to find the set of nodes corresponding to the 
-        // infoset's history
-        let root = self.root.read().unwrap();
-        let mut current_node: &GameTreeNode = &*root;
-        let mut current_history = ActionHistory::new();
-        for action in infoset.history.get_actions() {
-            let next_actions = current_history.next_actions(&self.bet_abstraction);
-            let child_index = next_actions.iter().position(|a| a.clone() == action).unwrap();
-            current_node = match current_node.children.get(child_index) {
-                Some(n) => n.as_ref(),
-                None => return None
-            };
-            current_history.add(&action);
-        }
-        // Then, lookup the node with the right card bucket
-        current_node.nodes.get(infoset.card_bucket as usize).cloned()
+        let nodes = match self.dashmap.get(&infoset.history) {
+            Some(n) => n,
+            None => return None
+        };
+        nodes.get(infoset.card_bucket as usize).cloned()
     }
 
     pub fn insert(&self, infoset: InfoSet, node: Node) {
-        // Find the GameTreeNode for this ActionHistory, creating it if it doesn't exist
-        // The action history must be within the bet abstraction
-        debug_assert!(infoset.history == infoset.history.translate(&self.bet_abstraction));
-        // Traverse the action history tree to find the set of nodes corresponding to the 
-        // infoset's history
-        let mut root = self.root.write().unwrap();
-        let mut current_node: &mut GameTreeNode = &mut *root;
-        let mut current_history = ActionHistory::new();
-        for action in infoset.history.get_actions() {
-            let next_actions = current_history.next_actions(&self.bet_abstraction);
-            let child_index = next_actions.iter().position(|a| a.clone() == action).unwrap();
-            if current_node.children.is_empty() {
-                // If the children aren't initialized yet, intiialize the GameTreeNode children.
-                // This will create a bunch of new Nodes because it creates a Node for each card
-                // bucket in each GameTreeNode.
-                let children: Vec<Box<GameTreeNode>> = next_actions.iter().map(|a| {
-                    let mut next_history = current_history.clone();
-                    next_history.add(&a);
-                    Box::new(GameTreeNode::new(&next_history, &self.bet_abstraction))
-                }).collect();  
-                current_node.children = children;
-            }
-            current_node = current_node.children.get_mut(child_index).unwrap();
-            current_history.add(&action);
+        let history = infoset.history;
+        if !self.dashmap.contains_key(&history) {
+            // Create the Vec<Node> at this history if it doesn't exist yet
+            let n_buckets = if history.street == PREFLOP {
+                169
+            } else if history.street == FLOP {
+                CONFIG.flop_buckets
+            } else if history.street == TURN {
+                CONFIG.turn_buckets
+            } else if history.street == RIVER {
+                CONFIG.river_buckets
+            } else {
+                panic!("Bad street")
+            } as usize;
+            self.dashmap.insert(history.clone(), vec![Node::new(); n_buckets]);
         }
-        // Insert the node at the card_bucket index in the GameTreeNode's vec
-        current_node.nodes[infoset.card_bucket as usize] = node;
+        let mut nodes = self.dashmap.get_mut(&history).unwrap();
+        let bucket_index = infoset.card_bucket as usize;
+        nodes[bucket_index] = node;
     }
 
     pub fn len(&self) -> usize {
-        self.iter().count()
-    }
-
-    pub fn iter(&self) -> Iter<Node> {
-        panic!("Not implemented")
-    }
-}
-
-impl Iterator for Nodes {
-    type Item = Node;
-    fn next(&mut self) -> Option<Self::Item> {
-        panic!("Not implemented");
-    }
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-struct GameTreeNode {
-    pub nodes: Vec<Node>,
-    pub children: Vec<Box<GameTreeNode>>
-}
-
-impl GameTreeNode {
-    fn new(history: &ActionHistory, bet_abstraction: &[Vec<f32>]) -> GameTreeNode {
-        if history.hand_over() {
-            return GameTreeNode { nodes: Vec::new(), children: Vec::new() };
-        }
-        let new_node = Node::new(history, bet_abstraction);
-        let n_buckets = if history.street == PREFLOP {
-            169
-        } else if history.street == FLOP {
-            CONFIG.flop_buckets
-        } else if history.street == TURN {
-            CONFIG.turn_buckets
-        } else if history.street == RIVER {
-            CONFIG.river_buckets
-        } else {
-            panic!("Bad street")
-        } as usize;
-        GameTreeNode {
-            nodes: vec![new_node; n_buckets],
-            children: Vec::new()
-        }
+        let mut length = 0;
+        self.dashmap.iter().for_each(|elem| {
+            let nodes = elem.value();
+            length += nodes.len();
+        });
+        length
     }
 }
 
@@ -128,20 +62,14 @@ impl GameTreeNode {
 pub struct Node {
     pub regrets: [f32; NUM_ACTIONS],
     strategy_sum: [f32; NUM_ACTIONS],
-    // Depending on the action history, there may be fewer than NUM_ACTIONS legal next actions at
-    // this spot. In that case, the trailing extra elements of regrets and strategy_sum will just
-    // be zeros. actions.len() is the source of truth for the branching factor at this node.
-    // pub actions: SmallVec<[Action; NUM_ACTIONS]>,   // TODO: See if you can get rid of actions as well
     pub t: f32 
 }
 
 impl Node {
-    pub fn new(history: &ActionHistory, bet_abstraction: &[Vec<f32>]) -> Node {
-        let actions = history.next_actions(bet_abstraction);
+    pub fn new() -> Node {
         Node {
             regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
-            // actions,
             t: 0.0,
         }
     }
