@@ -6,7 +6,6 @@ use crate::trainer_utils::*;
 use crate::nodes::*;
 use rayon::prelude::*;
 use moka::sync::Cache;
-use std::collections::HashMap;
 
 type PreflopCache = Cache<(i32, ActionHistory), Strategy>;
 
@@ -29,21 +28,8 @@ impl Bot {
     }
 
     pub fn get_action(&self, hand: &[Card], board: &[Card], history: &ActionHistory) -> Action {
-        // TODO: This actually should cache strategies, not actions, but let's check the
-        // speedup anyway
-        let key = (ABSTRACTION.bin(hand), history.clone());
-        let strategy: Strategy = match self.preflop_cache.get(&key) {
-            Some(s) => s,
-            None => {
-                let strategy = self.get_strategy(hand, board, history);
-                if history.street == PREFLOP {
-                    self.preflop_cache.insert(key, strategy.clone());
-                }
-                strategy
-            }
-        };
-        let action = sample_action_from_strategy(&strategy);
-        action
+        let strategy = self.get_strategy(hand, board, history);
+        sample_action_from_strategy(&strategy)
     }
 
     // Wrapper for the real time solving for the bot's strategy
@@ -58,7 +44,18 @@ impl Bot {
         if !self.subgame_solving || history.is_empty() {
             self.get_strategy_action_translation(hole, board, history)
         } else {
-            self.unsafe_nested_subgame_solving(hole, board, history)
+            // Preflop cache            
+            let key = (ABSTRACTION.bin(hole), history.clone());
+            match self.preflop_cache.get(&key) {
+                Some(strategy) => strategy,
+                None => {
+                    let strategy = self.unsafe_nested_subgame_solving(hole, board, history);
+                    if history.street == PREFLOP {
+                        self.preflop_cache.insert(key, strategy.clone());
+                    }
+                    strategy
+                }
+            }
         }
     }
 
