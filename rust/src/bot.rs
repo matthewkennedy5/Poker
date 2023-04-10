@@ -33,8 +33,6 @@ impl Bot {
     }
 
     // Wrapper for the real time solving for the bot's strategy
-    // TODO: Refactor this to maybe just input an infoset, or just a hand. The hole and board inputs add complexity
-    // since it's different than the rest of the codebase.
     pub fn get_strategy(
         &self,
         hole: &[Card],
