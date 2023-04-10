@@ -4,8 +4,8 @@ use crate::config::CONFIG;
 use crate::nodes::*;
 use once_cell::sync::Lazy;
 use rand::{prelude::SliceRandom, thread_rng};
-use std::{cmp::Eq, collections::HashMap, fmt, hash::Hash};
 use smallvec::SmallVec;
+use std::{cmp::Eq, collections::HashMap, fmt, hash::Hash};
 
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
@@ -465,24 +465,16 @@ pub fn lookup_or_new(nodes: &Nodes, infoset: &InfoSet, bet_abstraction: &[Vec<f3
 }
 
 // Normalizes the values of a HashMap so that its elements sum to 1.
-// TODO: Remove this in favor of normalize_vec
 pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f32>) -> HashMap<T, f32> {
-    let mut map = map.clone();
-    let mut sum = 0.0;
-    for elem in map.values() {
-        sum += elem;
-    }
-    for (action, val) in map.clone() {
-        let newval = if sum == 0.0 {
-            // If all values are 0, then just return a uniform distribution
-            1.0 / map.len() as f32
-        } else {
-            // Otherwise normalize based on the sum.
-            val / sum
-        };
-        map.insert(action.clone(), newval);
-    }
-    map
+    let keys: Vec<T> = map.keys().cloned().collect();
+    let probs: Vec<f32> = keys.iter().map(|k| map.get(k).unwrap()).cloned().collect();
+    let norm_probs = normalize_smallvec(&probs);
+    let result: HashMap<T, f32> = keys
+        .iter()
+        .zip(norm_probs.iter())
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect();
+    result
 }
 
 pub fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
@@ -582,4 +574,3 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
         return 0.0;
     }
 }
-
