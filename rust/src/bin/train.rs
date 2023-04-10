@@ -28,6 +28,22 @@ fn check_infoset_node_size() {
     println!("Node size: {}", size_of_val(&node));
 }
 
+fn check_floating_stability() {
+    let nodes = load_nodes(&CONFIG.nodes_path);
+    let preflop_infosets: Vec<InfoSet> = (0..169).map(|bucket| {
+        InfoSet { history: ActionHistory::new(), card_bucket: bucket }
+    }).collect();
+    for infoset in preflop_infosets {
+        println!("InfoSet: {infoset}");
+        println!("Node: {:?}", nodes.get(&infoset));
+        println!();
+    }
+}
+
 fn main() {
+    // check_floating_stability();
     train(CONFIG.train_iters, CONFIG.warm_start);
 }
+
+
+

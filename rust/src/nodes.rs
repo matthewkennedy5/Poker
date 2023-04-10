@@ -63,7 +63,7 @@ impl Nodes {
 pub struct Node {
     pub regrets: [f32; NUM_ACTIONS],
     strategy_sum: [f32; NUM_ACTIONS],
-    pub t: f32,
+    pub t: i32,
     num_actions: usize
 }
 
@@ -72,7 +72,7 @@ impl Node {
         Node {
             regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
-            t: 0.0,
+            t: 0,
             num_actions: num_actions
         }
     }
@@ -90,13 +90,14 @@ impl Node {
             .collect();
         let regret_norm: SmallVec<[f32; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
         for i in 0..regret_norm.len() {
-            // Add this action's probability to the cumulative strategy sum using DCFR+ update rules
+            // Add this action's probability to the cumulative strategy sum using DCFR update rules
             let new_prob = regret_norm[i] * prob;
-            let weight = if self.t < 100.0 { 0.0 } else { self.t - 100.0 };
-            self.strategy_sum[i] += weight * new_prob;
+            self.strategy_sum[i] += new_prob;
+            const GAMMA: f32 = 2.0;
+            self.strategy_sum[i] *= (self.t as f32 / (self.t as f32 + 1.0)).powf(GAMMA);
         }
         if prob > 0.0 {
-            self.t += 1.0;
+            self.t += 1;
         }
         regret_norm
     }
@@ -111,9 +112,11 @@ impl Node {
         // Update the accumulated regret according to Discounted Counterfactual
         // Regret Minimization rules
         if accumulated_regret >= 0.0 {
-            accumulated_regret *= self.t.powf(CONFIG.alpha) / (self.t.powf(CONFIG.alpha) + 1.0);
+            let t_alpha = (self.t as f32).powf(CONFIG.alpha);
+            accumulated_regret *= t_alpha / (t_alpha + 1.0);
         } else {
-            accumulated_regret *= self.t.powf(CONFIG.beta) / (self.t.powf(CONFIG.beta) + 1.0);
+            let t_beta = (self.t as f32).powf(CONFIG.beta);
+            accumulated_regret *= t_beta / (t_beta + 1.0);
         }
         self.regrets[action_index] = accumulated_regret;
     }

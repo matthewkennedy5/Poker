@@ -4,7 +4,7 @@ use crate::config::CONFIG;
 use crate::nodes::*;
 use once_cell::sync::Lazy;
 use rand::{prelude::SliceRandom, thread_rng};
-use std::{io::Write, fs::File, cmp::Eq, collections::HashMap, fmt, hash::Hash};
+use std::{cmp::Eq, collections::HashMap, fmt, hash::Hash};
 use smallvec::SmallVec;
 
 pub const PREFLOP: usize = 0;
