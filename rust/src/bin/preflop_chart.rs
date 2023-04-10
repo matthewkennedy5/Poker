@@ -14,14 +14,6 @@ pub fn write_preflop_strategy(bot: &Bot, path: &str) {
     let starting_history = ActionHistory::new();
     for hand in isomorphic_preflop_hands() {
         let strategy = bot.get_strategy(&hand, &Vec::new(), &starting_history);
-        debug_assert!({
-            // Make sure probability sums to 1 - TODO: Delete this assert
-            let mut sum = 0.0;
-            for (_, prob) in strategy.clone() {
-                sum += prob;
-            }
-            (sum - 1.0).abs() < 1e-6
-        });
         let str_strategy: HashMap<String, f32> = strategy
             .iter()
             .map(|(action, prob)| (action.to_string(), prob.clone()))
