@@ -72,16 +72,10 @@ impl Bot {
         // Only look at board cards for this street
         let board = &board[..board_length(history.street)];
         let translated = history.translate(&CONFIG.bet_abstraction);
-        let infoset = InfoSet::from_hand(hole, board, &translated);
-        let node = lookup_or_new(&self.blueprint, &infoset, &CONFIG.bet_abstraction);
-        let node_strategy: Vec<f32> = node.cumulative_strategy().to_vec();
-
-        // TODO: Also should be DRY with blueprint_exploitability and below
-        let mut adjusted_strategy: HashMap<Action,f32> = HashMap::new();
-        let actions = infoset.next_actions(&CONFIG.bet_abstraction);
-        for (action, prob) in actions.iter().zip(node_strategy.iter()) {
-            adjusted_strategy.insert(history.adjust_action(action), *prob);
-        }
+        let node_strategy = self.blueprint.get_strategy(hole, board, &translated);
+        let adjusted_strategy = node_strategy.iter().map(|(action, prob)| {
+            (history.adjust_action(&action), prob.clone())
+        }).collect();
         adjusted_strategy
     }
     
@@ -115,16 +109,8 @@ impl Bot {
         // That gives us our strategy in response to their action.
         let mut this_history = subgame_root;
         this_history.add(&history.last_action().unwrap());
-        let infoset = InfoSet::from_hand(hole, board, &this_history);
-        let node = lookup_or_new(&nodes, &infoset, &CONFIG.bet_abstraction);
 
-        // TODO: Refactor to be DRY with blueprint_exploitability in exploiter.rs
-        let mut strategy: Strategy = HashMap::new();
-        let probs: Vec<f32> = node.cumulative_strategy().to_vec();
-        let actions = infoset.next_actions(&CONFIG.bet_abstraction);
-        for (action, prob) in actions.iter().zip(probs.iter()) {
-            strategy.insert(action.clone(), *prob);
-        }
+        let strategy = nodes.get_strategy(hole, board, &this_history);
         strategy
     }
 

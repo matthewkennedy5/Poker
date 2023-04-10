@@ -86,7 +86,7 @@ impl Range {
         let mut opp_range = Range::new();
         let mut history_iter = ActionHistory::new();
         // By Bayes's rule, since the multiplication commutes, we can zero out the probabilties for
-        // the blocker cards up front. TODO: prove this
+        // the blocker cards up front.
         opp_range.remove_blockers(board);
         opp_range.remove_blockers(hole);
         for action in history.get_actions() {
