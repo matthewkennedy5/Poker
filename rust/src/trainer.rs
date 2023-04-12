@@ -36,9 +36,7 @@ pub fn train(iters: u64, warm_start: bool) {
         serialize_nodes(&nodes);
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
     }
-
     println!("{} nodes reached.", nodes.len());
-    serialize_nodes(&nodes);
 }
 
 pub fn load_nodes(path: &str) -> Nodes {
