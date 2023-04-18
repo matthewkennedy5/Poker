@@ -35,6 +35,15 @@ pub fn train(iters: u64, warm_start: bool) {
         bar.finish_with_message("Done");
         serialize_nodes(&nodes);
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
+        // Check how the 27o preflop node looks
+        let o27 = InfoSet::from_hand(
+            &card_utils::str2cards("2c7h"),
+            &Vec::new(),
+            &ActionHistory::new()
+        );
+        println!("InfoSet: {o27}");
+        println!("Actions: {:?}", o27.next_actions(&CONFIG.bet_abstraction));
+        println!("Node: {:?}", nodes.get(&o27));
     }
     println!("{} nodes reached.", nodes.len());
 }
@@ -61,7 +70,7 @@ pub fn cfr_iteration(
     deck: &[Card],
     history: &ActionHistory,
     nodes: &Nodes,
-    bet_abstraction: &Vec<Vec<f32>>,
+    bet_abstraction: &Vec<Vec<f64>>,
     depth_limit: i32,
 ) {
     [DEALER, OPPONENT].iter().for_each(|&player| {
@@ -83,11 +92,11 @@ pub fn iterate(
     player: usize,
     deck: &[Card],
     history: &ActionHistory,
-    weights: [f32; 2],
+    weights: [f64; 2],
     nodes: &Nodes,
-    bet_abstraction: &[Vec<f32>],
+    bet_abstraction: &[Vec<f64>],
     remaining_depth: i32,
-) -> f32 {
+) -> f64 {
     if history.hand_over() {
         return terminal_utility(deck, history, player);
     }
@@ -134,7 +143,7 @@ pub fn iterate(
     }
     let actions = infoset.next_actions(bet_abstraction);
     let strategy = node.current_strategy(weights[player]);
-    let mut utilities: SmallVec<[f32; NUM_ACTIONS]> = SmallVec::with_capacity(NUM_ACTIONS);
+    let mut utilities: SmallVec<[f64; NUM_ACTIONS]> = SmallVec::with_capacity(NUM_ACTIONS);
     let mut node_utility = 0.0;
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.
