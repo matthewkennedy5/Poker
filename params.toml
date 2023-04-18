@@ -17,14 +17,15 @@ river_buckets = 10000   # Max: 125756657
 # DCFR
 alpha = 1.5
 beta = 0.0
+gamma = 2.0
 
 # Filenames
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 100_000
-lbr_iters = 10_000
-eval_every = 100_000
+train_iters = 10_000_000
+lbr_iters = 1_000
+eval_every = 10_000_000
 warm_start = false
 
 # Realtime solving

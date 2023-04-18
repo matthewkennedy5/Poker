@@ -27,6 +27,7 @@ pub struct Config {
     // DCFR parameters
     pub alpha: f32,
     pub beta: f32,
+    pub gamma: f32,
 
     // File paths
     pub nodes_path: String,

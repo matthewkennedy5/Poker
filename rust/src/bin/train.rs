@@ -30,19 +30,19 @@ fn check_infoset_node_size() {
 
 fn check_floating_stability() {
     let nodes = load_nodes(&CONFIG.nodes_path);
-    let preflop_infosets: Vec<InfoSet> = (0..169).map(|bucket| {
-        InfoSet { history: ActionHistory::new(), card_bucket: bucket }
-    }).collect();
-    for infoset in preflop_infosets {
-        println!("InfoSet: {infoset}");
-        println!("Node: {:?}", nodes.get(&infoset));
-        println!();
-    }
+    let o27 = InfoSet::from_hand(
+        &str2cards("2c7h"),
+        &Vec::new(),
+        &ActionHistory::new()
+    );
+    println!("InfoSet: {o27}");
+    println!("Actions: {:?}", o27.next_actions(&CONFIG.bet_abstraction));
+    println!("Node: {:?}", nodes.get(&o27));
 }
 
 fn main() {
-    // check_floating_stability();
-    train(CONFIG.train_iters, CONFIG.warm_start);
+    // train(CONFIG.train_iters, CONFIG.warm_start);
+    check_floating_stability();
 }
 
 
