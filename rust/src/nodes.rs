@@ -68,7 +68,6 @@ impl Nodes {
             strategy.insert(action.clone(), prob);
         }
         strategy
-
     }
 }
 
@@ -106,7 +105,7 @@ impl Node {
             // Add this action's probability to the cumulative strategy sum using DCFR update rules
             let new_prob = regret_norm[i] * prob;
             self.strategy_sum[i] += new_prob;
-            // self.strategy_sum[i] *= (self.t as f64 / (self.t as f64 + 1.0)).powf(CONFIG.gamma);
+            self.strategy_sum[i] *= (self.t as f64 / (self.t as f64 + 1.0)).powf(CONFIG.gamma);
         }
         if prob > 0.0 {
             self.t += 1;
@@ -123,13 +122,13 @@ impl Node {
         let mut accumulated_regret = self.regrets[action_index] + regret;
         // Update the accumulated regret according to Discounted Counterfactual
         // Regret Minimization rules
-        // if accumulated_regret >= 0.0 {
-        //     let t_alpha = (self.t as f64).powf(CONFIG.alpha);
-        //     accumulated_regret *= t_alpha / (t_alpha + 1.0);
-        // } else {
-        //     let t_beta = (self.t as f64).powf(CONFIG.beta);
-        //     accumulated_regret *= t_beta / (t_beta + 1.0);
-        // }
+        if accumulated_regret >= 0.0 {
+            let t_alpha = (self.t as f64).powf(CONFIG.alpha);
+            accumulated_regret *= t_alpha / (t_alpha + 1.0);
+        } else {
+            let t_beta = (self.t as f64).powf(CONFIG.beta);
+            accumulated_regret *= t_beta / (t_beta + 1.0);
+        }
         self.regrets[action_index] = accumulated_regret;
     }
 }

@@ -525,6 +525,26 @@ fn all_in_call() {
     }));
 }
 
+#[test]
+fn terminal_utility_blinds() {
+    let history = ActionHistory::from_strings(vec![
+        "Call 100",
+        "Fold 0"
+    ]);
+    let util = terminal_utility(&deck(), &history, DEALER);
+    assert_eq!(util, 100.0);
+    let util = terminal_utility(&deck(), &history, OPPONENT);
+    assert_eq!(util, -100.0);
+
+    let history = ActionHistory::from_strings(vec![
+        "Fold 0"
+    ]);
+    let util = terminal_utility(&deck(), &history, DEALER);
+    assert_eq!(util, -50.0);
+    let util = terminal_utility(&deck(), &history, OPPONENT);
+    assert_eq!(util, 50.0);
+}
+
 fn play_hand_always_call() -> f64 {
     let mut deck: Vec<Card> = deck();
     let mut rng = &mut rand::thread_rng();

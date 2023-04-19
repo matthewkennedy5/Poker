@@ -55,7 +55,7 @@ pub struct ActionHistory {
     history: SmallVec<[Action; 10]>,
     last_action: Option<Action>,
     current_street_length: u8,
-    stacks: [Amount; 2],
+    stacks: [Amount; 2], // stacks doesn't take into account blinds, but stack_sizes() does
     pub street: usize,
     pub player: usize,
 }
@@ -504,6 +504,7 @@ pub fn normalize_smallvec(v: &[f64]) -> SmallVec<[f64; NUM_ACTIONS]> {
 }
 
 // Randomly sample an action given the current strategy at this node.
+// TODO: Dry with sample_action_from_strategy
 pub fn sample_action_from_node(
     node: &mut Node,
     actions: &SmallVec<[Action; NUM_ACTIONS]>,
@@ -523,10 +524,11 @@ pub fn sample_action_from_node(
 pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
     let actions: Vec<&Action> = strategy.keys().collect();
     let mut rng = thread_rng();
-    let action = (*actions
+    let action: Action = actions
         .choose_weighted(&mut rng, |a| strategy.get(a).unwrap())
-        .unwrap())
-    .clone();
+        .unwrap_or(&&FOLD)  // TODO: Fix this bug where in rare cases, the probabilities are all 0s.
+        .clone()
+        .clone();
     action
 }
 
@@ -538,24 +540,12 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
         // Someone folded -- assign the chips to the winner.
         let winner = history.player;
         let folder = 1 - winner;
-        let mut winnings: f64 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
-
-        // If someone folded on the first preflop round, they lose their blind
-        if winnings == 0.0 {
-            winnings += match folder {
-                DEALER => CONFIG.small_blind as f64,
-                OPPONENT => CONFIG.big_blind as f64,
-                _ => panic!("Bad player number"),
-            };
-        }
-
-        let util = if winner == player {
-            winnings
+        let winnings: f64 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
+        if winner == player {
+            return winnings;
         } else {
-            -winnings
-        };
-
-        return util;
+            return -winnings;
+        }
     }
 
     // Showdown time -- both players have contributed equally to the pot
