@@ -75,7 +75,7 @@ impl Nodes {
 pub struct Node {
     pub regrets: [f64; NUM_ACTIONS],
     strategy_sum: [f64; NUM_ACTIONS],
-    pub t: i32,
+    pub t: i32,     // TODO: Remove: unnecessary. 
     num_actions: usize
 }
 
@@ -106,10 +106,11 @@ impl Node {
                 // Add this action's probability to the cumulative strategy sum using DCFR update rules
                 let new_prob = regret_norm[i] * prob;
                 self.strategy_sum[i] += new_prob;
-                self.strategy_sum[i] *= 0.99999;    // Exponential discounting
+                self.strategy_sum[i] *= 1.0 - 1e-5 * prob;  // Exponential discounting
             }
             self.t += 1;
         }
+        debug_assert!(regret_norm.len() == self.num_actions);
         regret_norm
     }
 
@@ -120,5 +121,8 @@ impl Node {
     pub fn add_regret(&mut self, action_index: usize, regret: f64) {
         debug_assert!(action_index < self.num_actions);
         self.regrets[action_index] = self.regrets[action_index] + regret;
+        if self.regrets[action_index] < 0.0 {
+            self.regrets[action_index] *= 0.9999;
+        }
     }
 }

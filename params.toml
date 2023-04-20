@@ -18,6 +18,7 @@ river_buckets = 10000   # Max: 125756657
 alpha = 1.5
 beta = 0.0
 gamma = 2.0
+# decay = 1e-4
 
 # Filenames
 nodes_path = "products/nodes.bin"

@@ -35,15 +35,6 @@ pub fn train(iters: u64, warm_start: bool) {
         bar.finish_with_message("Done");
         serialize_nodes(&nodes);
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
-        // Check how the 27o preflop node looks
-        let o27 = InfoSet::from_hand(
-            &card_utils::str2cards("2c7h"),
-            &Vec::new(),
-            &ActionHistory::new()
-        );
-        println!("InfoSet: {o27}");
-        println!("Actions: {:?}", o27.next_actions(&CONFIG.bet_abstraction));
-        println!("Node: {:?}", nodes.get(&o27));
     }
     println!("{} nodes reached.", nodes.len());
 }
@@ -86,6 +77,15 @@ pub fn cfr_iteration(
             depth_limit,
         );
     });
+    // Check how the 28o preflop node looks
+    let o28 = InfoSet::from_hand(
+        &card_utils::str2cards("2c8h"),
+        &Vec::new(),
+        &ActionHistory::new(),
+    );
+    // println!("InfoSet: {o28}");
+    // println!("Actions: {:?}", o28.next_actions(&CONFIG.bet_abstraction));
+    // println!("Node: {:?}", nodes.get(&o28));
 }
 
 pub fn iterate(
@@ -129,7 +129,11 @@ pub fn iterate(
     // TODO: Restructure to be DRY between traverser and opponent like Jan's code
     let opponent = 1 - player;
     if history.player == opponent {
-        history.add(&sample_action_from_node(&mut node, &infoset.next_actions(bet_abstraction), false));
+        history.add(&sample_action_from_node(
+            &mut node,
+            &infoset.next_actions(bet_abstraction),
+            false,
+        ));
         if history.hand_over() {
             return terminal_utility(deck, &history, player);
         }
@@ -144,36 +148,37 @@ pub fn iterate(
     }
     let actions = infoset.next_actions(bet_abstraction);
     let strategy = node.current_strategy(weights[player]);
-    let mut utilities: SmallVec<[f64; NUM_ACTIONS]> = SmallVec::with_capacity(NUM_ACTIONS);
     let mut node_utility = 0.0;
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.
-    // for (action, prob) in actions.iter().zip(strategy.iter()) {
-    for (i, action) in actions.iter().enumerate() {
-        // Prune if the regret for this action is below -1000 buyins, and explore it 5% of the time anyway
-        if node.regrets[i] < -100.0 * CONFIG.stack_size as f64 && thread_rng().gen_bool(0.95) {
-            continue; 
-        }
-        let mut next_history = history.clone();
-        next_history.add(action);
-        let prob = strategy[i];
-        let new_weights = match player {
-            0 => [p0 * prob, p1],
-            1 => [p0, p1 * prob],
-            _ => panic!("Bad player value"),
-        };
-        let utility = iterate(
-            player,
-            deck,
-            &next_history,
-            new_weights,
-            nodes,
-            bet_abstraction,
-            remaining_depth - 1,
-        );
-        utilities.push(utility);
-        node_utility += prob * utility;
-    }
+    let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
+        .map(|i| {
+            // Prune if the regret for this action is below the threshold
+            if node.regrets[i] < -10.0 * CONFIG.stack_size as f64 {
+                0.0
+            } else {
+                let mut next_history = history.clone();
+                next_history.add(&actions[i]);
+                let prob = strategy[i];
+                let new_weights = match player {
+                    0 => [p0 * prob, p1],
+                    1 => [p0, p1 * prob],
+                    _ => panic!("Bad player value"),
+                };
+                let utility = iterate(
+                    player,
+                    deck,
+                    &next_history,
+                    new_weights,
+                    nodes,
+                    bet_abstraction,
+                    remaining_depth - 1,
+                );
+                node_utility += prob * utility;
+                utility
+            }
+        })
+        .collect();
 
     // Update regrets
     for (index, utility) in utilities.iter().enumerate() {
