@@ -101,13 +101,13 @@ impl Node {
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
         let regret_norm: SmallVec<[f64; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
-        for i in 0..regret_norm.len() {
-            // Add this action's probability to the cumulative strategy sum using DCFR update rules
-            let new_prob = regret_norm[i] * prob;
-            self.strategy_sum[i] += new_prob;
-            self.strategy_sum[i] *= 0.99999;    // Exponential discounting
-        }
         if prob > 0.0 {
+            for i in 0..regret_norm.len() {
+                // Add this action's probability to the cumulative strategy sum using DCFR update rules
+                let new_prob = regret_norm[i] * prob;
+                self.strategy_sum[i] += new_prob;
+                self.strategy_sum[i] *= 0.99999;    // Exponential discounting
+            }
             self.t += 1;
         }
         regret_norm

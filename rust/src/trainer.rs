@@ -126,6 +126,7 @@ pub fn iterate(
 
     // If it's not our turn, we sample the other player's action from their
     // current policy, and load our node.
+    // TODO: Restructure to be DRY between traverser and opponent like Jan's code
     let opponent = 1 - player;
     if history.player == opponent {
         history.add(&sample_action_from_node(&mut node, &infoset.next_actions(bet_abstraction), false));
@@ -147,9 +148,15 @@ pub fn iterate(
     let mut node_utility = 0.0;
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.
-    for (action, prob) in actions.iter().zip(strategy.iter()) {
+    // for (action, prob) in actions.iter().zip(strategy.iter()) {
+    for (i, action) in actions.iter().enumerate() {
+        // Prune if the regret for this action is below -1000 buyins, and explore it 5% of the time anyway
+        if node.regrets[i] < -100.0 * CONFIG.stack_size as f64 && thread_rng().gen_bool(0.95) {
+            continue; 
+        }
         let mut next_history = history.clone();
         next_history.add(action);
+        let prob = strategy[i];
         let new_weights = match player {
             0 => [p0 * prob, p1],
             1 => [p0, p1 * prob],
