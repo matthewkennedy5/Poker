@@ -21,7 +21,7 @@ actix-rt = "*"
 actix-files = "*"
 actix-cors = "*"
 toml = "*"
-rs_poker = "1.0.0"
+rs_poker = "*"
 moka = "*"
 criterion = { version = "*", features = ["html_reports"] }
 smallvec = { version = "*", features = ["serde"] }

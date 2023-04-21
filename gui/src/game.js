@@ -97,7 +97,7 @@ class Game extends Component {
     }
 
     handOver() {
-        if (this.humanPosition == "dealer") {
+        if (this.humanPosition === "dealer") {
             if (this.winnings > 0) {
                 this.winner = "human";
             } else {
@@ -169,7 +169,7 @@ class Game extends Component {
     async updateGameState() {
         let dealerCards = [];
         let opponentCards = [];
-        if (this.humanPosition == "dealer") {
+        if (this.humanPosition === "dealer") {
             dealerCards = this.humanCards;
             opponentCards = this.cpuCards;
         } else {
