@@ -104,7 +104,7 @@ impl Node {
                 // Add this action's probability to the cumulative strategy sum using DCFR update rules
                 let new_prob = regret_norm[i] * prob;
                 self.strategy_sum[i] += new_prob;
-                self.strategy_sum[i] *= 1.0 - 1e-4 * prob;  // Exponential discounting
+                // self.strategy_sum[i] *= 1.0 - 1e-4 * prob;  // Exponential discounting
             }
         }
         debug_assert!(regret_norm.len() == self.num_actions);
@@ -119,7 +119,7 @@ impl Node {
         debug_assert!(action_index < self.num_actions);
         self.regrets[action_index] = self.regrets[action_index] + regret;
         // if self.regrets[action_index] < 0.0 {
-        self.regrets[action_index] *= 0.9999;
+        // self.regrets[action_index] *= 0.9999;
         // }
     }
 }

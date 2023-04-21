@@ -497,7 +497,7 @@ fn action_translation_all_in() {
 #[test]
 fn limp_is_call_not_bet() {
     let history = ActionHistory::new();
-    let bet_abstraction: Vec<Vec<f64>> = vec![vec![1.0]];
+    let bet_abstraction: Vec<Vec<f32>> = vec![vec![1.0]];
     // assumes that bet_abstraction contains POT on preflop
     let call = Action {
         action: ActionType::Call,
@@ -545,7 +545,7 @@ fn terminal_utility_blinds() {
     assert_eq!(util, 50.0);
 }
 
-fn play_hand_always_call() -> f64 {
+fn play_hand_always_call() -> f32 {
     let mut deck: Vec<Card> = deck();
     let mut rng = &mut rand::thread_rng();
     deck.shuffle(&mut rng);
@@ -574,10 +574,10 @@ fn bot_beats_always_call() {
     println!("[INFO] Starting game against always call bot...");
     let iters = 10_000;
     let bar = pbar(iters);
-    let winnings: Vec<f64> = (0..iters)
+    let winnings: Vec<f32> = (0..iters)
         .into_par_iter()
         .map(|_i| {
-            let score = play_hand_always_call() / (CONFIG.big_blind as f64);
+            let score = play_hand_always_call() / (CONFIG.big_blind as f32);
             bar.inc(1);
             score
         })
@@ -585,7 +585,7 @@ fn bot_beats_always_call() {
     bar.finish();
     let mean = statistical::mean(&winnings);
     let std = statistical::standard_deviation(&winnings, Some(mean));
-    let confidence = 1.96 * std / (iters as f64).sqrt();
+    let confidence = 1.96 * std / (iters as f32).sqrt();
     println!("Score against check/call bot: {mean} +/- {confidence} BB/h\n");
 }
 
@@ -662,7 +662,7 @@ fn depth_limited_solving() {
             for (a, b) in full_strat.iter().zip(depth_strat.iter()) {
                 sum += (a - b).powf(2.0);
             }
-            sum / full_strat.len() as f64
+            sum / full_strat.len() as f32
         });
     }
 
@@ -673,7 +673,7 @@ fn depth_limited_solving() {
             for (a, b) in full_strat.iter().zip(iters_strat.iter()) {
                 sum += (a - b).powf(2.0);
             }
-            sum / full_strat.len() as f64
+            sum / full_strat.len() as f32
         });
     }
 
