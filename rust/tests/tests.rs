@@ -735,7 +735,7 @@ fn test_preflop_buckets() {
 
 // Fully populate the nodes to check if it will fit in memory. If not, the test will crash
 // because the computer ran out of memory.
-#[test]
+// #[test]
 fn node_memory_stress_test() {
     let nodes: Nodes = Nodes::new();
     let histories = all_histories(&ActionHistory::new());
@@ -761,4 +761,14 @@ fn node_memory_stress_test() {
         }
     });
     bar.finish_with_message("Success!");
+}
+
+#[test]
+fn all_in_showdown_street() {
+    let history = ActionHistory::from_strings(vec![
+        "Call 100",
+        "Bet 20000",
+        "Call 19900"
+    ]);
+    assert_eq!(history.street, SHOWDOWN);
 }

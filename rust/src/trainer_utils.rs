@@ -11,6 +11,7 @@ pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
 pub const TURN: usize = 2;
 pub const RIVER: usize = 3;
+pub const SHOWDOWN: usize = 4;
 
 pub const DEALER: usize = 0;
 pub const OPPONENT: usize = 1;
@@ -133,6 +134,9 @@ impl ActionHistory {
             self.street += 1;
             self.current_street_length = 0;
             self.player = OPPONENT;
+        }
+        if self.stacks[0] == 0 && self.stacks[1] == 0 {
+            self.street = SHOWDOWN;
         }
     }
 
