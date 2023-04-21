@@ -19,15 +19,15 @@ pub struct Config {
     pub small_blind: u16,
 
     // Abstraction
-    pub bet_abstraction: Vec<Vec<f64>>,
+    pub bet_abstraction: Vec<Vec<f32>>,
     pub flop_buckets: i32,
     pub turn_buckets: i32,
     pub river_buckets: i32,
 
     // DCFR parameters
-    pub alpha: f64,
-    pub beta: f64,
-    pub gamma: f64,
+    pub alpha: f32,
+    pub beta: f32,
+    pub gamma: f32,
 
     // File paths
     pub nodes_path: String,

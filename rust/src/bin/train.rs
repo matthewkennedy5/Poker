@@ -5,7 +5,7 @@ use std::mem::size_of_val;
 
 // fn check_t() {
 //     let nodes = load_nodes(&CONFIG.nodes_path);
-//     let t: Vec<f64> = nodes.iter().map(|entry| {
+//     let t: Vec<f32> = nodes.iter().map(|entry| {
 //         entry.t
 //     }).collect();
 //     let mean = statistical::mean(&t);

@@ -35,6 +35,15 @@ pub fn train(iters: u64, warm_start: bool) {
         bar.finish_with_message("Done");
         serialize_nodes(&nodes);
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
+        // Check how the 28o preflop node looks
+        let o28 = InfoSet::from_hand(
+            &card_utils::str2cards("2c8h"),
+            &Vec::new(),
+            &ActionHistory::new(),
+        );
+        println!("InfoSet: {o28}");
+        println!("Actions: {:?}", o28.next_actions(&CONFIG.bet_abstraction));
+        println!("Node: {:?}", nodes.get(&o28));
     }
     println!("{} nodes reached.", nodes.len());
 }
@@ -61,7 +70,7 @@ pub fn cfr_iteration(
     deck: &[Card],
     history: &ActionHistory,
     nodes: &Nodes,
-    bet_abstraction: &Vec<Vec<f64>>,
+    bet_abstraction: &Vec<Vec<f32>>,
     depth_limit: i32,
 ) {
     [DEALER, OPPONENT].iter().for_each(|&player| {
@@ -77,26 +86,17 @@ pub fn cfr_iteration(
             depth_limit,
         );
     });
-    // Check how the 28o preflop node looks
-    let o28 = InfoSet::from_hand(
-        &card_utils::str2cards("2c8h"),
-        &Vec::new(),
-        &ActionHistory::new(),
-    );
-    // println!("InfoSet: {o28}");
-    // println!("Actions: {:?}", o28.next_actions(&CONFIG.bet_abstraction));
-    // println!("Node: {:?}", nodes.get(&o28));
 }
 
 pub fn iterate(
     player: usize,
     deck: &[Card],
     history: &ActionHistory,
-    weights: [f64; 2],
+    weights: [f32; 2],
     nodes: &Nodes,
-    bet_abstraction: &[Vec<f64>],
+    bet_abstraction: &[Vec<f32>],
     remaining_depth: i32,
-) -> f64 {
+) -> f32 {
     if history.hand_over() {
         return terminal_utility(deck, history, player);
     }
@@ -151,10 +151,10 @@ pub fn iterate(
     let mut node_utility = 0.0;
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.
-    let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
+    let utilities: SmallVec<[f32; NUM_ACTIONS]> = (0..actions.len())
         .map(|i| {
             // Prune if the regret for this action is below the threshold
-            if node.regrets[i] < -10.0 * CONFIG.stack_size as f64 {
+            if node.regrets[i] < -10.0 * CONFIG.stack_size as f32 {
                 0.0
             } else {
                 let mut next_history = history.clone();

@@ -10,11 +10,11 @@ fn main() {
 
 // For making preflop charts
 pub fn write_preflop_strategy(bot: &Bot, path: &str) {
-    let mut preflop_strategy: HashMap<String, HashMap<String, f64>> = HashMap::new();
+    let mut preflop_strategy: HashMap<String, HashMap<String, f32>> = HashMap::new();
     let starting_history = ActionHistory::new();
     for hand in isomorphic_preflop_hands() {
         let strategy = bot.get_strategy(&hand, &Vec::new(), &starting_history);
-        let str_strategy: HashMap<String, f64> = strategy
+        let str_strategy: HashMap<String, f32> = strategy
             .iter()
             .map(|(action, prob)| (action.to_string(), prob.clone()))
             .collect();
