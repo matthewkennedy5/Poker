@@ -153,30 +153,25 @@ pub fn iterate(
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     let utilities: SmallVec<[f32; NUM_ACTIONS]> = (0..actions.len())
         .map(|i| {
-            // Prune if the regret for this action is below the threshold
-            if node.regrets[i] < -10.0 * CONFIG.stack_size as f32 {
-                0.0
-            } else {
-                let mut next_history = history.clone();
-                next_history.add(&actions[i]);
-                let prob = strategy[i];
-                let new_weights = match player {
-                    0 => [p0 * prob, p1],
-                    1 => [p0, p1 * prob],
-                    _ => panic!("Bad player value"),
-                };
-                let utility = iterate(
-                    player,
-                    deck,
-                    &next_history,
-                    new_weights,
-                    nodes,
-                    bet_abstraction,
-                    remaining_depth - 1,
-                );
-                node_utility += prob * utility;
-                utility
-            }
+            let mut next_history = history.clone();
+            next_history.add(&actions[i]);
+            let prob = strategy[i];
+            let new_weights = match player {
+                0 => [p0 * prob, p1],
+                1 => [p0, p1 * prob],
+                _ => panic!("Bad player value"),
+            };
+            let utility = iterate(
+                player,
+                deck,
+                &next_history,
+                new_weights,
+                nodes,
+                bet_abstraction,
+                remaining_depth - 1,
+            );
+            node_utility += prob * utility;
+            utility
         })
         .collect();
 

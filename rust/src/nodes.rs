@@ -75,7 +75,8 @@ impl Nodes {
 pub struct Node {
     pub regrets: [f32; NUM_ACTIONS],
     strategy_sum: [f32; NUM_ACTIONS],
-    num_actions: usize
+    num_actions: usize,
+    t: u64,
 }
 
 impl Node {
@@ -83,7 +84,8 @@ impl Node {
         Node {
             regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
-            num_actions: num_actions
+            num_actions: num_actions,
+            t: 0
         }
     }
 
@@ -104,8 +106,9 @@ impl Node {
                 // Add this action's probability to the cumulative strategy sum using DCFR update rules
                 let new_prob = regret_norm[i] * prob;
                 self.strategy_sum[i] += new_prob;
-                // self.strategy_sum[i] *= 1.0 - 1e-4 * prob;  // Exponential discounting
+                self.strategy_sum[i] *= (self.t as f32 / (self.t + 100) as f32).powf(CONFIG.gamma);
             }
+            self.t += 1;
         }
         debug_assert!(regret_norm.len() == self.num_actions);
         regret_norm
@@ -117,9 +120,14 @@ impl Node {
 
     pub fn add_regret(&mut self, action_index: usize, regret: f32) {
         debug_assert!(action_index < self.num_actions);
-        self.regrets[action_index] = self.regrets[action_index] + regret;
-        // if self.regrets[action_index] < 0.0 {
-        // self.regrets[action_index] *= 0.9999;
-        // }
+        let mut accumulated_regret = self.regrets[action_index] + regret;
+        if accumulated_regret >= 0.0 {
+            let t_alpha = (self.t as f32).powf(CONFIG.alpha) / ((100.0 as f32).powf(CONFIG.alpha));
+            accumulated_regret *= t_alpha / (t_alpha + 1.0);
+        } else {
+            let t_beta = (self.t as f32).powf(CONFIG.beta) / ((100.0 as f32).powf(CONFIG.beta));
+            accumulated_regret *= t_beta / (t_beta + 1.0);
+        }
+        self.regrets[action_index] = accumulated_regret;
     }
 }

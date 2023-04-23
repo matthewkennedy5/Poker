@@ -109,7 +109,7 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     let mut clusters = HashMap::new();
     for (idx, (hand, _ehs2)) in hand_ehs2.iter().enumerate() {
         // Bucket the hand according to the percentile of its E[HS^2]
-        let bucket: i32 = ((n_buckets as f32) * (idx as f32) / (hand_ehs2.len() as f32)) as i32;
+        let bucket: i32 = ((n_buckets as f64) * (idx as f64) / (hand_ehs2.len() as f64)) as i32;
         clusters.insert(*hand, bucket);
     }
     let path = match n_cards {
