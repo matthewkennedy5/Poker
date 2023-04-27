@@ -73,8 +73,8 @@ impl Nodes {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
-    pub regrets: [f64; NUM_ACTIONS],
-    strategy_sum: [f64; NUM_ACTIONS],
+    pub regrets: [f32; NUM_ACTIONS],
+    strategy_sum: [f32; NUM_ACTIONS],
     num_actions: usize,
     t: u64,
 }
@@ -92,21 +92,21 @@ impl Node {
     // Returns the current strategy for this node, and updates the cumulative strategy
     // as a side effect.
     // Input: prob is the probability of reaching this node
-    pub fn current_strategy(&mut self, prob: f64) -> SmallVec<[f64; NUM_ACTIONS]> {
+    pub fn current_strategy(&mut self, prob: f32) -> SmallVec<[f32; NUM_ACTIONS]> {
         // Normalize the regrets for this iteration of CFR
-        let positive_regrets: SmallVec<[f64; NUM_ACTIONS]> = self
+        let positive_regrets: SmallVec<[f32; NUM_ACTIONS]> = self
             .regrets
             .iter()
             .take(self.num_actions)
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
-        let regret_norm: SmallVec<[f64; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
+        let regret_norm: SmallVec<[f32; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
         if prob > 0.0 {
             for i in 0..regret_norm.len() {
                 // Add this action's probability to the cumulative strategy sum using DCFR update rules
                 let new_prob = regret_norm[i] * prob;
                 self.strategy_sum[i] += new_prob;
-                self.strategy_sum[i] *= (self.t as f64 / (self.t + 100) as f64).powf(CONFIG.gamma);
+                self.strategy_sum[i] *= (self.t as f32 / (self.t + 100) as f32).powf(CONFIG.gamma);
             }
             self.t += 1;
         }
@@ -114,18 +114,18 @@ impl Node {
         regret_norm
     }
 
-    pub fn cumulative_strategy(&self) -> SmallVec<[f64; NUM_ACTIONS]> {
+    pub fn cumulative_strategy(&self) -> SmallVec<[f32; NUM_ACTIONS]> {
         normalize_smallvec(&self.strategy_sum[..self.num_actions])
     }
 
-    pub fn add_regret(&mut self, action_index: usize, regret: f64) {
+    pub fn add_regret(&mut self, action_index: usize, regret: f32) {
         debug_assert!(action_index < self.num_actions);
         let mut accumulated_regret = self.regrets[action_index] + regret;
         if accumulated_regret >= 0.0 {
-            let t_alpha = (self.t as f64).powf(CONFIG.alpha) / ((100.0 as f64).powf(CONFIG.alpha));
+            let t_alpha = (self.t as f32).powf(CONFIG.alpha) / ((100.0 as f32).powf(CONFIG.alpha));
             accumulated_regret *= t_alpha / (t_alpha + 1.0);
         } else {
-            let t_beta = (self.t as f64).powf(CONFIG.beta) / ((100.0 as f64).powf(CONFIG.beta));
+            let t_beta = (self.t as f32).powf(CONFIG.beta) / ((100.0 as f32).powf(CONFIG.beta));
             accumulated_regret *= t_beta / (t_beta + 1.0);
         }
         self.regrets[action_index] = accumulated_regret;

@@ -59,7 +59,7 @@ struct HistoryInfo {
     allInAmount: Amount,
     whoseTurn: String,
     stacks: StacksJSON,
-    winnings: f64,
+    winnings: f32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

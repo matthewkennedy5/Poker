@@ -131,7 +131,7 @@ impl Bot {
     ) -> Nodes {
         let nodes: Nodes = Nodes::new();
         let mut bet_abstraction = CONFIG.bet_abstraction.clone();
-        let pot_frac = (opp_action.amount as f64) / (history.pot() as f64);
+        let pot_frac = (opp_action.amount as f32) / (history.pot() as f32);
         if opp_action.action == ActionType::Bet
             && !bet_abstraction[history.street].contains(&pot_frac)
         {

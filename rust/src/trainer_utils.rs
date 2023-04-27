@@ -20,11 +20,11 @@ pub const FOLD: Action = Action {
     action: ActionType::Fold,
     amount: 0,
 };
-pub const ALL_IN: f64 = -1.0;
+pub const ALL_IN: f32 = -1.0;
 
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 
-pub type Strategy = HashMap<Action, f64>;
+pub type Strategy = HashMap<Action, f32>;
 pub type Amount = u16;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
@@ -209,7 +209,7 @@ impl ActionHistory {
 
     // Returns a vector of the possible next actions after this state, that are
     // allowed in our action abstraction.
-    pub fn next_actions(&self, bet_abstraction: &[Vec<f64>]) -> SmallVec<[Action; NUM_ACTIONS]> {
+    pub fn next_actions(&self, bet_abstraction: &[Vec<f32>]) -> SmallVec<[Action; NUM_ACTIONS]> {
         // Add all the potential bet sizes in the abstraction, and call and fold actions.
         // Then later we filter out the illegal actions.
         debug_assert!(self.street <= RIVER + 1);
@@ -223,7 +223,7 @@ impl ActionHistory {
                 let bet_size = if fraction == &ALL_IN {
                     self.stacks[self.player]
                 } else {
-                    (*fraction * (pot as f64)) as Amount
+                    (*fraction * (pot as f32)) as Amount
                 };
                 Action {
                     action: ActionType::Bet,
@@ -272,7 +272,7 @@ impl ActionHistory {
     // current history, with actions mapped to those of the given bet abstraction.
     // This assumes that folding and calling are always going to be implicitly
     // allowed in the abstraction.
-    pub fn translate(&self, bet_abstraction: &Vec<Vec<f64>>) -> ActionHistory {
+    pub fn translate(&self, bet_abstraction: &Vec<Vec<f32>>) -> ActionHistory {
         let mut translated = ActionHistory::new();
         let mut untranslated = ActionHistory::new();
         for action in self.get_actions() {
@@ -364,11 +364,11 @@ impl fmt::Display for ActionHistory {
 // Returns the element which is closest in log space to the input amount
 fn find_closest_log(v: Vec<Amount>, n: Amount) -> Amount {
     debug_assert!(!v.is_empty());
-    let log_n = (n as f64).ln();
+    let log_n = (n as f32).ln();
     let mut closest_v = 0;
-    let mut log_closest_diff = f64::MAX;
+    let mut log_closest_diff = f32::MAX;
     for candidate in v {
-        let log_candidate_diff = ((candidate as f64).ln() - log_n).abs();
+        let log_candidate_diff = ((candidate as f32).ln() - log_n).abs();
         if log_candidate_diff < log_closest_diff {
             closest_v = candidate;
             log_closest_diff = log_candidate_diff;
@@ -435,7 +435,7 @@ impl InfoSet {
         }
     }
 
-    pub fn next_actions(&self, bet_abstraction: &[Vec<f64>]) -> SmallVec<[Action; NUM_ACTIONS]> {
+    pub fn next_actions(&self, bet_abstraction: &[Vec<f32>]) -> SmallVec<[Action; NUM_ACTIONS]> {
         self.history.next_actions(bet_abstraction)
     }
 }
@@ -460,7 +460,7 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
     }
 }
 
-pub fn lookup_or_new(nodes: &Nodes, infoset: &InfoSet, bet_abstraction: &[Vec<f64>]) -> Node {
+pub fn lookup_or_new(nodes: &Nodes, infoset: &InfoSet, bet_abstraction: &[Vec<f32>]) -> Node {
     let node = match nodes.get(infoset) {
         Some(n) => n.clone(),
         None => Node::new(infoset.next_actions(bet_abstraction).len()),
@@ -469,11 +469,11 @@ pub fn lookup_or_new(nodes: &Nodes, infoset: &InfoSet, bet_abstraction: &[Vec<f6
 }
 
 // Normalizes the values of a HashMap so that its elements sum to 1.
-pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64> {
+pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f32>) -> HashMap<T, f32> {
     let keys: Vec<T> = map.keys().cloned().collect();
-    let probs: Vec<f64> = keys.iter().map(|k| map.get(k).unwrap()).cloned().collect();
+    let probs: Vec<f32> = keys.iter().map(|k| map.get(k).unwrap()).cloned().collect();
     let norm_probs = normalize_smallvec(&probs);
-    let result: HashMap<T, f64> = keys
+    let result: HashMap<T, f32> = keys
         .iter()
         .zip(norm_probs.iter())
         .map(|(key, value)| (key.clone(), value.clone()))
@@ -481,23 +481,23 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64>
     result
 }
 
-pub fn normalize_smallvec(v: &[f64]) -> SmallVec<[f64; NUM_ACTIONS]> {
+pub fn normalize_smallvec(v: &[f32]) -> SmallVec<[f32; NUM_ACTIONS]> {
     for elem in v {
         debug_assert!(*elem >= 0.0);
     }
-    let sum: f64 = v.iter().sum();
-    let norm: SmallVec<[f64; NUM_ACTIONS]> = v
+    let sum: f32 = v.iter().sum();
+    let norm: SmallVec<[f32; NUM_ACTIONS]> = v
         .iter()
         .map(|e| {
             if sum == 0.0 {
                 // If all values are 0, then just return a uniform distribution
-                1.0 / v.len() as f64
+                1.0 / v.len() as f32
             } else {
                 e / sum
             }
         })
         .collect();
-    let norm_sum: f64 = norm.iter().sum();
+    let norm_sum: f32 = norm.iter().sum();
     debug_assert!(
         (norm_sum - 1.0).abs() < 1e-6,
         "Sum of normalized vector: {}. Input vector: {:?}",
@@ -538,13 +538,13 @@ pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
 
 // Assuming history represents a terminal state (someone folded, or it's a showdown),
 // return the utility, in chips, that the given player gets.
-pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -> f64 {
+pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -> f32 {
     let opponent = 1 - player;
     if history.last_action().unwrap().action == ActionType::Fold {
         // Someone folded -- assign the chips to the winner.
         let winner = history.player;
         let folder = 1 - winner;
-        let winnings: f64 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
+        let winnings: f32 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f32;
         if winner == player {
             return winnings;
         } else {
@@ -560,9 +560,9 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
     let opponent_strength = FAST_HAND_TABLE.hand_strength(&opponent_hand);
 
     if player_strength > opponent_strength {
-        (pot / 2) as f64
+        (pot / 2) as f32
     } else if player_strength < opponent_strength {
-        return -(pot as f64) / 2.0;
+        return -(pot as f32) / 2.0;
     } else {
         // It's a tie: player_strength == opponent_strength
         return 0.0;
