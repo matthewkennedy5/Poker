@@ -1,11 +1,10 @@
 use optimus::*;
-use rand::Rng;
 
 use std::mem::size_of_val;
 
 // fn check_t() {
 //     let nodes = load_nodes(&CONFIG.nodes_path);
-//     let t: Vec<f32> = nodes.iter().map(|entry| {
+//     let t: Vec<f64> = nodes.iter().map(|entry| {
 //         entry.t
 //     }).collect();
 //     let mean = statistical::mean(&t);
@@ -31,9 +30,18 @@ fn check_infoset_node_size() {
 fn check_floating_stability() {
     let nodes = load_nodes(&CONFIG.nodes_path);
     let o27 = InfoSet::from_hand(
-        &str2cards("2c7h"),
-        &Vec::new(),
-        &ActionHistory::new()
+        &str2cards("AcAh"),
+        &str2cards("7c6dTcAd7d"),
+        &ActionHistory::from_strings(vec![
+            "Bet 200",
+            "Call 200",
+            "Call 0",
+            "Bet 400",
+            "Call 400",
+            "Call 0",
+            "Bet 1200",
+            "Call 1200"
+        ]),
     );
     println!("InfoSet: {o27}");
     println!("Actions: {:?}", o27.next_actions(&CONFIG.bet_abstraction));
@@ -42,7 +50,7 @@ fn check_floating_stability() {
 
 fn main() {
     train(CONFIG.train_iters, CONFIG.warm_start);
-    check_floating_stability();
+    // check_floating_stability();
 }
 
 

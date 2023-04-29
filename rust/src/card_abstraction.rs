@@ -73,7 +73,7 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, 
 
 // Returns all isomorphic hands paired with their E[HS^2] values, in sorted order
 // by E[HS^2].
-fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<(u64, f32)> {
+fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<(u64, f64)> {
     let isomorphic_hands = match n_cards {
         5 => load_flop_isomorphic(),
         6 => load_turn_isomorphic(),
@@ -84,7 +84,7 @@ fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<(u64, f32)> {
     // Cluster the hands based on E[HS^2] percentile bucketing.
     // Calculate all E[HS^2] values in parallel
     let bar = pbar(isomorphic_hands.len() as u64);
-    let mut hand_ehs2: Vec<(u64, f32)> = isomorphic_hands
+    let mut hand_ehs2: Vec<(u64, f64)> = isomorphic_hands
         .par_iter()
         .map(|h| {
             let ehs2 = expected_hs2(*h);

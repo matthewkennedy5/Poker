@@ -531,7 +531,7 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
 }
 
 // Returns the second moment of the hand's equity distribution.
-pub fn expected_hs2(hand: u64) -> f32 {
+pub fn expected_hs2(hand: u64) -> f64 {
     // For river hands, this just returns HS^2 since there is no distribution
     // Flop and turn, deals rollouts for the E[HS^2] value.
     let hand = hand2cards(hand);
@@ -555,8 +555,8 @@ pub fn expected_hs2(hand: u64) -> f32 {
     sum / count
 }
 
-fn river_equity(hand: Vec<Card>) -> f32 {
-    // fn river_equity(hand: &[Card]) -> f32 {
+fn river_equity(hand: Vec<Card>) -> f64 {
+    // fn river_equity(hand: &[Card]) -> f64 {
     let mut deck = deck();
     // Remove the already-dealt cards from the deck
     deck.retain(|c| !hand.contains(c));
@@ -582,7 +582,7 @@ fn river_equity(hand: Vec<Card>) -> f32 {
         }
     }
 
-    n_wins / (n_runs as f32)
+    n_wins / (n_runs as f64)
 }
 
 // There are multiple places where I have to serialize a HashMap of cards->i32
@@ -599,7 +599,7 @@ pub fn serialize(hand_data: HashMap<u64, i32>, path: &str) {
 }
 
 struct EquityTable {
-    table: HashMap<u64, f32>,
+    table: HashMap<u64, f64>,
 }
 
 impl EquityTable {
@@ -620,7 +620,7 @@ impl EquityTable {
                     let hand = data.next().unwrap();
                     let equity = data.next().unwrap();
                     let hand = str2hand(hand);
-                    let equity: f32 = equity.to_string().parse().unwrap();
+                    let equity: f64 = equity.to_string().parse().unwrap();
                     table.insert(hand, equity);
                 }
                 println!("[INFO] Done loading the equity lookup table.");
@@ -629,7 +629,7 @@ impl EquityTable {
         }
     }
 
-    fn create() -> HashMap<u64, f32> {
+    fn create() -> HashMap<u64, f64> {
         let isomorphic: Vec<u64> = load_river_isomorphic().iter().copied().collect();
         println!("[INFO] Creating the river equity lookup table...");
         let chunk_size = isomorphic.len() / 100;
@@ -644,7 +644,7 @@ impl EquityTable {
             let thread_tx = tx.clone();
             let thread_pbar_tx = pbar_tx.clone();
             handles.push(thread::spawn(move || {
-                let equities: Vec<(u64, f32)> = chunk
+                let equities: Vec<(u64, f64)> = chunk
                     .iter()
                     .map(|h| {
                         thread_pbar_tx
@@ -663,7 +663,7 @@ impl EquityTable {
         }
         bar.finish();
 
-        let mut equities: Vec<(u64, f32)> = Vec::new();
+        let mut equities: Vec<(u64, f64)> = Vec::new();
         for _i in 0..handles.len() {
             let mut result = rx.recv().expect("Could not receive result");
             equities.append(&mut result);
@@ -687,7 +687,7 @@ impl EquityTable {
         table
     }
 
-    pub fn lookup(&self, hand: &[Card]) -> f32 {
+    pub fn lookup(&self, hand: &[Card]) -> f64 {
         let hand = cards2hand(&isomorphic_hand(hand, true));
         *self
             .table
