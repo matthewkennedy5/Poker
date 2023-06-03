@@ -106,7 +106,6 @@ impl Node {
                 // Add this action's probability to the cumulative strategy sum using DCFR update rules
                 let new_prob = regret_norm[i] * prob;
                 self.strategy_sum[i] += new_prob;
-                self.strategy_sum[i] *= 0.99999;
                 // self.strategy_sum[i] *= (self.t as f64 / (self.t + 100) as f64).powf(CONFIG.gamma);
             }
             // self.t += 1;
@@ -129,7 +128,6 @@ impl Node {
         //     let t_beta = (self.t as f64).powf(CONFIG.beta) / ((100.0 as f64).powf(CONFIG.beta));
         //     accumulated_regret *= t_beta / (t_beta + 1.0);
         // }
-        accumulated_regret *= 0.99999;
         self.regrets[action_index] = accumulated_regret;
     }
 }

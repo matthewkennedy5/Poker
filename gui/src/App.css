@@ -1,6 +1,9 @@
 :root {
   --button-color: #53d78b;
   --fold-color: red;
+  display: flex;
+  justify-content: center;
+  background-color: #474747;
 }
 
 .App {
@@ -8,13 +11,14 @@
 }
 
 .app {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   height: 100vh;
   width: 100vw;
+  max-width: 450px;
   background-color: #272727;
   font-family: Mulish,sans-serif;
-  position: absolute;
-  top: 0;
-  left: 0;
 }
 
 .App-logo {
@@ -61,7 +65,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 20vw;
+  border-radius: 20%;
   margin: 5%;
   width: 90%;
   height: 60%;
