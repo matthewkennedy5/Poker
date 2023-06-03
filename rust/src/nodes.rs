@@ -76,7 +76,7 @@ pub struct Node {
     pub regrets: [f64; NUM_ACTIONS],
     strategy_sum: [f64; NUM_ACTIONS],
     num_actions: usize,
-    // t: u64,
+    t: u64,
 }
 
 impl Node {
@@ -85,7 +85,7 @@ impl Node {
             regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
             num_actions: num_actions,
-            // t: 0
+            t: 0
         }
     }
 
@@ -103,12 +103,14 @@ impl Node {
         let regret_norm: SmallVec<[f64; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
         if prob > 0.0 {
             for i in 0..regret_norm.len() {
-                // Add this action's probability to the cumulative strategy sum using DCFR update rules
+                // Add this action's probability to the cumulative strategy sum 
                 let new_prob = regret_norm[i] * prob;
-                self.strategy_sum[i] += new_prob;
+                if self.t >= 1_000_000 {
+                    self.strategy_sum[i] += new_prob;
+                }
                 // self.strategy_sum[i] *= (self.t as f64 / (self.t + 100) as f64).powf(CONFIG.gamma);
             }
-            // self.t += 1;
+            self.t += 1;
         }
         debug_assert!(regret_norm.len() == self.num_actions);
         regret_norm
