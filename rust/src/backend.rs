@@ -151,11 +151,11 @@ pub async fn start_server() -> std::io::Result<()> {
     println!("[INFO] Launched server");
     HttpServer::new(|| {
         App::new()
-            // .route("/api/compare", web::post().to(compare_hands))
             .route("/api/bot", web::post().to(get_cpu_action))
             .route("/api/historyInfo", web::post().to(get_history_info))
             .service(fs::Files::new("/", "../gui/build").index_file("index.html"))
-            .wrap(Cors::permissive())
+            .wrap(Cors::permissive()
+        )
     })
     .bind("0.0.0.0:80")?
     .run()

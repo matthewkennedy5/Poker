@@ -1,6 +1,7 @@
 use optimus::*;
 
 use std::mem::size_of_val;
+use std::fs;
 
 // fn check_t() {
 //     let nodes = load_nodes(&CONFIG.nodes_path);
@@ -48,8 +49,26 @@ fn check_floating_stability() {
     println!("Node: {:?}", nodes.get(&o27));
 }
 
+fn t_json() {
+    let nodes = load_nodes(&CONFIG.nodes_path);
+    let mut ts: Vec<u64> = Vec::new();
+    for (history, history_nodes) in nodes.dashmap {
+        for n in history_nodes {
+            ts.push(n.t);
+            if n.t > 0 {
+                println!("{}", history);
+            }
+        }
+    }
+    ts.sort();
+
+    let json = serde_json::to_string(&ts).unwrap();
+    fs::write("products/t_histogram.json", json).unwrap();
+}
+
 fn main() {
-    train(CONFIG.train_iters, CONFIG.warm_start);
+    t_json();
+    // train(CONFIG.train_iters, CONFIG.warm_start);
     // check_floating_stability();
 }
 
