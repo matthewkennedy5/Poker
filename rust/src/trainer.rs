@@ -35,15 +35,27 @@ pub fn train(iters: u64, warm_start: bool) {
         bar.finish_with_message("Done");
         serialize_nodes(&nodes);
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
+
+        // Check what percent of nodes have t = 0
+        let mut zero = 0;
+        for (history, history_nodes) in nodes.dashmap.clone() {
+            for n in history_nodes {
+                if n.t == 0 {
+                    zero += 1;
+                }
+            }
+        }
+        println!("Percent zeros: {}", zero as f64 / 21904056.0);
+
         // Check how the 28o preflop node looks
-        let o28 = InfoSet::from_hand(
-            &card_utils::str2cards("2c8h"),
-            &Vec::new(),
-            &ActionHistory::new(),
-        );
-        println!("InfoSet: {o28}");
-        println!("Actions: {:?}", o28.next_actions(&CONFIG.bet_abstraction));
-        println!("Node: {:?}", nodes.get(&o28));
+        // let o28 = InfoSet::from_hand(
+        //     &card_utils::str2cards("2c8h"),
+        //     &Vec::new(),
+        //     &ActionHistory::new(),
+        // );
+        // println!("InfoSet: {o28}");
+        // println!("Actions: {:?}", o28.next_actions(&CONFIG.bet_abstraction));
+        // println!("Node: {:?}", nodes.get(&o28));
     }
     println!("{} nodes reached.", nodes.len());
 }
@@ -129,11 +141,9 @@ pub fn iterate(
     // TODO: Restructure to be DRY between traverser and opponent like Jan's code
     let opponent = 1 - player;
     if history.player == opponent {
-        history.add(&sample_action_from_node(
-            &mut node,
-            &infoset.next_actions(bet_abstraction),
-            false,
-        ));
+        let opp_action: Action =
+            sample_action_from_node(&mut node, &infoset.next_actions(bet_abstraction), false);
+        history.add(&opp_action);
         if history.hand_over() {
             return terminal_utility(deck, &history, player);
         }
@@ -153,10 +163,10 @@ pub fn iterate(
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
         .map(|i| {
-            if node.regrets[i] < -100.0 * CONFIG.stack_size as f64 && rand::thread_rng().gen_bool(0.95) {
-                // Prune
-                return 0.0;
-            }
+            // if node.regrets[i] < -100.0 * CONFIG.stack_size as f64 && rand::thread_rng().gen_bool(0.95) {
+            //     // Prune
+            //     return 0.0;
+            // }
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
             let prob = strategy[i];

@@ -105,9 +105,7 @@ impl Node {
             for i in 0..regret_norm.len() {
                 // Add this action's probability to the cumulative strategy sum 
                 let new_prob = regret_norm[i] * prob;
-                // if self.t >= 1_000_000 {
                 self.strategy_sum[i] += new_prob;
-                // }
                 // self.strategy_sum[i] *= (self.t as f64 / (self.t + 100) as f64).powf(CONFIG.gamma);
             }
             self.t += 1;

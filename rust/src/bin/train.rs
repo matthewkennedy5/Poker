@@ -52,23 +52,25 @@ fn check_floating_stability() {
 fn t_json() {
     let nodes = load_nodes(&CONFIG.nodes_path);
     let mut ts: Vec<u64> = Vec::new();
+    let mut zero = 0;
     for (history, history_nodes) in nodes.dashmap {
         for n in history_nodes {
             ts.push(n.t);
-            if n.t > 0 {
-                println!("{}", history);
+            if n.t == 0 {
+                zero += 1;
             }
         }
     }
-    ts.sort();
+    println!("Percent zeros: {}", (zero as f64) / (ts.len() as f64));
 
-    let json = serde_json::to_string(&ts).unwrap();
-    fs::write("products/t_histogram.json", json).unwrap();
+    // ts.sort();
+    // let json = serde_json::to_string(&ts).unwrap();
+    // fs::write("products/t_histogram.json", json).unwrap();
 }
 
 fn main() {
-    t_json();
-    // train(CONFIG.train_iters, CONFIG.warm_start);
+    // t_json();
+    train(CONFIG.train_iters, CONFIG.warm_start);
     // check_floating_stability();
 }
 
