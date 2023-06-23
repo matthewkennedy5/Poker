@@ -10,9 +10,9 @@ bet_abstraction = [
     [0.5, 1.0, -1.0],
     [0.5, 1.0, -1.0],
 ]
-flop_buckets = 1000    # Max:   1342562
-turn_buckets = 1000    # Max:  14403610
-river_buckets = 1000   # Max: 125756657
+flop_buckets = 10000    # Max:   1342562
+turn_buckets = 10000    # Max:  14403610
+river_buckets = 10000   # Max: 125756657
 
 # DCFR
 alpha = 1.5
@@ -24,9 +24,9 @@ nodes_path = "products/nodes.bin"
 
 # Training
 train_iters = 10_000_000_000
-lbr_iters = 10_000
-eval_every = 1_000_000
-warm_start = true
+lbr_iters = 1_000_000
+eval_every = 100_000
+warm_start = false
 
 # Realtime solving
 subgame_solving = false

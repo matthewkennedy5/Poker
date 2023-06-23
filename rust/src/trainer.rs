@@ -38,24 +38,26 @@ pub fn train(iters: u64, warm_start: bool) {
 
         // Check what percent of nodes have t = 0
         let mut zero = 0;
+        let mut total = 0;
         for (history, history_nodes) in nodes.dashmap.clone() {
             for n in history_nodes {
+                total += 1;
                 if n.t == 0 {
                     zero += 1;
                 }
             }
         }
-        println!("Percent zeros: {}", zero as f64 / 21904056.0);
+        println!("Percent zeros: {}", zero as f64 / total as f64);
 
         // Check how the 28o preflop node looks
-        // let o28 = InfoSet::from_hand(
-        //     &card_utils::str2cards("2c8h"),
-        //     &Vec::new(),
-        //     &ActionHistory::new(),
-        // );
-        // println!("InfoSet: {o28}");
-        // println!("Actions: {:?}", o28.next_actions(&CONFIG.bet_abstraction));
-        // println!("Node: {:?}", nodes.get(&o28));
+        let o28 = InfoSet::from_hand(
+            &card_utils::str2cards("2c8h"),
+            &Vec::new(),
+            &ActionHistory::new(),
+        );
+        println!("InfoSet: {o28}");
+        println!("Actions: {:?}", o28.next_actions(&CONFIG.bet_abstraction));
+        println!("Node: {:?}", nodes.get(&o28));
     }
     println!("{} nodes reached.", nodes.len());
 }
@@ -115,47 +117,53 @@ pub fn iterate(
 
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
-    let mut history = history.clone();
-    let mut infoset = InfoSet::from_deck(deck, &history);
+    let history = history.clone();
+    let infoset = InfoSet::from_deck(deck, &history);
     let mut node = lookup_or_new(nodes, &infoset, bet_abstraction);
 
-    // Depth limited solving - just sample actions until the end of the game to estimate the utility
-    // TODO: Let the opponent choose between several strategies
-    if remaining_depth == 0 {
-        loop {
-            infoset = InfoSet::from_deck(deck, &history);
-            node = lookup_or_new(nodes, &infoset, bet_abstraction);
-            // TODO: Right now node will just be a uniform distribution strategy because it's not
-            // trained. I think instead you want to sample the action from the blueprint.
-            let action =
-                sample_action_from_node(&mut node, &infoset.next_actions(bet_abstraction), true);
-            history.add(&action);
-            if history.hand_over() {
-                return terminal_utility(deck, &history, player);
-            }
-        }
-    }
-
-    // If it's not our turn, we sample the other player's action from their
-    // current policy, and load our node.
     // TODO: Restructure to be DRY between traverser and opponent like Jan's code
     let opponent = 1 - player;
     if history.player == opponent {
-        let opp_action: Action =
-            sample_action_from_node(&mut node, &infoset.next_actions(bet_abstraction), false);
-        history.add(&opp_action);
-        if history.hand_over() {
-            return terminal_utility(deck, &history, player);
+
+        let actions = infoset.next_actions(bet_abstraction);
+        let mut action_utilities = Vec::new();
+        let strategy = node.current_strategy(0.0);
+    
+        // Instead of sampling a single action for the opponent, iterate over all possible actions
+        for i in 0..actions.len() {
+            let mut next_history = history.clone();
+            next_history.add(&actions[i]);
+            let prob = strategy[i];
+            let new_weights = match opponent {
+                0 => [weights[0] * prob, weights[1]],
+                1 => [weights[0], weights[1] * prob],
+                _ => panic!("Bad player value"),
+            };
+
+            // Calculate the utility for each action
+            let utility = if next_history.hand_over() {
+                terminal_utility(deck, &next_history, player)
+            } else {
+                iterate(
+                    player,
+                    deck,
+                    &next_history,
+                    new_weights,
+                    nodes,
+                    bet_abstraction,
+                    remaining_depth - 1,
+                )
+            };
+            action_utilities.push(utility * prob);
         }
-        infoset = InfoSet::from_deck(deck, &history);
-        node = lookup_or_new(nodes, &infoset, bet_abstraction);
+    
+        // Calculate the expected utility for the opponent by taking the average of the action utilities
+        let expected_utility = action_utilities.iter().sum::<f64>();
+        return expected_utility;
     }
 
     // Grab the current strategy at this node
     let [p0, p1] = weights;
-    if weights[opponent] < 1e-6 {
-        return 0.0;
-    }
     let actions = infoset.next_actions(bet_abstraction);
     let strategy = node.current_strategy(weights[player]);
     let mut node_utility = 0.0;
@@ -165,6 +173,8 @@ pub fn iterate(
         .map(|i| {
             // if node.regrets[i] < -100.0 * CONFIG.stack_size as f64 && rand::thread_rng().gen_bool(0.95) {
             //     // Prune
+            //     // on the other hand, just change one variable at a time for now, even if it's slow. 
+            //     // once it works, try to speed it up with pruning or whatever. 
             //     return 0.0;
             // }
             let mut next_history = history.clone();
