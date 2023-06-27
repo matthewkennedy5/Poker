@@ -106,7 +106,7 @@ impl Node {
                 // Add this action's probability to the cumulative strategy sum 
                 let new_prob = regret_norm[i] * prob;
                 self.strategy_sum[i] += new_prob;
-                self.strategy_sum[i] *= (self.t as f64 / (self.t + 100) as f64).powf(CONFIG.gamma);
+                self.strategy_sum[i] *= CONFIG.decay;
             }
             self.t += 1;
         }
@@ -120,14 +120,7 @@ impl Node {
 
     pub fn add_regret(&mut self, action_index: usize, regret: f64) {
         debug_assert!(action_index < self.num_actions);
-        let mut accumulated_regret = self.regrets[action_index] + regret;
-        if accumulated_regret >= 0.0 {
-            let t_alpha = (self.t as f64).powf(CONFIG.alpha) / ((100.0 as f64).powf(CONFIG.alpha));
-            accumulated_regret *= t_alpha / (t_alpha + 1.0);
-        } else {
-            let t_beta = (self.t as f64).powf(CONFIG.beta) / ((100.0 as f64).powf(CONFIG.beta));
-            accumulated_regret *= t_beta / (t_beta + 1.0);
-        }
+        let accumulated_regret = self.regrets[action_index] + regret;
         self.regrets[action_index] = accumulated_regret;
     }
 }

@@ -25,9 +25,7 @@ pub struct Config {
     pub river_buckets: i32,
 
     // DCFR parameters
-    pub alpha: f64,
-    pub beta: f64,
-    pub gamma: f64,
+    pub decay: f64,
 
     // File paths
     pub nodes_path: String,

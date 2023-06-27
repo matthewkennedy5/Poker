@@ -164,6 +164,7 @@ pub fn iterate(
 
     // Grab the current strategy at this node
     let [p0, p1] = weights;
+    // add pruning if the weight for the opponent is <0 or whatever. Nice. 
     let actions = infoset.next_actions(bet_abstraction);
     let strategy = node.current_strategy(weights[player]);
     let mut node_utility = 0.0;
