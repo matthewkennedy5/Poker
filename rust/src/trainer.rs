@@ -124,16 +124,18 @@ pub fn iterate(
     // TODO: Restructure to be DRY between traverser and opponent like Jan's code
     let opponent = 1 - player;
     if history.player == opponent {
-
         let actions = infoset.next_actions(bet_abstraction);
         let mut action_utilities = Vec::new();
         let strategy = node.current_strategy(0.0);
-    
+
         // Instead of sampling a single action for the opponent, iterate over all possible actions
         for i in 0..actions.len() {
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
             let prob = strategy[i];
+            if prob < 1e-6 {
+                continue;
+            }
             let new_weights = match opponent {
                 0 => [weights[0] * prob, weights[1]],
                 1 => [weights[0], weights[1] * prob],
@@ -156,7 +158,7 @@ pub fn iterate(
             };
             action_utilities.push(utility * prob);
         }
-    
+
         // Calculate the expected utility for the opponent by taking the average of the action utilities
         let expected_utility = action_utilities.iter().sum::<f64>();
         return expected_utility;
@@ -164,7 +166,6 @@ pub fn iterate(
 
     // Grab the current strategy at this node
     let [p0, p1] = weights;
-    // add pruning if the weight for the opponent is <0 or whatever. Nice. 
     let actions = infoset.next_actions(bet_abstraction);
     let strategy = node.current_strategy(weights[player]);
     let mut node_utility = 0.0;
@@ -172,12 +173,12 @@ pub fn iterate(
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
         .map(|i| {
-            // if node.regrets[i] < -100.0 * CONFIG.stack_size as f64 && rand::thread_rng().gen_bool(0.95) {
-            //     // Prune
-            //     // on the other hand, just change one variable at a time for now, even if it's slow. 
-            //     // once it works, try to speed it up with pruning or whatever. 
-            //     return 0.0;
-            // }
+            if node.regrets[i] < -100.0 * CONFIG.stack_size as f64
+                && rand::thread_rng().gen_bool(0.95)
+            {
+                // Prune
+                return 0.0;
+            }
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
             let prob = strategy[i];
