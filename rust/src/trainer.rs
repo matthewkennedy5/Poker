@@ -103,7 +103,7 @@ pub fn cfr_iteration(
 }
 
 pub fn iterate(
-    player: usize,
+    player: usize,  // change to "traverser"
     deck: &[Card],
     history: &ActionHistory,
     weights: [f64; 2],
@@ -121,49 +121,11 @@ pub fn iterate(
     let infoset = InfoSet::from_deck(deck, &history);
     let mut node = lookup_or_new(nodes, &infoset, bet_abstraction);
 
-    // TODO: Restructure to be DRY between traverser and opponent like Jan's code
     let opponent = 1 - player;
-    if history.player == opponent {
-        let actions = infoset.next_actions(bet_abstraction);
-        let mut action_utilities = Vec::new();
-        let strategy = node.current_strategy(0.0);
-
-        // Instead of sampling a single action for the opponent, iterate over all possible actions
-        for i in 0..actions.len() {
-            let mut next_history = history.clone();
-            next_history.add(&actions[i]);
-            let prob = strategy[i];
-            if prob < 1e-6 {
-                continue;
-            }
-            let new_weights = match opponent {
-                0 => [weights[0] * prob, weights[1]],
-                1 => [weights[0], weights[1] * prob],
-                _ => panic!("Bad player value"),
-            };
-
-            // Calculate the utility for each action
-            let utility = iterate(
-                    player,
-                    deck,
-                    &next_history,
-                    new_weights,
-                    nodes,
-                    bet_abstraction,
-                    remaining_depth - 1,
-                );
-            action_utilities.push(utility * prob);
-        }
-
-        // Calculate the expected utility for the opponent by taking the average of the action utilities
-        let expected_utility = action_utilities.iter().sum::<f64>();
-        return expected_utility;
-    }
-
-    // Grab the current strategy at this node
-    let [p0, p1] = weights;
     let actions = infoset.next_actions(bet_abstraction);
-    let strategy = node.current_strategy(weights[player]);
+    let strategy = node.current_strategy(
+        if history.player == player { weights[player] } else { 0.0 }
+    );
     let mut node_utility = 0.0;
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.
@@ -175,12 +137,17 @@ pub fn iterate(
                 // Prune
                 return 0.0;
             }
+            let prob = strategy[i];
+            if history.player == opponent && prob < 1e-6 {
+                return 0.0;
+            }
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
-            let prob = strategy[i];
-            let new_weights = match player {
-                0 => [p0 * prob, p1],
-                1 => [p0, p1 * prob],
+
+            // TODO: Just keep track of opponent_weight
+            let new_weights = match history.player {
+                0 => [weights[0] * prob, weights[1]],
+                1 => [weights[0], weights[1] * prob],
                 _ => panic!("Bad player value"),
             };
             let utility = iterate(
@@ -197,13 +164,15 @@ pub fn iterate(
         })
         .collect();
 
-    // Update regrets
-    for (index, utility) in utilities.iter().enumerate() {
-        let regret = utility - node_utility;
-        node.add_regret(index, weights[opponent] * regret);
-    }
+    // Update regrets for the traversing player
+    if history.player == player {
+        for (index, utility) in utilities.iter().enumerate() {
+            let regret = utility - node_utility;
+            node.add_regret(index, weights[opponent] * regret);
+        }
 
-    let updated = node.clone();
-    nodes.insert(infoset, updated);
+        let updated = node.clone();
+        nodes.insert(infoset, updated);
+    }
     node_utility
 }
