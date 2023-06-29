@@ -103,7 +103,7 @@ pub fn cfr_iteration(
 }
 
 pub fn iterate(
-    player: usize,  // change to "traverser"
+    player: usize,
     deck: &[Card],
     history: &ActionHistory,
     weights: [f64; 2],
@@ -131,12 +131,12 @@ pub fn iterate(
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
         .map(|i| {
-            if node.regrets[i] < -100.0 * CONFIG.stack_size as f64
-                && rand::thread_rng().gen_bool(0.95)
-            {
-                // Prune
-                return 0.0;
-            }
+            // if node.regrets[i] < -100.0 * CONFIG.stack_size as f64
+            //     && rand::thread_rng().gen_bool(0.95)
+            // {
+            //     // Prune
+            //     return 0.0;
+            // }
             let prob = strategy[i];
             if history.player == opponent && prob < 1e-6 {
                 return 0.0;
@@ -144,7 +144,6 @@ pub fn iterate(
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
 
-            // TODO: Just keep track of opponent_weight
             let new_weights = match history.player {
                 0 => [weights[0] * prob, weights[1]],
                 1 => [weights[0], weights[1] * prob],

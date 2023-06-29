@@ -106,7 +106,7 @@ impl Node {
                 // Add this action's probability to the cumulative strategy sum 
                 let new_prob = regret_norm[i] * prob;
                 self.strategy_sum[i] += new_prob;
-                self.strategy_sum[i] *= CONFIG.decay;
+                // self.strategy_sum[i] *= CONFIG.decay;
             }
             self.t += 1;
         }
