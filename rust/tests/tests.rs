@@ -772,3 +772,27 @@ fn all_in_showdown_street() {
     ]);
     assert_eq!(history.street, SHOWDOWN);
 }
+
+#[test]
+fn train_performance() {
+    train(1_000_000, 1_000_000, false);
+    let nodes = load_nodes(&CONFIG.nodes_path);
+
+    // Check what percent of nodes have t = 0
+    let mut zero = 0;
+    let mut total = 0;
+    for (_, history_nodes) in nodes.dashmap.clone() {
+        for n in history_nodes {
+            total += 1;
+            if n.t == 0 {
+                zero += 1;
+            }
+        }
+    }
+    let percent_zeros = zero as f64 / total as f64;
+    assert!(percent_zeros < 0.2);
+
+    // Make sure the exploitability is below 0.5 BB/h
+    let exploitability = blueprint_exploitability(&nodes, 100_000);
+    assert!(exploitability < 0.5);
+}

@@ -10,7 +10,7 @@ use smallvec::SmallVec;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
-pub fn train(iters: u64, warm_start: bool) {
+pub fn train(iters: u64, eval_every: u64, warm_start: bool)  {
     let deck = card_utils::deck();
     let nodes = if warm_start {
         load_nodes(&CONFIG.nodes_path)
@@ -18,11 +18,11 @@ pub fn train(iters: u64, warm_start: bool) {
         Nodes::new()
     };
     println!("[INFO] Beginning training.");
-    let num_epochs = iters / CONFIG.eval_every;
+    let num_epochs = iters / eval_every;
     for epoch in 0..num_epochs {
         println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
-        let bar = card_utils::pbar(CONFIG.eval_every);
-        (0..CONFIG.eval_every).into_par_iter().for_each(|i| {
+        let bar = card_utils::pbar(eval_every);
+        (0..eval_every).into_par_iter().for_each(|i| {
             cfr_iteration(
                 &deck,
                 &ActionHistory::new(),
