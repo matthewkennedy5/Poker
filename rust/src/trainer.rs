@@ -143,10 +143,7 @@ pub fn iterate(
             };
 
             // Calculate the utility for each action
-            let utility = if next_history.hand_over() {
-                terminal_utility(deck, &next_history, player)
-            } else {
-                iterate(
+            let utility = iterate(
                     player,
                     deck,
                     &next_history,
@@ -154,8 +151,7 @@ pub fn iterate(
                     nodes,
                     bet_abstraction,
                     remaining_depth - 1,
-                )
-            };
+                );
             action_utilities.push(utility * prob);
         }
 
