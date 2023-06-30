@@ -44,20 +44,24 @@ impl Range {
     where
         F: Fn(&Vec<Card>) -> Strategy,
     {
-        let mut new_range = self.range.clone();
-        for (hole, prob) in self.range.clone() {
+        let keys: Vec<_> = self.range.keys().cloned().collect();
+
+        for hole in keys {
+            let prob = self.range[&hole];
             if prob < PROB_CUTOFF {
                 continue;
             }
-            let p = *get_strategy(&hole)
+
+            let strategy = get_strategy(&hole);
+            let p = *strategy
                 .get(action)
-                .unwrap_or_else(|| panic!("Action {} is not in strategy: {:?}",
-                    action,
-                    get_strategy(&hole)));
+                .unwrap_or_else(|| panic!("Action {} is not in strategy: {:?}", action, strategy));
+
             let new_prob = prob * p;
-            new_range.insert(hole.clone(), new_prob);
+            self.range.insert(hole, new_prob);  // Modify the range in place
         }
-        self.range = normalize(&new_range);
+
+        self.range = normalize(&self.range);
     }
 
     pub fn hand_prob(&self, hand: &[Card]) -> f64 {
