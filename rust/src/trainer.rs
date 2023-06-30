@@ -131,12 +131,12 @@ pub fn iterate(
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
         .map(|i| {
-            // if node.regrets[i] < -100.0 * CONFIG.stack_size as f64
-            //     && rand::thread_rng().gen_bool(0.95)
-            // {
-            //     // Prune
-            //     return 0.0;
-            // }
+            if node.regrets[i] < -100.0 * CONFIG.stack_size as f64
+                && rand::thread_rng().gen_bool(0.95)
+            {
+                // Prune
+                return 0.0;
+            }
             let prob = strategy[i];
             if history.player == opponent && prob < 1e-6 {
                 return 0.0;

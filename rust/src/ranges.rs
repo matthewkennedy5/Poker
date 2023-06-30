@@ -1,5 +1,5 @@
 use crate::itertools::Itertools;
-use rand::{prelude::SliceRandom, thread_rng};
+use rand::{prelude::SliceRandom, thread_rng, distributions::WeightedIndex, distributions::Distribution};
 use std::collections::HashMap;
 
 use crate::card_utils::*;
@@ -65,10 +65,10 @@ impl Range {
     }
 
     pub fn sample_hand(&self) -> Vec<Card> {
-        let hands: Vec<Vec<Card>> = self.range.keys().cloned().collect();
-        let hand = hands
-            .choose_weighted(&mut thread_rng(), |hand: &Vec<Card>| self.hand_prob(hand))
-            .unwrap();
+        let weights: Vec<f64> = self.range.values().cloned().collect();
+        let hands: Vec<&Vec<Card>> = self.range.keys().collect();
+        let dist = WeightedIndex::new(&weights).unwrap();
+        let hand = hands[dist.sample(&mut rand::thread_rng())];
         hand.clone()
     }
 
