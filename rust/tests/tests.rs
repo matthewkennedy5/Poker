@@ -1,9 +1,9 @@
-use std::collections::HashSet;
 use once_cell::sync::Lazy;
 #[cfg(test)]
 use optimus::*;
-use rayon::prelude::*;
 use rand::prelude::*;
+use rayon::prelude::*;
+use std::collections::HashSet;
 
 static BOT: Lazy<Bot> = Lazy::new(Bot::new);
 
@@ -527,18 +527,13 @@ fn all_in_call() {
 
 #[test]
 fn terminal_utility_blinds() {
-    let history = ActionHistory::from_strings(vec![
-        "Call 100",
-        "Fold 0"
-    ]);
+    let history = ActionHistory::from_strings(vec!["Call 100", "Fold 0"]);
     let util = terminal_utility(&deck(), &history, DEALER);
     assert_eq!(util, 100.0);
     let util = terminal_utility(&deck(), &history, OPPONENT);
     assert_eq!(util, -100.0);
 
-    let history = ActionHistory::from_strings(vec![
-        "Fold 0"
-    ]);
+    let history = ActionHistory::from_strings(vec!["Fold 0"]);
     let util = terminal_utility(&deck(), &history, DEALER);
     assert_eq!(util, -50.0);
     let util = terminal_utility(&deck(), &history, OPPONENT);
@@ -724,8 +719,8 @@ fn all_histories(history: &ActionHistory) -> Vec<ActionHistory> {
     all
 }
 
-// Test that all canonical preflop hands are put in a different bin.  
-#[test] 
+// Test that all canonical preflop hands are put in a different bin.
+#[test]
 fn test_preflop_buckets() {
     let preflop_hands = isomorphic_preflop_hands();
     let buckets: Vec<i32> = preflop_hands.iter().map(|h| ABSTRACTION.bin(h)).collect();
@@ -741,19 +736,25 @@ fn node_memory_stress_test() {
     let histories = all_histories(&ActionHistory::new());
     println!("All histories: {}", histories.len());
     // Assuming there's 169 preflop buckets, and the same number of buckets for flop, turn, and river.
-    // this could change in the future. 
+    // this could change in the future.
     let bar = pbar((histories.len() as i32 * CONFIG.flop_buckets) as u64);
     histories.into_par_iter().for_each(|history| {
         if history.street == PREFLOP {
             for bucket in 0..169 {
-                let infoset = InfoSet { history: history.clone(), card_bucket: bucket };
+                let infoset = InfoSet {
+                    history: history.clone(),
+                    card_bucket: bucket,
+                };
                 let node = Node::new(infoset.next_actions(&CONFIG.bet_abstraction).len());
                 nodes.insert(infoset, node);
                 bar.inc(1);
             }
         } else {
             for bucket in 0..CONFIG.flop_buckets {
-                let infoset = InfoSet { history: history.clone(), card_bucket: bucket };
+                let infoset = InfoSet {
+                    history: history.clone(),
+                    card_bucket: bucket,
+                };
                 let node = Node::new(infoset.next_actions(&CONFIG.bet_abstraction).len());
                 nodes.insert(infoset, node);
                 bar.inc(1);
@@ -765,11 +766,7 @@ fn node_memory_stress_test() {
 
 #[test]
 fn all_in_showdown_street() {
-    let history = ActionHistory::from_strings(vec![
-        "Call 100",
-        "Bet 20000",
-        "Call 19900"
-    ]);
+    let history = ActionHistory::from_strings(vec!["Call 100", "Bet 20000", "Call 19900"]);
     assert_eq!(history.street, SHOWDOWN);
 }
 
@@ -800,7 +797,7 @@ fn train_performance() {
 #[test]
 fn abstraction_distributes_hands_evenly() {
     // Randomly deal a lot of hands and bucket it to the abstraction. Verify that the largest ratio
-    // of counts between abstraction buckets is less than 2. 
+    // of counts between abstraction buckets is less than 2.
     let abstraction = Abstraction::new();
 
     // 1. have a Vec<counts> for each bucket
@@ -822,4 +819,28 @@ fn abstraction_distributes_hands_evenly() {
     let min: f64 = counts.iter().min().unwrap().clone() as f64;
     let ratio: f64 = max / min;
     assert!(ratio < 2.0);
+}
+
+#[test]
+fn abstraction_buckets_in_range() {
+    let abstraction = Abstraction::new();
+
+    for hand in load_flop_isomorphic() {
+        let cards = hand2cards(hand);
+        let bucket = abstraction.bin(&cards);
+        assert!(0 <= bucket);
+        assert!(bucket < CONFIG.flop_buckets)
+    }
+    for hand in load_turn_isomorphic() {
+        let cards = hand2cards(hand);
+        let bucket = abstraction.bin(&cards);
+        assert!(0 <= bucket);
+        assert!(bucket < CONFIG.turn_buckets)
+    }
+    for hand in load_river_isomorphic() {
+        let cards = hand2cards(hand);
+        let bucket = abstraction.bin(&cards);
+        assert!(0 <= bucket);
+        assert!(bucket < CONFIG.river_buckets)
+    }
 }

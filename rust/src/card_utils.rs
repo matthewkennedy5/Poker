@@ -600,8 +600,8 @@ pub fn serialize(hand_data: HashMap<u64, i32>, path: &str) {
 
 
 // TODO: Get rid of EquityTable and store the hand ehs2 instead. This will save time
-// when re-bucketing the abstraction. 
-
+// when re-bucketing the abstraction. Or just store the ehs2 values and use that to
+// lookup the abstraction bucket at runtime. 
 struct EquityTable {
     table: HashMap<u64, f64>,
 }
