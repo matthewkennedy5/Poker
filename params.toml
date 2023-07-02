@@ -21,9 +21,9 @@ decay = 0.9999
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 100_000_000
-lbr_iters = 1_000_000
-eval_every = 10_000_000
+train_iters = 1_000_000_000
+lbr_iters = 10_000_000
+eval_every = 1_000_000
 warm_start = true
 
 # Realtime solving
