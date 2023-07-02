@@ -7,7 +7,8 @@
 use crate::card_utils::*;
 use crate::config::CONFIG;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::{collections::HashMap, fs::File};
+use itertools::Itertools;
+use std::{collections::HashMap, fs::File, path::Path};
 
 const FLOP_PATH: &str = "products/flop_abstraction.bin";
 const TURN_PATH: &str = "products/turn_abstraction.bin";
@@ -98,6 +99,47 @@ fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
     sorted_hands
 }
 
+pub fn get_hand_counts(n_cards: usize) -> HashMap<u64, i32> {
+
+    let path = format!("products/hand_counts_{n_cards}.bin");
+
+    if Path::new(&path).exists() {
+        let hand_counts = read_serialized(&path);
+        return hand_counts;
+    }
+
+    println!("[INFO] Getting {n_cards} hand counts...");
+    let deck = deck();
+    let mut hand_counts: HashMap<u64, i32> = HashMap::new();
+    let bar = pbar(match n_cards {
+        5 => 25989600,
+        6 => 305377800,
+        7 => 2_809_475_760,
+        _ => 0,
+    });
+    for preflop in deck.iter().combinations(2) {
+        let mut rest_of_deck = deck.clone();
+        rest_of_deck.retain(|c| !preflop.contains(&c));
+        for board in rest_of_deck.iter().combinations(n_cards - 2) {
+            let cards = [deepcopy(&preflop), deepcopy(&board)].concat();
+            let hand = cards2hand(&isomorphic_hand(&cards, true));
+            let current_count: i32 = match hand_counts.get(&hand) {
+                Some(count) => count.clone(),
+                None => 0
+            };
+            hand_counts.insert(hand, current_count + 1);
+            bar.inc(1);
+        }
+    }
+    bar.finish();
+    // for (hand, count) in hand_counts.clone() {
+    //     println!("{}: {}", hand2str(hand), count);
+    // }
+
+    serialize(hand_counts.clone(), path.as_str());
+    hand_counts
+}
+
 fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     match n_cards {
         5 => println!("[INFO] Preparing the flop abstraction."),
@@ -106,11 +148,21 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
         _ => panic!("Bad number of cards"),
     };
     let hand_ehs2 = get_sorted_hand_ehs2(n_cards);
+    let hand_counts = get_hand_counts(n_cards);
+    let total_hands: u64 = match n_cards {
+        5 => 25989600,
+        6 => 305377800,
+        7 => 2_809_475_760,
+        _ => 0,
+    };
     let mut clusters = HashMap::new();
-    for (idx, hand) in hand_ehs2.iter().enumerate() {
+    let mut sum: u64 = 0;
+    for hand in hand_ehs2 {
         // Bucket the hand according to the percentile of its E[HS^2]
-        let bucket: i32 = ((n_buckets as f64) * (idx as f64) / (hand_ehs2.len() as f64)) as i32;
-        clusters.insert(*hand, bucket);
+        let count = hand_counts.get(&hand).unwrap().clone() as u64;
+        sum += count;
+        let bucket: i32 = ((n_buckets as f64) * (sum as f64) / (total_hands as f64)) as i32;
+        clusters.insert(hand, bucket);
     }
     let path = match n_cards {
         5 => FLOP_PATH,

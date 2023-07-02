@@ -598,6 +598,10 @@ pub fn serialize(hand_data: HashMap<u64, i32>, path: &str) {
     bincode::serialize_into(buffer, &hand_data).unwrap();
 }
 
+
+// TODO: Get rid of EquityTable and store the hand ehs2 instead. This will save time
+// when re-bucketing the abstraction. 
+
 struct EquityTable {
     table: HashMap<u64, f64>,
 }

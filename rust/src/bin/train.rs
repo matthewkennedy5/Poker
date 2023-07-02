@@ -1,6 +1,11 @@
 use optimus::*;
 
 fn main() {
+
+    // get_hand_counts(5);
+    // get_hand_counts(6);
+    // get_hand_counts(7);
+
     train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
 
     // let nodes = load_nodes(&CONFIG.nodes_path);

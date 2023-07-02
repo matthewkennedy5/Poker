@@ -799,5 +799,27 @@ fn train_performance() {
 
 #[test]
 fn abstraction_distributes_hands_evenly() {
-    
+    // Randomly deal a lot of hands and bucket it to the abstraction. Verify that the largest ratio
+    // of counts between abstraction buckets is less than 2. 
+    let abstraction = Abstraction::new();
+
+    // 1. have a Vec<counts> for each bucket
+    let mut counts: Vec<i32> = vec![0; CONFIG.flop_buckets as usize];
+    let mut deck = deck();
+
+    // 2. randomly deal like 10M hands, incrementing each count
+    for i in 0..100_000 {
+        deck.shuffle(&mut thread_rng());
+        let hand: &[Card] = &deck[0..5];
+        let bucket = abstraction.bin(hand) as usize;
+        counts[bucket] += 1;
+    }
+
+    println!("{:?}", counts);
+
+    // 3. verify that no count is 2x of another
+    let max: f64 = counts.iter().max().unwrap().clone() as f64;
+    let min: f64 = counts.iter().min().unwrap().clone() as f64;
+    let ratio: f64 = max / min;
+    assert!(ratio < 2.0);
 }
