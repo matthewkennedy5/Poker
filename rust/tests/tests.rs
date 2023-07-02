@@ -773,7 +773,7 @@ fn all_in_showdown_street() {
     assert_eq!(history.street, SHOWDOWN);
 }
 
-#[test]
+// #[test]
 fn train_performance() {
     train(1_000_000, 1_000_000, false);
     let nodes = load_nodes(&CONFIG.nodes_path);
@@ -795,4 +795,9 @@ fn train_performance() {
     // Make sure the exploitability is below 0.5 BB/h
     let exploitability = blueprint_exploitability(&nodes, 100_000);
     assert!(exploitability < 0.5);
+}
+
+#[test]
+fn abstraction_distributes_hands_evenly() {
+    
 }

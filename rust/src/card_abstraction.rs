@@ -71,9 +71,8 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, 
     }
 }
 
-// Returns all isomorphic hands paired with their E[HS^2] values, in sorted order
-// by E[HS^2].
-fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<(u64, f64)> {
+// Returns all isomorphic hands in sorted order by E[HS^2]
+fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
     let isomorphic_hands = match n_cards {
         5 => load_flop_isomorphic(),
         6 => load_turn_isomorphic(),
@@ -95,7 +94,8 @@ fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<(u64, f64)> {
     bar.finish_with_message("Done");
 
     hand_ehs2.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-    hand_ehs2
+    let sorted_hands: Vec<u64> = hand_ehs2.iter().map(|(hand, ehs2)| *hand).collect();
+    sorted_hands
 }
 
 fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
@@ -107,7 +107,7 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     };
     let hand_ehs2 = get_sorted_hand_ehs2(n_cards);
     let mut clusters = HashMap::new();
-    for (idx, (hand, _ehs2)) in hand_ehs2.iter().enumerate() {
+    for (idx, hand) in hand_ehs2.iter().enumerate() {
         // Bucket the hand according to the percentile of its E[HS^2]
         let bucket: i32 = ((n_buckets as f64) * (idx as f64) / (hand_ehs2.len() as f64)) as i32;
         clusters.insert(*hand, bucket);
