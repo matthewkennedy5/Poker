@@ -526,58 +526,6 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
     isomorphic
 }
 
-// Returns the second moment of the hand's equity distribution.
-pub fn expected_hs2(hand: u64) -> f64 {
-    // For river hands, this just returns HS^2 since there is no distribution
-    // Flop and turn, deals rollouts for the E[HS^2] value.
-    let hand = hand2cards(hand);
-    let mut sum = 0.0;
-    let mut count = 0.0;
-    let mut deck = deck();
-    deck.retain(|c| !hand.contains(c));
-
-    if hand.len() == 7 {
-        let equity = river_equity(&hand);
-        return equity.powi(2);
-    }
-    for rollout in deck.iter().combinations(7 - hand.len()) {
-        let full_hand = [hand.clone(), deepcopy(&rollout)].concat();
-        let equity = river_equity(&full_hand);
-        sum += equity.powi(2);
-        count += 1.0;
-    }
-    sum / count
-}
-
-fn river_equity(hand: &Vec<Card>) -> f64 {
-    let mut deck = deck();
-    // Remove the already-dealt cards from the deck
-    deck.retain(|c| !hand.contains(c));
-
-    let board = hand[2..].to_vec();
-    let mut n_wins = 0.0;
-    let mut n_runs = 0;
-
-    for opp_preflop in deck.iter().combinations(2) {
-        n_runs += 1;
-
-        // Create the poker hands by concatenating cards
-        let my_hand = hand.to_vec();
-        let opp_hand = [deepcopy(&opp_preflop), board.clone()].concat();
-
-        let my_strength = FAST_HAND_TABLE.hand_strength(&my_hand);
-        let opp_strength = FAST_HAND_TABLE.hand_strength(&opp_hand);
-
-        if my_strength > opp_strength {
-            n_wins += 1.0;
-        } else if my_strength == opp_strength {
-            n_wins += 0.5;
-        }
-    }
-
-    n_wins / (n_runs as f64)
-}
-
 // There are multiple places where I have to serialize a HashMap of cards->i32
 // with some sort of data such as hand strength or abstraction ID. This loads
 // that data from a file desciptor and returns the lookup table.
