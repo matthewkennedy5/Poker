@@ -132,9 +132,6 @@ pub fn get_hand_counts(n_cards: usize) -> HashMap<u64, i32> {
         }
     }
     bar.finish();
-    // for (hand, count) in hand_counts.clone() {
-    //     println!("{}: {}", hand2str(hand), count);
-    // }
 
     serialize(hand_counts.clone(), path.as_str());
     hand_counts
@@ -160,8 +157,8 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     for hand in hand_ehs2 {
         // Bucket the hand according to the percentile of its E[HS^2]
         let count = hand_counts.get(&hand).unwrap().clone() as u64;
-        sum += count;
         let bucket: i32 = ((n_buckets as f64) * (sum as f64) / (total_hands as f64)) as i32;
+        sum += count;
         clusters.insert(hand, bucket);
     }
     let path = match n_cards {

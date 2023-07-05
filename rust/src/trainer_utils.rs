@@ -526,7 +526,7 @@ pub fn sample_action_from_node(
 }
 
 pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
-    let actions: Vec<&Action> = strategy.keys().collect();
+    let actions: Vec<&Action> = strategy.keys().collect(); // TODO: Change to Vec<Action>, and other clippy refactors
     let mut rng = thread_rng();
     let action: Action = actions
         .choose_weighted(&mut rng, |a| strategy.get(a).unwrap())
