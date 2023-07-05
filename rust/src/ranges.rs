@@ -1,5 +1,5 @@
 use crate::itertools::Itertools;
-use rand::{prelude::SliceRandom, thread_rng, distributions::WeightedIndex, distributions::Distribution};
+use rand::{distributions::WeightedIndex, distributions::Distribution};
 use std::collections::HashMap;
 
 use crate::card_utils::*;

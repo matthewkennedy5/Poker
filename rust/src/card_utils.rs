@@ -10,13 +10,10 @@ use std::{
     fs::File,
     io::{BufRead, BufReader, Write},
     path::Path,
-    sync::mpsc,
-    thread,
     time::Duration,
 };
 
 const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.bin";
-const EQUITY_TABLE_PATH: &str = "products/equity_table.txt";
 const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.txt";
 const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
@@ -25,7 +22,6 @@ pub type SmallVecHand = SmallVec<[Card; 7]>;
 type IsomorphicHandCache = Cache<(SmallVecHand, bool), SmallVecHand>;
 
 pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(FastHandTable::new);
-static EQUITY_TABLE: Lazy<EquityTable> = Lazy::new(EquityTable::new);
 static ISOMORPHIC_HAND_CACHE: Lazy<IsomorphicHandCache> = Lazy::new(|| Cache::new(100_000));
 
 pub const CLUBS: i32 = 0;
@@ -541,22 +537,19 @@ pub fn expected_hs2(hand: u64) -> f64 {
     deck.retain(|c| !hand.contains(c));
 
     if hand.len() == 7 {
-        let equity = EQUITY_TABLE.lookup(&hand);
+        let equity = river_equity(&hand);
         return equity.powi(2);
     }
-
     for rollout in deck.iter().combinations(7 - hand.len()) {
         let full_hand = [hand.clone(), deepcopy(&rollout)].concat();
-        let equity = EQUITY_TABLE.lookup(&full_hand);
+        let equity = river_equity(&full_hand);
         sum += equity.powi(2);
         count += 1.0;
     }
-
     sum / count
 }
 
-fn river_equity(hand: Vec<Card>) -> f64 {
-    // fn river_equity(hand: &[Card]) -> f64 {
+fn river_equity(hand: &Vec<Card>) -> f64 {
     let mut deck = deck();
     // Remove the already-dealt cards from the deck
     deck.retain(|c| !hand.contains(c));
@@ -596,106 +589,4 @@ pub fn read_serialized(path: &str) -> HashMap<u64, i32> {
 pub fn serialize(hand_data: HashMap<u64, i32>, path: &str) {
     let buffer = File::create(path).unwrap();
     bincode::serialize_into(buffer, &hand_data).unwrap();
-}
-
-// start here: todo
-// TODO: Get rid of EquityTable and store the hand ehs2 instead. This will save time
-// when re-bucketing the abstraction. Or just store the ehs2 values and cutoffs and use that to
-// lookup the abstraction bucket at runtime. 
-struct EquityTable {
-    table: HashMap<u64, f64>,
-}
-
-impl EquityTable {
-    fn new() -> EquityTable {
-        match File::open(EQUITY_TABLE_PATH) {
-            Err(_e) => {
-                let table = EquityTable::create();
-                EquityTable { table }
-            }
-            Ok(file) => {
-                // Read from the file
-                println!("[INFO] Loading the equity lookup table.");
-                let mut table = HashMap::new();
-                let reader = BufReader::new(file);
-                for line in reader.lines() {
-                    let line_str = line.unwrap();
-                    let mut data = line_str.split_whitespace();
-                    let hand = data.next().unwrap();
-                    let equity = data.next().unwrap();
-                    let hand = str2hand(hand);
-                    let equity: f64 = equity.to_string().parse().unwrap();
-                    table.insert(hand, equity);
-                }
-                println!("[INFO] Done loading the equity lookup table.");
-                EquityTable { table }
-            }
-        }
-    }
-
-    fn create() -> HashMap<u64, f64> {
-        let isomorphic: Vec<u64> = load_river_isomorphic().iter().copied().collect();
-        println!("[INFO] Creating the river equity lookup table...");
-        let chunk_size = isomorphic.len() / 100;
-        let chunks: Vec<Vec<u64>> = isomorphic
-            .chunks(chunk_size)
-            .map(|s| s.to_owned())
-            .collect();
-        let mut handles = Vec::new();
-        let (tx, rx) = mpsc::channel();
-        let (pbar_tx, pbar_rx) = mpsc::channel();
-        for chunk in chunks {
-            let thread_tx = tx.clone();
-            let thread_pbar_tx = pbar_tx.clone();
-            handles.push(thread::spawn(move || {
-                let equities: Vec<(u64, f64)> = chunk
-                    .iter()
-                    .map(|h| {
-                        thread_pbar_tx
-                            .send(1)
-                            .expect("could not send pbar increment");
-                        (*h, river_equity(hand2cards(*h)))
-                    })
-                    .collect();
-                thread_tx.send(equities).expect("Could not send the equity");
-            }));
-        }
-        let bar = pbar(isomorphic.len() as u64);
-        for _i in 0..isomorphic.len() {
-            let increment = pbar_rx.recv().unwrap();
-            bar.inc(increment);
-        }
-        bar.finish();
-
-        let mut equities: Vec<(u64, f64)> = Vec::new();
-        for _i in 0..handles.len() {
-            let mut result = rx.recv().expect("Could not receive result");
-            equities.append(&mut result);
-        }
-
-        for handle in handles {
-            handle.join().expect("Could not join the threads");
-        }
-        let mut table = HashMap::new();
-
-        println!("[INFO] Writing to disk");
-        // Serialize the equity table and construct the HashMap to return
-        let mut buffer = File::create(EQUITY_TABLE_PATH).unwrap();
-        for (hand, equity) in &equities {
-            let to_write = format!("{} {}\n", hand2str(*hand), equity);
-            buffer.write(to_write.as_bytes()).unwrap();
-            table.insert(*hand, *equity);
-        }
-
-        println!("[INFO] Done creating the river equity lookup table.");
-        table
-    }
-
-    pub fn lookup(&self, hand: &[Card]) -> f64 {
-        let hand = cards2hand(&isomorphic_hand(hand, true));
-        *self
-            .table
-            .get(&hand)
-            .unwrap_or_else(|| panic!("{} not in equity table", hand2str(hand)))
-    }
 }
