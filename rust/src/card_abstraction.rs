@@ -8,7 +8,7 @@ use crate::card_utils::*;
 use crate::config::CONFIG;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use itertools::Itertools;
-use std::{collections::HashMap, fs::File, path::Path};
+use std::{collections::HashMap, fs::File, path::Path, io::BufReader};
 
 const FLOP_PATH: &str = "products/flop_abstraction.bin";
 const TURN_PATH: &str = "products/turn_abstraction.bin";
@@ -74,6 +74,14 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, 
 
 // Returns all isomorphic hands in sorted order by E[HS^2]
 fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
+    let path = format!("products/ehs2_{n_cards}.bin");
+    if Path::new(&path).exists() {
+        let file = File::open(path.as_str()).unwrap();
+        let reader = BufReader::new(file);
+        let ehs2: Vec<u64> = bincode::deserialize_from(reader).unwrap();
+        return ehs2;
+    }
+    
     let isomorphic_hands = match n_cards {
         5 => load_flop_isomorphic(),
         6 => load_turn_isomorphic(),
@@ -96,6 +104,9 @@ fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
 
     hand_ehs2.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
     let sorted_hands: Vec<u64> = hand_ehs2.iter().map(|(hand, ehs2)| *hand).collect();
+
+    let buffer = File::create(path.as_str()).unwrap();
+    bincode::serialize_into(buffer, &sorted_hands).unwrap();
     sorted_hands
 }
 
