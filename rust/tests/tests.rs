@@ -844,3 +844,12 @@ fn abstraction_buckets_in_range() {
         assert!(bucket < CONFIG.river_buckets)
     }
 }
+
+#[test]
+fn test_subgame_solving() {
+    BOT.get_strategy(
+        &str2cards("AdAs"),
+        &Vec::new(),
+        &ActionHistory::from_strings(vec!["Bet 250"]),
+    );
+}

@@ -63,12 +63,10 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
 }
 
 pub fn load_nodes(path: &str) -> Nodes {
-    println!("[INFO] Loading strategy at {path} ...");
     let file = File::open(path).expect("Nodes file not found");
     let reader = BufReader::new(file);
     let nodes: Nodes = bincode::deserialize_from(reader).expect("Failed to deserialize nodes");
     let len = nodes.len();
-    println!("[INFO] Done loading strategy: {len} nodes.");
     nodes
 }
 
