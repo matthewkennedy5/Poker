@@ -79,7 +79,7 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, 
 }
 
 // Returns all isomorphic hands in sorted order by E[HS^2]
-fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
+pub fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
     let path = format!("products/ehs2_{n_cards}.bin");
     if Path::new(&path).exists() {
         let file = File::open(path.as_str()).unwrap();
@@ -129,8 +129,8 @@ pub fn get_hand_counts(n_cards: usize) -> HashMap<u64, i32> {
     let deck = deck();
     let mut hand_counts: HashMap<u64, i32> = HashMap::new();
     let bar = pbar(match n_cards {
-        5 => 25989600,
-        6 => 305377800,
+        5 => 25_989_600,
+        6 => 305_377_800,
         7 => 2_809_475_760,
         _ => 0,
     });
