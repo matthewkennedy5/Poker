@@ -4,6 +4,7 @@ big_blind = 100
 small_blind = 50
 
 # Bet abstractions, expressed as multiples of the pot size. -1 means "all-in".
+# This does not include the call and fold actions. 
 bet_abstraction = [
     [1.0, 2.0, -1.0],
     [0.5, 1.0, -1.0],
@@ -28,7 +29,7 @@ warm_start = false
 
 # Realtime solving
 subgame_solving = true
-subgame_iters = 1_000
+subgame_iters = 10_000
 depth_limit = -1   # -1 means always solve to the end of the game
 
 # Preflop chart
