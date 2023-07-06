@@ -9,6 +9,12 @@ use crate::config::CONFIG;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use itertools::Itertools;
 use std::{collections::HashMap, fs::File, path::Path, io::BufReader};
+use once_cell::sync::Lazy;
+use moka::sync::Cache;
+
+static RIVER_EQUITY_CACHE: Lazy<Cache<SmallVecHand, f64>> = Lazy::new(|| 
+    Cache::new(125_756_657)   // Number of isomorphic river hands
+);
 
 const FLOP_PATH: &str = "products/flop_abstraction.bin";
 const TURN_PATH: &str = "products/turn_abstraction.bin";
@@ -205,7 +211,13 @@ pub fn expected_hs2(hand: u64) -> f64 {
     sum / count
 }
 
+
 fn river_equity(hand: &Vec<Card>) -> f64 {
+    let iso = isomorphic_hand(hand, true);
+    if let Some(equity) = RIVER_EQUITY_CACHE.get(&iso) {
+        return equity.clone();
+    }
+
     let mut deck = deck();
     // Remove the already-dealt cards from the deck
     deck.retain(|c| !hand.contains(c));
@@ -230,6 +242,7 @@ fn river_equity(hand: &Vec<Card>) -> f64 {
             n_wins += 0.5;
         }
     }
-
-    n_wins / (n_runs as f64)
+    let equity = n_wins / (n_runs as f64);
+    RIVER_EQUITY_CACHE.insert(iso, equity);
+    return equity;
 }
