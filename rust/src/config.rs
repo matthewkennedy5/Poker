@@ -35,6 +35,8 @@ pub struct Config {
     pub lbr_iters: u64,
     pub eval_every: u64,
     pub warm_start: bool,
+    pub player_prune: bool,
+    pub opp_prune: bool,
 
     // Real time solving
     pub subgame_solving: bool,

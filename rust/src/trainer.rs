@@ -10,7 +10,7 @@ use smallvec::SmallVec;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
-pub fn train(iters: u64, eval_every: u64, warm_start: bool)  {
+pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
     let deck = card_utils::deck();
     let nodes = if warm_start {
         load_nodes(&CONFIG.nodes_path)
@@ -123,24 +123,27 @@ pub fn iterate(
 
     let opponent = 1 - player;
     let actions = infoset.next_actions(bet_abstraction);
-    let strategy = node.current_strategy(
-        if history.player == player { weights[player] } else { 0.0 }
-    );
+    let strategy = node.current_strategy(if history.player == player {
+        weights[player]
+    } else {
+        0.0
+    });
     let mut node_utility = 0.0;
 
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
         .map(|i| {
-            // if node.regrets[i] < -100.0 * CONFIG.stack_size as f64
-            //     && rand::thread_rng().gen_bool(0.95)
-            // {
-            //     // Prune
-            //     return 0.0;
-            // }
             let prob = strategy[i];
-            // if history.player == opponent && prob < 1e-6 {
-            //     return 0.0;
-            // }
+
+            // Pruning
+            let player_prune = CONFIG.player_prune
+                && node.regrets[i] < -100.0 * CONFIG.stack_size as f64
+                && rand::thread_rng().gen_bool(0.95);
+            let opp_prune = CONFIG.opp_prune && history.player == opponent && prob < 1e-6;
+            if player_prune || opp_prune {
+                return 0.0;
+            }
+
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
 

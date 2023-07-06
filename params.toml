@@ -26,6 +26,8 @@ train_iters = 1_000_000
 lbr_iters = 200_000
 eval_every = 100_000
 warm_start = false
+player_prune = false
+opp_prune = false
 
 # Realtime solving
 subgame_solving = true

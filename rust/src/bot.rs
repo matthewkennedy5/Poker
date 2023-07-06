@@ -139,7 +139,7 @@ impl Bot {
             bet_abstraction[history.street].push(pot_frac);
         }
         bet_abstraction[history.street].push(pot_frac);
-        (0..iters).into_par_iter().for_each(|_i| {
+        (0..iters).into_iter().for_each(|_i| {
             let opp_hand = opp_range.sample_hand();
             let mut deck = card_utils::deck();
             // Remove opponent's cards (blockers) from the deck
