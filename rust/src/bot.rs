@@ -144,16 +144,14 @@ impl Bot {
         depth_limit: i32
     ) -> Nodes {
         let nodes: Nodes = Nodes::new();
-        let bar = pbar(iters);
         (0..iters).into_par_iter().for_each(|_i| {
             let opp_hand = opp_range.sample_hand();
             let mut deck = deck();
             // Remove opponent's cards (blockers) from the deck
             deck.retain(|card| !opp_hand.contains(card));
+            // it should hold constant observed public hands, etc
             cfr_iteration(&deck, history, &nodes, bet_abstraction, depth_limit);
-            bar.inc(1);
         });
-        bar.finish();
         nodes
     }
 }

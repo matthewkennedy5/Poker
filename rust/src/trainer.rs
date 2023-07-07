@@ -22,7 +22,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
     for epoch in 0..num_epochs {
         println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
         let bar = card_utils::pbar(eval_every);
-        (0..eval_every).into_par_iter().for_each(|i| {
+        (0..eval_every).into_iter().for_each(|i| {
             cfr_iteration(
                 &deck,
                 &ActionHistory::new(),
