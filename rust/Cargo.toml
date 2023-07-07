@@ -34,8 +34,7 @@ incremental = true
 lto = false
 
 [profile.dev]
-debug = true
-opt-level = 0
+opt-level = 1
 
 [[bench]]
 name="benches"

@@ -1,4 +1,4 @@
-use crate::card_utils::{self, Card};
+use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::ranges::*;
 use crate::trainer::*;
@@ -138,14 +138,16 @@ impl Bot {
             // If the opponent made an off-tree bet, add it to the bet abstraction
             bet_abstraction[history.street].push(pot_frac);
         }
-        bet_abstraction[history.street].push(pot_frac);
-        (0..iters).into_iter().for_each(|_i| {
+        let bar = pbar(iters);
+        (0..iters).into_par_iter().for_each(|_i| {
             let opp_hand = opp_range.sample_hand();
-            let mut deck = card_utils::deck();
+            let mut deck = deck();
             // Remove opponent's cards (blockers) from the deck
             deck.retain(|card| !opp_hand.contains(card));
             cfr_iteration(&deck, history, &nodes, &bet_abstraction, depth_limit);
+            bar.inc(1);
         });
+        bar.finish();
         nodes
     }
 }

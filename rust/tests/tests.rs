@@ -746,7 +746,7 @@ fn node_memory_stress_test() {
                     card_bucket: bucket,
                 };
                 let node = Node::new(infoset.next_actions(&CONFIG.bet_abstraction).len());
-                nodes.insert(infoset, node);
+                nodes.insert(infoset, node, &CONFIG.bet_abstraction);
                 bar.inc(1);
             }
         } else {
@@ -756,7 +756,7 @@ fn node_memory_stress_test() {
                     card_bucket: bucket,
                 };
                 let node = Node::new(infoset.next_actions(&CONFIG.bet_abstraction).len());
-                nodes.insert(infoset, node);
+                nodes.insert(infoset, node, &CONFIG.bet_abstraction);
                 bar.inc(1);
             }
         }
@@ -853,3 +853,7 @@ fn test_subgame_solving() {
         &ActionHistory::from_strings(vec!["Bet 250"]),
     );
 }
+
+
+
+

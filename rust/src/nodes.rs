@@ -4,7 +4,7 @@ use crate::card_utils::*;
 use smallvec::SmallVec;
 use dashmap::DashMap;
 
-// Upper limit on branching factor of blueprint game tree. For setting the SmallVec size.
+// Upper limit on branching factor of blueprint game tree. 
 pub const NUM_ACTIONS: usize = 5;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -27,7 +27,7 @@ impl Nodes {
         nodes.get(infoset.card_bucket as usize).cloned()
     }
 
-    pub fn insert(&self, infoset: InfoSet, node: Node) {
+    pub fn insert(&self, infoset: InfoSet, node: Node, bet_abstraction: &[Vec<f64>]) {
         let history = infoset.history;
         if !self.dashmap.contains_key(&history) {
             // Create the Vec<Node> at this history if it doesn't exist yet
@@ -42,7 +42,7 @@ impl Nodes {
             } else {
                 panic!("Bad street")
             } as usize;
-            let new_node = Node::new(history.next_actions(&CONFIG.bet_abstraction).len());
+            let new_node = Node::new(history.next_actions(bet_abstraction).len());
             self.dashmap.insert(history.clone(), vec![new_node; n_buckets]);
         }
         let mut nodes = self.dashmap.get_mut(&history).unwrap();
@@ -75,7 +75,7 @@ impl Nodes {
 pub struct Node {
     pub regrets: [f64; NUM_ACTIONS],
     strategy_sum: [f64; NUM_ACTIONS],
-    num_actions: usize,
+    pub num_actions: usize,
     pub t: u64,
 }
 

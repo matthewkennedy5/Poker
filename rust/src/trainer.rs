@@ -170,9 +170,7 @@ pub fn iterate(
             let regret = utility - node_utility;
             node.add_regret(index, weights[opponent] * regret);
         }
-
-        let updated = node.clone();
-        nodes.insert(infoset, updated);
+        nodes.insert(infoset, node, bet_abstraction);
     }
     node_utility
 }
