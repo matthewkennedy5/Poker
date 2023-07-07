@@ -94,14 +94,6 @@ impl Bot {
         let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
         let opp_action = history.last_action().unwrap();
 
-        let nodes = Bot::solve_subgame(
-            &subgame_root,
-            &opp_range,
-            &opp_action,
-            CONFIG.subgame_iters,
-            CONFIG.depth_limit
-        );
-
         // Add the opponent's action to the bet abstraction
         let mut new_abstraction = CONFIG.bet_abstraction.clone();
         let pot_frac = (opp_action.amount as f64) / (subgame_root.pot() as f64);
@@ -111,6 +103,14 @@ impl Bot {
             // If the opponent made an off-tree bet, add it to the bet abstraction
             new_abstraction[subgame_root.street].push(pot_frac);
         }
+
+        let nodes = Bot::solve_subgame(
+            &subgame_root,
+            &opp_range,
+            &new_abstraction,
+            CONFIG.subgame_iters,
+            CONFIG.depth_limit
+        );
 
         // Debug info
         let infoset = InfoSet::from_hand(hole, board, history);
@@ -139,27 +139,18 @@ impl Bot {
     pub fn solve_subgame(
         history: &ActionHistory,
         opp_range: &Range,
-        opp_action: &Action,
+        bet_abstraction: &[Vec<f64>],
         iters: u64,
         depth_limit: i32
     ) -> Nodes {
         let nodes: Nodes = Nodes::new();
-        // TODO: DRY with above bet_abstraction new code
-        let mut bet_abstraction = CONFIG.bet_abstraction.clone();
-        let pot_frac = (opp_action.amount as f64) / (history.pot() as f64);
-        if opp_action.action == ActionType::Bet
-            && !bet_abstraction[history.street].contains(&pot_frac)
-        {
-            // If the opponent made an off-tree bet, add it to the bet abstraction
-            bet_abstraction[history.street].push(pot_frac);
-        }
         let bar = pbar(iters);
         (0..iters).into_par_iter().for_each(|_i| {
             let opp_hand = opp_range.sample_hand();
             let mut deck = deck();
             // Remove opponent's cards (blockers) from the deck
             deck.retain(|card| !opp_hand.contains(card));
-            cfr_iteration(&deck, history, &nodes, &bet_abstraction, depth_limit);
+            cfr_iteration(&deck, history, &nodes, bet_abstraction, depth_limit);
             bar.inc(1);
         });
         bar.finish();

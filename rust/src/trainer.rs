@@ -82,7 +82,7 @@ pub fn cfr_iteration(
     deck: &[Card],
     history: &ActionHistory,
     nodes: &Nodes,
-    bet_abstraction: &Vec<Vec<f64>>,
+    bet_abstraction: &[Vec<f64>],
     depth_limit: i32,
 ) {
     [DEALER, OPPONENT].iter().for_each(|&player| {
