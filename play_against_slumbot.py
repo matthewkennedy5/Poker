@@ -455,4 +455,8 @@ def main():
     print(f'Winnings: {mean} +/- {conf} BB/h')
     
 if __name__ == '__main__':
+    os.chdir("rust")
+    os.system("cargo build --bin server")
+    os.system("target/release/server &")
+    time.sleep(1)
     main()

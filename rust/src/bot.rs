@@ -4,6 +4,7 @@ use crate::ranges::*;
 use crate::trainer::*;
 use crate::trainer_utils::*;
 use crate::nodes::*;
+use rand::seq::SliceRandom;
 use rayon::prelude::*;
 use moka::sync::Cache;
 
@@ -82,6 +83,9 @@ impl Bot {
         board: &[Card],
         history: &ActionHistory,
     ) -> Strategy {
+
+        debug_assert!(board.len() == board_length(history.street));
+
         let subgame_root: ActionHistory = history.without_last_action();
         let translated = subgame_root.translate(&CONFIG.bet_abstraction);
 
@@ -104,13 +108,46 @@ impl Bot {
             new_abstraction[subgame_root.street].push(pot_frac);
         }
 
-        let nodes = Bot::solve_subgame(
-            &subgame_root,
-            &opp_range,
-            &new_abstraction,
-            CONFIG.subgame_iters,
-            CONFIG.depth_limit
-        );
+        // let nodes = Bot::solve_subgame(
+        //     &subgame_root,
+        //     &opp_range,
+        //     &new_abstraction,
+        //     CONFIG.subgame_iters,
+        //     CONFIG.depth_limit
+        // );
+
+        let nodes = Nodes::new();
+        let bar = pbar(CONFIG.subgame_iters);
+        for i in 0..CONFIG.subgame_iters {
+            let opp_hand = opp_range.sample_hand();
+            let mut current_deck: Vec<Card> = Vec::with_capacity(52);
+            if history.player == DEALER {
+                current_deck.extend(hole);
+                current_deck.extend(opp_hand);
+            } else {
+                current_deck.extend(opp_hand);
+                current_deck.extend(hole);
+            }
+            current_deck.extend(board);
+            let mut rest_of_deck = deck();
+            rest_of_deck.retain(|c| !current_deck.contains(&c));
+            rest_of_deck.shuffle(&mut rand::thread_rng());
+            current_deck.extend(rest_of_deck);
+
+            for player in [DEALER, OPPONENT].iter() {
+                iterate(
+                    DEALER,
+                    &current_deck,
+                    history,
+                    [1.0, 1.0],
+                    &nodes,
+                    &new_abstraction,
+                    CONFIG.depth_limit
+                );
+            }
+            bar.inc(1);
+        }
+        bar.finish();
 
         // Debug info
         let infoset = InfoSet::from_hand(hole, board, history);
@@ -146,11 +183,10 @@ impl Bot {
         let nodes: Nodes = Nodes::new();
         (0..iters).into_par_iter().for_each(|_i| {
             let opp_hand = opp_range.sample_hand();
-            let mut deck = deck();
+            // let mut deck = deck();
             // Remove opponent's cards (blockers) from the deck
-            deck.retain(|card| !opp_hand.contains(card));
+            // deck.retain(|card| !opp_hand.contains(card));
             // it should hold constant observed public hands, etc
-            cfr_iteration(&deck, history, &nodes, bet_abstraction, depth_limit);
         });
         nodes
     }

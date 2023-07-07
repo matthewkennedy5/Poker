@@ -27,7 +27,7 @@ lbr_iters = 200_000
 eval_every = 10_000
 warm_start = false
 player_prune = false
-opp_prune = true
+opp_prune = false
 
 # Realtime solving
 subgame_solving = true
