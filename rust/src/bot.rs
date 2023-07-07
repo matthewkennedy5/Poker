@@ -67,7 +67,7 @@ impl Bot {
         // Only look at board cards for this street
         let board = &board[..board_length(history.street)];
         let translated = history.translate(&CONFIG.bet_abstraction);
-        let node_strategy = self.blueprint.get_strategy(hole, board, &translated);
+        let node_strategy = self.blueprint.get_strategy(hole, board, &translated, &CONFIG.bet_abstraction);
         let adjusted_strategy = node_strategy.iter().map(|(action, prob)| {
             (history.adjust_action(&action), prob.clone())
         }).collect();
@@ -92,20 +92,38 @@ impl Bot {
         };
 
         let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
+        let opp_action = history.last_action().unwrap();
 
         let nodes = Bot::solve_subgame(
             &subgame_root,
             &opp_range,
-            &history.last_action().unwrap(),
+            &opp_action,
             CONFIG.subgame_iters,
             CONFIG.depth_limit
         );
 
+        // Add the opponent's action to the bet abstraction
+        let mut new_abstraction = CONFIG.bet_abstraction.clone();
+        let pot_frac = (opp_action.amount as f64) / (subgame_root.pot() as f64);
+        if opp_action.action == ActionType::Bet
+            && !new_abstraction[subgame_root.street].contains(&pot_frac)
+        {
+            // If the opponent made an off-tree bet, add it to the bet abstraction
+            new_abstraction[subgame_root.street].push(pot_frac);
+        }
+
         // That gives us our strategy in response to their action.
-        let mut this_history = subgame_root;
+        let mut this_history = subgame_root.clone();
         this_history.add(&history.last_action().unwrap());
 
-        let strategy = nodes.get_strategy(hole, board, &this_history);
+        // Debug info
+        let infoset = InfoSet::from_hand(hole, board, history);
+        let node = nodes.get(&infoset).unwrap();
+        println!("InfoSet: {infoset}");
+        println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
+        println!("Node: {:?}", node);
+
+        let strategy = nodes.get_strategy(hole, board, &this_history, &new_abstraction);
         strategy
     }
 
@@ -130,6 +148,7 @@ impl Bot {
         depth_limit: i32
     ) -> Nodes {
         let nodes: Nodes = Nodes::new();
+        // TODO: DRY with above bet_abstraction new code
         let mut bet_abstraction = CONFIG.bet_abstraction.clone();
         let pot_frac = (opp_action.amount as f64) / (history.pot() as f64);
         if opp_action.action == ActionType::Bet

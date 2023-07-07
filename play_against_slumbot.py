@@ -332,7 +332,7 @@ def BotAction(response):
             json = response.json()
             break
         except:
-            time.sleep(1)
+            time.sleep(600)
 
     action = json['action']
     amount = json['amount']
@@ -440,7 +440,7 @@ def main():
         token = None
     
     num_hands = args.num_hands
-    num_procs = 10
+    num_procs = 1
     hands_per_cpu = int(num_hands / num_procs)
     input =[hands_per_cpu for p in range(num_procs)]
 

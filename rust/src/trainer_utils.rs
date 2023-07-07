@@ -467,7 +467,8 @@ pub fn lookup_or_new(nodes: &Nodes, infoset: &InfoSet, bet_abstraction: &[Vec<f6
         None => Node::new(num_actions),
     };
     debug_assert!(
-        node.num_actions == num_actions
+        node.num_actions == num_actions,
+        "{} {}", node.num_actions, num_actions
     );
     node
 }

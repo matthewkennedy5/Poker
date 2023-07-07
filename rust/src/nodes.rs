@@ -59,11 +59,11 @@ impl Nodes {
         length
     }
 
-    pub fn get_strategy(&self, hole: &[Card], board: &[Card], history: &ActionHistory) -> Strategy {
+    pub fn get_strategy(&self, hole: &[Card], board: &[Card], history: &ActionHistory, bet_abstraction: &[Vec<f64>]) -> Strategy {
         let infoset = InfoSet::from_hand(hole, board, history);
-        let node = lookup_or_new(self, &infoset, &CONFIG.bet_abstraction);
+        let node = lookup_or_new(self, &infoset, bet_abstraction);
         let mut strategy = Strategy::new();
-        let actions = infoset.next_actions(&CONFIG.bet_abstraction);
+        let actions = infoset.next_actions(bet_abstraction);
         for (action, prob) in actions.iter().zip(node.cumulative_strategy()) {
             strategy.insert(action.clone(), prob);
         }

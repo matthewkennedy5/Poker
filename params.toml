@@ -11,9 +11,9 @@ bet_abstraction = [
     [0.5, 1.0, -1.0],
     [0.5, 1.0, -1.0],
 ]
-flop_buckets = 1000    # Max:   1342562
-turn_buckets = 1000    # Max:  14403610
-river_buckets = 1000   # Max: 125756657
+flop_buckets = 10000    # Max:   1342562
+turn_buckets = 10000    # Max:  14403610
+river_buckets = 10000   # Max: 125756657
 
 # DCFR
 decay = 0.9999
@@ -27,11 +27,11 @@ lbr_iters = 200_000
 eval_every = 10_000
 warm_start = false
 player_prune = false
-opp_prune = false
+opp_prune = true
 
 # Realtime solving
 subgame_solving = true
-subgame_iters = 10_000
+subgame_iters = 100_000
 depth_limit = -1   # -1 means always solve to the end of the game
 
 # Preflop chart
