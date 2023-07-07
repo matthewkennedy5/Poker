@@ -112,10 +112,6 @@ impl Bot {
             new_abstraction[subgame_root.street].push(pot_frac);
         }
 
-        // That gives us our strategy in response to their action.
-        let mut this_history = subgame_root.clone();
-        this_history.add(&history.last_action().unwrap());
-
         // Debug info
         let infoset = InfoSet::from_hand(hole, board, history);
         let node = nodes.get(&infoset).unwrap();
@@ -123,7 +119,7 @@ impl Bot {
         println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
         println!("Node: {:?}", node);
 
-        let strategy = nodes.get_strategy(hole, board, &this_history, &new_abstraction);
+        let strategy = nodes.get_strategy(hole, board, history, &new_abstraction);
         strategy
     }
 
