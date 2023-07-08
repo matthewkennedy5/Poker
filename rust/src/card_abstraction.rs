@@ -163,7 +163,7 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     };
     let hand_ehs2 = get_sorted_hand_ehs2(n_cards);
     let hand_counts = get_hand_counts(n_cards);
-    let total_hands: u64 = match n_cards {
+    let total_hands: u64 = match n_cards {  // TODO: Change to sum(hand_counts)?
         5 => 25989600,
         6 => 305377800,
         7 => 2_809_475_760,
@@ -177,6 +177,13 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
         let bucket: i32 = ((n_buckets as f64) * (sum as f64) / (total_hands as f64)) as i32;
         sum += count;
         clusters.insert(hand, bucket);
+        debug_assert!(
+            bucket < n_buckets, 
+            "Hand {} has bucket {} which is outside the range of 0 to {}",
+            hand2str(hand),
+            bucket,
+            n_buckets
+        );
     }
     let path = match n_cards {
         5 => FLOP_PATH,

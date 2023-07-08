@@ -800,11 +800,9 @@ fn abstraction_distributes_hands_evenly() {
     // of counts between abstraction buckets is less than 2.
     let abstraction = Abstraction::new();
 
-    // 1. have a Vec<counts> for each bucket
     let mut counts: Vec<i32> = vec![0; CONFIG.flop_buckets as usize];
     let mut deck = deck();
 
-    // 2. randomly deal like 10M hands, incrementing each count
     for i in 0..100_000 {
         deck.shuffle(&mut thread_rng());
         let hand: &[Card] = &deck[0..5];
@@ -812,9 +810,7 @@ fn abstraction_distributes_hands_evenly() {
         counts[bucket] += 1;
     }
 
-    println!("{:?}", counts);
-
-    // 3. verify that no count is 2x of another
+    //  verify that no count is 2x of another
     let max: f64 = counts.iter().max().unwrap().clone() as f64;
     let min: f64 = counts.iter().min().unwrap().clone() as f64;
     let ratio: f64 = max / min;
@@ -825,23 +821,33 @@ fn abstraction_distributes_hands_evenly() {
 fn abstraction_buckets_in_range() {
     let abstraction = Abstraction::new();
 
-    for hand in load_flop_isomorphic() {
-        let cards = hand2cards(hand);
-        let bucket = abstraction.bin(&cards);
-        assert!(0 <= bucket);
-        assert!(bucket < CONFIG.flop_buckets)
-    }
-    for hand in load_turn_isomorphic() {
-        let cards = hand2cards(hand);
-        let bucket = abstraction.bin(&cards);
-        assert!(0 <= bucket);
-        assert!(bucket < CONFIG.turn_buckets)
-    }
-    for hand in load_river_isomorphic() {
-        let cards = hand2cards(hand);
-        let bucket = abstraction.bin(&cards);
-        assert!(0 <= bucket);
-        assert!(bucket < CONFIG.river_buckets)
+    for street in [FLOP, TURN, RIVER].iter() {
+        let street = street.clone();
+        let mut hands: HashSet<u64> = HashSet::new();
+        let n_buckets;
+        if street == FLOP {
+            hands = load_flop_isomorphic();
+            n_buckets = CONFIG.flop_buckets;
+        } else if street == TURN {
+            load_turn_isomorphic();
+            n_buckets = CONFIG.turn_buckets;
+        } else if street == RIVER {
+            load_river_isomorphic();
+            n_buckets = CONFIG.river_buckets;
+        } else {
+            panic!("bad street");
+        };
+        for hand in hands {
+            let cards = hand2cards(hand);
+            let bucket = abstraction.bin(&cards);
+            assert!(
+                0 <= bucket && bucket < n_buckets, 
+                "Hand {} has bucket {} which is outside the range of 0 to {}",
+                hand2str(hand),
+                bucket,
+                n_buckets
+            );
+        }
     }
 }
 
@@ -864,7 +870,7 @@ fn subgame_solving_beats_blueprint() {
     let iters = 10_000;
     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
     let bar = pbar(iters as u64);
-    for i in 0..iters {
+    for _i in 0..iters {
         let amount = play_hand_bots(&blueprint_bot, &subgame_bot);
         winnings.push(amount);
         bar.inc(1);

@@ -86,13 +86,16 @@ impl Bot {
 
         debug_assert!(board.len() == board_length(history.street));
 
-        let subgame_root: ActionHistory = history.without_last_action();
+        // let subgame_root: ActionHistory = history.without_last_action();
+        let subgame_root = history;
         let translated = subgame_root.translate(&CONFIG.bet_abstraction);
 
         // Get our beliefs of the opponent's range given their actions up to the subgame root.
         // Use action translation to map the actions so far to infosets in the blueprint strategy.
         let get_strategy = |hole: &[Card], board: &[Card], history: &ActionHistory| {
             self.get_strategy_action_translation(hole, board, history)
+            // TODO: The other move here is to get the opponent range via past unsafe subgame solving,
+            // and keep track of the range as you go. 
         };
 
         let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
@@ -117,8 +120,7 @@ impl Bot {
         // );
 
         let nodes = Nodes::new();
-        let bar = pbar(CONFIG.subgame_iters);
-        for i in 0..CONFIG.subgame_iters {
+        (0..CONFIG.subgame_iters).into_par_iter().for_each(|_i| {
             let opp_hand = opp_range.sample_hand();
             let mut current_deck: Vec<Card> = Vec::with_capacity(52);
             if history.player == DEALER {
@@ -136,22 +138,20 @@ impl Bot {
 
             for player in [DEALER, OPPONENT].iter() {
                 iterate(
-                    DEALER,
+                    player.clone(),
                     &current_deck,
                     history,
                     [1.0, 1.0],
                     &nodes,
-                    &new_abstraction,
+                    &CONFIG.bet_abstraction,
                     CONFIG.depth_limit
                 );
             }
-            bar.inc(1);
-        }
-        bar.finish();
+        });
 
         // Debug info
         let infoset = InfoSet::from_hand(hole, board, history);
-        let node = nodes.get(&infoset).unwrap();
+        let node = nodes.get(&infoset).expect("Infoset not found in subgame nodes");
         println!("InfoSet: {infoset}");
         println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
         println!("Node: {:?}", node);
