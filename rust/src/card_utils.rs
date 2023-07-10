@@ -160,7 +160,7 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
             )
             .unwrap(),
     );
-    bar.enable_steady_tick(Duration::new(0, 1_000_000_000));
+    // bar.enable_steady_tick(Duration::new(0, 1_000_000_000));
     bar
 }
 

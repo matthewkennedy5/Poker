@@ -3,7 +3,7 @@ use crate::config::CONFIG;
 use crate::trainer_utils::*;
 use dashmap::DashMap;
 use smallvec::SmallVec;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 // Upper limit on branching factor of blueprint game tree.
 pub const NUM_ACTIONS: usize = 5;
@@ -71,13 +71,13 @@ impl Nodes {
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
         let current_strategy: SmallVec<[f64; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
-        if prob > 0.0 {
+        if prob > 0.0 && node.t > CONFIG.subgame_iters / 2 {
             for i in 0..current_strategy.len() {
                 // Add this action's probability to the cumulative strategy sum 
                 node.strategy_sum[i] += current_strategy[i] * prob;
             }
-            node.t += 1;
         }
+        node.t += 1;
     }
     
     pub fn get_current_strategy(&self, infoset: &InfoSet, bet_abstraction: &[Vec<f64>]) -> SmallVec<[f64; NUM_ACTIONS]> {
