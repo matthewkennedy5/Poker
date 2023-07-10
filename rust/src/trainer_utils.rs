@@ -512,24 +512,6 @@ pub fn normalize_smallvec(v: &[f64]) -> SmallVec<[f64; NUM_ACTIONS]> {
     norm
 }
 
-// Randomly sample an action given the current strategy at this node.
-// TODO: Dry with sample_action_from_strategy
-pub fn sample_action_from_node(
-    node: &mut Node,
-    actions: &SmallVec<[Action; NUM_ACTIONS]>,
-    cumulative: bool,
-) -> Action {
-    let strategy = match cumulative {
-        true => node.cumulative_strategy(),
-        false => node.current_strategy(0.0),
-    };
-    let action_indexes: SmallVec<[usize; NUM_ACTIONS]> = (0..actions.len()).collect();
-    let index: usize = *action_indexes
-        .choose_weighted(&mut thread_rng(), |i| strategy[(*i)])
-        .unwrap_or_else(|_| panic!("Invalid strategy distribution: {:?}", &strategy));
-    actions.get(index).unwrap().clone()
-}
-
 pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
     let actions: Vec<&Action> = strategy.keys().collect(); // TODO: Change to Vec<Action>, and other clippy refactors
     let mut rng = thread_rng();

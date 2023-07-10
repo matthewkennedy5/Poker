@@ -39,8 +39,9 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         // Check what percent of nodes have t = 0
         let mut zero = 0;
         let mut total = 0;
-        for (history, history_nodes) in nodes.dashmap.clone() {
-            for n in history_nodes {
+        for reference in &nodes.dashmap {
+            let history_nodes = reference.lock().unwrap();
+            for n in history_nodes.iter() {
                 total += 1;
                 if n.t == 0 {
                     zero += 1;
@@ -117,17 +118,15 @@ pub fn iterate(
     // doesn't exist
     let history = history.clone();
     let infoset = InfoSet::from_deck(deck, &history);
-    let mut node = lookup_or_new(nodes, &infoset, bet_abstraction);
+
+    let strategy = nodes.get_current_strategy(&infoset, bet_abstraction);
+    if history.player == player {
+        nodes.update_strategy_sum(&infoset, bet_abstraction, weights[player]);
+    }
 
     let opponent = 1 - player;
     let actions = infoset.next_actions(bet_abstraction);
-    let strategy = node.current_strategy(if history.player == player {
-        weights[player]
-    } else {
-        0.0
-    });
     let mut node_utility = 0.0;
-
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
         .map(|i| {
@@ -174,9 +173,8 @@ pub fn iterate(
     if history.player == player {
         for (index, utility) in utilities.iter().enumerate() {
             let regret = utility - node_utility;
-            node.add_regret(index, weights[opponent] * regret);
+            nodes.add_regret(&infoset, bet_abstraction, index, weights[opponent] * regret);
         }
-        nodes.insert(infoset, node, bet_abstraction);
     }
     node_utility
 }

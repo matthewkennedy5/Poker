@@ -728,42 +728,6 @@ fn test_preflop_buckets() {
     assert_eq!(buckets.len(), buckets_set.len());
 }
 
-// Fully populate the nodes to check if it will fit in memory. If not, the test will crash
-// because the computer ran out of memory.
-// #[test]
-fn node_memory_stress_test() {
-    let nodes: Nodes = Nodes::new();
-    let histories = all_histories(&ActionHistory::new());
-    println!("All histories: {}", histories.len());
-    // Assuming there's 169 preflop buckets, and the same number of buckets for flop, turn, and river.
-    // this could change in the future.
-    let bar = pbar((histories.len() as i32 * CONFIG.flop_buckets) as u64);
-    histories.into_par_iter().for_each(|history| {
-        if history.street == PREFLOP {
-            for bucket in 0..169 {
-                let infoset = InfoSet {
-                    history: history.clone(),
-                    card_bucket: bucket,
-                };
-                let node = Node::new(infoset.next_actions(&CONFIG.bet_abstraction).len());
-                nodes.insert(infoset, node, &CONFIG.bet_abstraction);
-                bar.inc(1);
-            }
-        } else {
-            for bucket in 0..CONFIG.flop_buckets {
-                let infoset = InfoSet {
-                    history: history.clone(),
-                    card_bucket: bucket,
-                };
-                let node = Node::new(infoset.next_actions(&CONFIG.bet_abstraction).len());
-                nodes.insert(infoset, node, &CONFIG.bet_abstraction);
-                bar.inc(1);
-            }
-        }
-    });
-    bar.finish_with_message("Success!");
-}
-
 #[test]
 fn all_in_showdown_street() {
     let history = ActionHistory::from_strings(vec!["Call 100", "Bet 20000", "Call 19900"]);
@@ -771,28 +735,28 @@ fn all_in_showdown_street() {
 }
 
 // #[test]
-fn train_performance() {
-    train(1_000_000, 1_000_000, false);
-    let nodes = load_nodes(&CONFIG.nodes_path);
+// fn train_performance() {
+//     train(1_000_000, 1_000_000, false);
+//     let nodes = load_nodes(&CONFIG.nodes_path);
 
-    // Check what percent of nodes have t = 0
-    let mut zero = 0;
-    let mut total = 0;
-    for (_, history_nodes) in nodes.dashmap.clone() {
-        for n in history_nodes {
-            total += 1;
-            if n.t == 0 {
-                zero += 1;
-            }
-        }
-    }
-    let percent_zeros = zero as f64 / total as f64;
-    assert!(percent_zeros < 0.2);
+//     // Check what percent of nodes have t = 0
+//     let mut zero = 0;
+//     let mut total = 0;
+//     for (_, history_nodes) in nodes.dashmap.clone() {
+//         for n in history_nodes {
+//             total += 1;
+//             if n.t == 0 {
+//                 zero += 1;
+//             }
+//         }
+//     }
+//     let percent_zeros = zero as f64 / total as f64;
+//     assert!(percent_zeros < 0.2);
 
-    // Make sure the exploitability is below 0.5 BB/h
-    let exploitability = blueprint_exploitability(&nodes, 100_000);
-    assert!(exploitability < 0.5);
-}
+//     // Make sure the exploitability is below 0.5 BB/h
+//     let exploitability = blueprint_exploitability(&nodes, 100_000);
+//     assert!(exploitability < 0.5);
+// }
 
 #[test]
 fn abstraction_distributes_hands_evenly() {

@@ -111,16 +111,8 @@ impl Bot {
             new_abstraction[subgame_root.street].push(pot_frac);
         }
 
-        // let nodes = Bot::solve_subgame(
-        //     &subgame_root,
-        //     &opp_range,
-        //     &new_abstraction,
-        //     CONFIG.subgame_iters,
-        //     CONFIG.depth_limit
-        // );
-
         let nodes = Nodes::new();
-        (0..CONFIG.subgame_iters).into_iter().for_each(|_i| {
+        (0..CONFIG.subgame_iters).into_par_iter().for_each(|_i| {
             // Construct a plausible deck using:
             // - Our hand (player's hand)
             // - Opponent hand sampled from our belief of their range
@@ -160,6 +152,7 @@ impl Bot {
         println!("InfoSet: {infoset}");
         println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
         println!("Node: {:?}", node);
+        debug_assert!(node.t == CONFIG.subgame_iters);
 
         let strategy = nodes.get_strategy(hole, board, history, &new_abstraction);
         strategy
