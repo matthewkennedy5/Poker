@@ -120,7 +120,12 @@ impl Bot {
         // );
 
         let nodes = Nodes::new();
-        (0..CONFIG.subgame_iters).into_par_iter().for_each(|_i| {
+        (0..CONFIG.subgame_iters).into_iter().for_each(|_i| {
+            // Construct a plausible deck using:
+            // - Our hand (player's hand)
+            // - Opponent hand sampled from our belief of their range
+            // - Current board cards
+            // - Then shuffle the rest of the deck for the remaining board cards
             let opp_hand = opp_range.sample_hand();
             let mut current_deck: Vec<Card> = Vec::with_capacity(52);
             if history.player == DEALER {

@@ -867,7 +867,7 @@ fn subgame_solving_beats_blueprint() {
     blueprint_bot.subgame_solving = false;
     subgame_bot.subgame_solving = true;
 
-    let iters = 10_000;
+    let iters = 1_000_000;
     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
     let bar = pbar(iters as u64);
     for _i in 0..iters {

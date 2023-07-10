@@ -134,13 +134,13 @@ pub fn iterate(
             let prob = strategy[i];
 
             // Pruning
-            let player_prune = CONFIG.player_prune
-                && node.regrets[i] < -100.0 * CONFIG.stack_size as f64
-                && rand::thread_rng().gen_bool(0.95);
-            let opp_prune = CONFIG.opp_prune && history.player == opponent && prob < 1e-6;
-            if player_prune || opp_prune {
-                return 0.0;
-            }
+            // let player_prune = CONFIG.player_prune
+            //     && node.regrets[i] < -100.0 * CONFIG.stack_size as f64
+            //     && rand::thread_rng().gen_bool(0.95);
+            // let opp_prune = CONFIG.opp_prune && history.player == opponent && prob < 1e-6;
+            // if player_prune || opp_prune {
+            //     return 0.0;
+            // }
 
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
@@ -150,6 +150,12 @@ pub fn iterate(
                 1 => [weights[0], weights[1] * prob],
                 _ => panic!("Bad player value"),
             };
+
+            // Pruning experiment - TODO (I think this is right)
+            // if weights[0] < 1e-10 && weights[1] < 1e-10 {
+            //     return 0.0;
+            // }
+
             let utility = iterate(
                 player,
                 deck,

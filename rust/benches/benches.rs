@@ -50,7 +50,7 @@ fn bench_win_probability_rollout(c: &mut Criterion) {
 fn bench_play_hand(c: &mut Criterion) {
     let blueprint = load_nodes(&CONFIG.nodes_path);
     let get_strategy = |hole: &[Card], board: &[Card], history: &ActionHistory| {
-        blueprint.get_strategy(hole, board, history)
+        blueprint.get_strategy(hole, board, history, &CONFIG.bet_abstraction)
     };
     let mut group = c.benchmark_group("play_hand");
     group.warm_up_time(Duration::new(90, 0));
