@@ -805,7 +805,7 @@ fn abstraction_buckets_in_range() {
             let cards = hand2cards(hand);
             let bucket = abstraction.bin(&cards);
             assert!(
-                0 <= bucket && bucket < n_buckets, 
+                0 <= bucket && bucket < n_buckets,
                 "Hand {} has bucket {} which is outside the range of 0 to {}",
                 hand2str(hand),
                 bucket,
@@ -831,21 +831,23 @@ fn subgame_solving_beats_blueprint() {
     blueprint_bot.subgame_solving = false;
     subgame_bot.subgame_solving = true;
 
-    let iters = 100_000;
+    let iters = 1_000_000;
     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
     let bar = pbar(iters as u64);
+    let mut mean = 0.0;
     for _i in 0..iters {
         let amount = play_hand_bots(&blueprint_bot, &subgame_bot);
-        winnings.push(amount);
+        winnings.push(amount / CONFIG.big_blind as f64);
+        // TODO: DRY with exploiter.rs
+        if winnings.len() >= 2 {
+            mean = statistical::mean(&winnings);
+            let std = statistical::standard_deviation(&winnings, Some(mean));
+            let confidence = 1.96 * std / (iters as f64).sqrt();
+            println!("Subgame solver winnings vs blueprint: {mean} +/- {confidence} BB/h\n");
+        }
         bar.inc(1);
     }
     bar.finish();
-
-    // TODO: DRY with exploiter.rs
-    let mean = statistical::mean(&winnings);
-    let std = statistical::standard_deviation(&winnings, Some(mean));
-    let confidence = 1.96 * std / (iters as f64).sqrt();
-    println!("Subgame solver winnings vs blueprint: {mean} +/- {confidence} BB/h\n");
     assert!(mean > 0.0);
 }
 
@@ -861,6 +863,18 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
         let board = &hand[2..];
 
         let bot = if history.player == subgame_bot_position {
+            {
+                // Check that the Bayesian belief probability for the opponent's hand is above 0
+                let opp_range =
+                    Range::get_opponent_range(hole, board, &history, |hole, board, history| {
+                        subgame_bot.get_strategy(hole, board, history)
+                    });
+                let opponent = 1 - history.player;
+                let opp_hand = get_hand(&deck, opponent, PREFLOP);
+                let prob = opp_range.hand_prob(&opp_hand);
+                assert!(prob > 0.0, "Unexpected opponent hand {:?}", cards2str(&opp_hand));
+            }
+
             subgame_bot
         } else {
             blueprint_bot

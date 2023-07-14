@@ -107,6 +107,7 @@ pub fn iterate(
     history: &ActionHistory,
     weights: [f64; 2],
     nodes: &Nodes,
+    // blueprint: &Nodes,      // For depth limited solving
     bet_abstraction: &[Vec<f64>],
     remaining_depth: i32,
 ) -> f64 {
@@ -116,12 +117,32 @@ pub fn iterate(
 
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
-    let history = history.clone();
+    let mut history = history.clone();
     let infoset = InfoSet::from_deck(deck, &history);
 
+    // Depth limited solving - just sample actions until the end of the game to estimate the utility
+    // of this information set
+    // TODO: Let the opponent choose between several strategies
+    if remaining_depth == 0 {
+        loop {
+            // Try the simplest thing first: uniform distribution over actions. It's a reasonable
+            // approximation of the utility. 
+            let actions = history.next_actions(bet_abstraction);
+            let action = actions.choose(&mut thread_rng()).unwrap();
+            history.add(action);
+            if history.hand_over() {
+                return terminal_utility(deck, &history, player);
+            }
+        }
+    }
+
     let strategy = nodes.get_current_strategy(&infoset, bet_abstraction);
+    let mut regrets = [0.0; NUM_ACTIONS];
     if history.player == player {
         nodes.update_strategy_sum(&infoset, bet_abstraction, weights[player]);
+        if let Some(node) = nodes.get(&infoset) {
+            regrets = node.regrets;
+        }
     }
 
     let opponent = 1 - player;
@@ -141,6 +162,10 @@ pub fn iterate(
             //     return 0.0;
             // }
 
+            // if regrets[i] < -100.0 * CONFIG.stack_size as f64 && rand::thread_rng().gen_bool(0.95) {
+            //     return 0.0;
+            // }
+
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
 
@@ -151,9 +176,9 @@ pub fn iterate(
             };
 
             // Pruning experiment - TODO (I think this is right)
-            // if weights[0] < 1e-10 && weights[1] < 1e-10 {
-            //     return 0.0;
-            // }
+            if weights[0] < 1e-10 && weights[1] < 1e-10 {
+                return 0.0;
+            }
 
             let utility = iterate(
                 player,

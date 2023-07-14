@@ -71,7 +71,7 @@ impl Nodes {
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
         let current_strategy: SmallVec<[f64; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
-        if prob > 0.0 && node.t > CONFIG.subgame_iters / 2 {
+        if prob > 0.0 && node.t > (CONFIG.subgame_iters as f64 * 0.9) as u64 {
             for i in 0..current_strategy.len() {
                 // Add this action's probability to the cumulative strategy sum 
                 node.strategy_sum[i] += current_strategy[i] * prob;

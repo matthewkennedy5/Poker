@@ -1,5 +1,5 @@
 use crate::itertools::Itertools;
-use rand::{distributions::WeightedIndex, distributions::Distribution};
+use rand::{distributions::Distribution, distributions::WeightedIndex};
 use std::collections::HashMap;
 
 use crate::card_utils::*;
@@ -7,10 +7,11 @@ use crate::trainer_utils::*;
 
 // If a hand's probability is below PROB_CUTOFF in the range, just skip it since it has a negligible
 // contribution to the range.
-pub const PROB_CUTOFF: f64 = 0.0001;
+pub const PROB_CUTOFF: f64 = 1e-4;
 
 #[derive(Debug, Clone)]
 pub struct Range {
+    // This is the full 1326 2 card preflop combinations, not isomorphic
     pub range: HashMap<Vec<Card>, f64>,
 }
 
@@ -58,14 +59,17 @@ impl Range {
                 .unwrap_or_else(|| panic!("Action {} is not in strategy: {:?}", action, strategy));
 
             let new_prob = prob * p;
-            self.range.insert(hole, new_prob);  // Modify the range in place
+            self.range.insert(hole, new_prob); // Modify the range in place
         }
 
         self.range = normalize(&self.range);
     }
 
     pub fn hand_prob(&self, hand: &[Card]) -> f64 {
-        *self.range.get(hand).unwrap()
+        *self
+            .range
+            .get(hand)
+            .expect(format!("Hand {} not found in range", cards2str(hand)).as_str())
     }
 
     pub fn sample_hand(&self) -> Vec<Card> {

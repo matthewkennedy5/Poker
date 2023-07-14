@@ -8,6 +8,7 @@ use rand::seq::SliceRandom;
 use rayon::prelude::*;
 use moka::sync::Cache;
 
+// TODO: Rename preflop cache if you cache flop actions as well
 type PreflopCache = Cache<(i32, ActionHistory), Strategy>;
 
 pub struct Bot {
@@ -23,7 +24,7 @@ impl Bot {
         let blueprint = load_nodes(&CONFIG.nodes_path);
         Bot {
             blueprint,
-            preflop_cache: Cache::new(100_000),
+            preflop_cache: Cache::new(1_000_000),
             subgame_solving: CONFIG.subgame_solving
         }
     }
@@ -49,7 +50,7 @@ impl Bot {
                 Some(strategy) => strategy,
                 None => {
                     let strategy = self.unsafe_nested_subgame_solving(hole, board, history);
-                    if history.street == PREFLOP {
+                    if history.street == PREFLOP || history.street == FLOP {
                         self.preflop_cache.insert(key, strategy.clone());
                     }
                     strategy
@@ -112,6 +113,7 @@ impl Bot {
         }
 
         let nodes = Nodes::new();
+        // let bar = pbar(CONFIG.subgame_iters);
         (0..CONFIG.subgame_iters).into_par_iter().for_each(|_i| {
             // Construct a plausible deck using:
             // - Our hand (player's hand)
@@ -144,7 +146,9 @@ impl Bot {
                     CONFIG.depth_limit
                 );
             }
+            // bar.inc(1);
         });
+        // bar.finish();
 
         // Debug info
         let infoset = InfoSet::from_hand(hole, board, history);
