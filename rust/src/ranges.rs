@@ -1,4 +1,3 @@
-use crate::itertools::Itertools;
 use rand::{distributions::Distribution, distributions::WeightedIndex};
 use std::collections::HashMap;
 
@@ -7,7 +6,7 @@ use crate::trainer_utils::*;
 
 // If a hand's probability is below PROB_CUTOFF in the range, just skip it since it has a negligible
 // contribution to the range.
-pub const PROB_CUTOFF: f64 = 1e-4;
+pub const PROB_CUTOFF: f64 = 1e-10;
 
 #[derive(Debug, Clone)]
 pub struct Range {
@@ -19,12 +18,13 @@ impl Range {
     pub fn new() -> Range {
         let mut range = HashMap::new();
         let deck = deck();
-        for hand in deck.iter().combinations(2) {
-            // I'm not sure if combinations() always returns the cards in a sorted order, but we'll
-            // cross that bridge if we come to it.
-            let hand = deepcopy(&hand);
-            range.insert(hand, 1.0);
+        for i in 0..deck.len() {
+            for j in i+1..deck.len() {
+                let hand = vec![deck[i], deck[j]];
+                range.insert(hand, 1.0);
+            }
         }
+        debug_assert!(range.len() == 1326);
         range = normalize(&range);
         Range { range }
     }
@@ -66,9 +66,11 @@ impl Range {
     }
 
     pub fn hand_prob(&self, hand: &[Card]) -> f64 {
+        let mut sorted: Vec<Card> = hand.to_vec();
+        sorted.sort();
         *self
             .range
-            .get(hand)
+            .get(&sorted)
             .expect(format!("Hand {} not found in range", cards2str(hand)).as_str())
     }
 
@@ -91,19 +93,24 @@ impl Range {
     where
         F: Fn(&[Card], &[Card], &ActionHistory) -> Strategy,
     {
+        debug_assert!(board.len() == board_length(history.street));
         let mut opp_range = Range::new();
         let mut history_iter = ActionHistory::new();
-        // By Bayes's rule, since the multiplication commutes, we can zero out the probabilties for
-        // the blocker cards up front.
         opp_range.remove_blockers(board);
         opp_range.remove_blockers(hole);
         for action in history.get_actions() {
             if history_iter.player == history.player {
                 // If the opponent just made an action, then update their range based on their action
+
                 let strategy = |hole: &Vec<Card>| get_strategy(hole, board, &history_iter);
+                println!("Strategy: {:?}", strategy(&str2cards("Jd3d")));
                 opp_range.update(&action, strategy);
             }
             history_iter.add(&action);
+
+            // DEBUG
+            // let prob = opp_range.hand_prob(&str2cards("Jd3d"));
+            // println!("Prob for Jd3d after action {action} is {prob}");
         }
         opp_range
     }

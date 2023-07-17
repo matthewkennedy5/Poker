@@ -7,6 +7,7 @@ use crate::nodes::*;
 use rand::seq::SliceRandom;
 use rayon::prelude::*;
 use moka::sync::Cache;
+use smallvec::ToSmallVec;
 
 // TODO: Rename preflop cache if you cache flop actions as well
 type PreflopCache = Cache<(i32, ActionHistory), Strategy>;
@@ -31,7 +32,13 @@ impl Bot {
 
     pub fn get_action(&self, hand: &[Card], board: &[Card], history: &ActionHistory) -> Action {
         let strategy = self.get_strategy(hand, board, history);
-        sample_action_from_strategy(&strategy)
+        let action = sample_action_from_strategy(&strategy);
+        debug_assert!({
+            let prob = strategy.get(&action).unwrap().clone();
+            println!("Picked action {action} with probability {prob}");
+            prob > 0.0
+        });
+        action
     }
 
     // Wrapper for the real time solving for the bot's strategy
@@ -76,8 +83,6 @@ impl Bot {
         adjusted_strategy
     }
     
-    // TODO: I think you should also your hand (hole and board) to the card abstraction here. That way you 
-    // perfectly understand the cards on the table when computing your strategy.  
     fn unsafe_nested_subgame_solving(
         &self,
         hole: &[Card],
@@ -85,9 +90,8 @@ impl Bot {
         history: &ActionHistory,
     ) -> Strategy {
 
-        debug_assert!(board.len() == board_length(history.street));
+        let board: SmallVecHand = board[..board_length(history.street)].to_smallvec();
 
-        // let subgame_root: ActionHistory = history.without_last_action();
         let subgame_root = history;
         let translated = subgame_root.translate(&CONFIG.bet_abstraction);
 
@@ -99,7 +103,7 @@ impl Bot {
             // and keep track of the range as you go. 
         };
 
-        let opp_range = Range::get_opponent_range(hole, board, &translated, get_strategy);
+        let opp_range = Range::get_opponent_range(hole, &board, &translated, get_strategy);
         let opp_action = history.last_action().unwrap();
 
         // Add the opponent's action to the bet abstraction
@@ -129,7 +133,7 @@ impl Bot {
                 current_deck.extend(opp_hand);
                 current_deck.extend(hole);
             }
-            current_deck.extend(board);
+            current_deck.extend(board.iter());
             let mut rest_of_deck = deck();
             rest_of_deck.retain(|c| !current_deck.contains(&c));
             rest_of_deck.shuffle(&mut rand::thread_rng());
@@ -151,45 +155,13 @@ impl Bot {
         // bar.finish();
 
         // Debug info
-        let infoset = InfoSet::from_hand(hole, board, history);
+        let infoset = InfoSet::from_hand(hole, &board, history);
         let node = nodes.get(&infoset).expect("Infoset not found in subgame nodes");
         println!("InfoSet: {infoset}");
         println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
         println!("Node: {:?}", node);
-        debug_assert!(node.t == CONFIG.subgame_iters);
 
-        let strategy = nodes.get_strategy(hole, board, history, &new_abstraction);
+        let strategy = nodes.get_strategy(hole, &board, history, &new_abstraction);
         strategy
-    }
-
-    // Uses unsafe subgame solving to return the Nash equilibrium strategy for the current spot,
-    // assuming that the opponent is playing with the given range.
-    //
-    // Inputs:
-    //      history: The history of actions leading up to this spot, not including the opponent's
-    //          most recent action
-    //      opp_range: Our Bayesian belief distribution of the cards the opponent has
-    //      opp_action: Action the opponent took at this spot, which might not be in the action
-    //          abstraction
-    //      iters: How many iterations of CFR to run
-    //
-    // Returns:
-    //      nodes: The solved CFR tree nodes for each infoset in the subgame
-    pub fn solve_subgame(
-        history: &ActionHistory,
-        opp_range: &Range,
-        bet_abstraction: &[Vec<f64>],
-        iters: u64,
-        depth_limit: i32
-    ) -> Nodes {
-        let nodes: Nodes = Nodes::new();
-        (0..iters).into_par_iter().for_each(|_i| {
-            let opp_hand = opp_range.sample_hand();
-            // let mut deck = deck();
-            // Remove opponent's cards (blockers) from the deck
-            // deck.retain(|card| !opp_hand.contains(card));
-            // it should hold constant observed public hands, etc
-        });
-        nodes
     }
 }

@@ -460,6 +460,7 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
     }
 }
 
+// TODO: Delete this? 
 pub fn lookup_or_new(nodes: &Nodes, infoset: &InfoSet, bet_abstraction: &[Vec<f64>]) -> Node {
     let num_actions = infoset.next_actions(bet_abstraction).len();
     let node = match nodes.get(infoset) {

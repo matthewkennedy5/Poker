@@ -33,7 +33,7 @@ debug-assertions = false
 lto = false
 
 [profile.dev]
-opt-level = 3
+opt-level = 1
 
 [[bench]]
 name="benches"
