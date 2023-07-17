@@ -96,21 +96,16 @@ impl Range {
         debug_assert!(board.len() == board_length(history.street));
         let mut opp_range = Range::new();
         let mut history_iter = ActionHistory::new();
+        let opponent = 1 - history.player;
         opp_range.remove_blockers(board);
         opp_range.remove_blockers(hole);
         for action in history.get_actions() {
-            if history_iter.player == history.player {
-                // If the opponent just made an action, then update their range based on their action
-
+            if history_iter.player == opponent {
+                // Update the opponent's range based on their action
                 let strategy = |hole: &Vec<Card>| get_strategy(hole, board, &history_iter);
-                println!("Strategy: {:?}", strategy(&str2cards("Jd3d")));
                 opp_range.update(&action, strategy);
             }
             history_iter.add(&action);
-
-            // DEBUG
-            // let prob = opp_range.hand_prob(&str2cards("Jd3d"));
-            // println!("Prob for Jd3d after action {action} is {prob}");
         }
         opp_range
     }

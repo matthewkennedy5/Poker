@@ -882,14 +882,9 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
                     println!("Probability: {prob}");
                     println!("Last strategy: {:?}", blueprint_bot.get_strategy(&opp_hand, board, &history.without_last_action()));
                     println!("breakpoint");
-                    let opp_range =
-                    Range::get_opponent_range(hole, board, &history, |hole, board, history| {
-                        blueprint_bot.get_strategy(hole, board, history)
-                    });
                 }
                 assert!(prob > 0.0, "Unexpected opponent hand {:?}", cards2str(&opp_hand));
             }
-
             subgame_bot
         } else {
             blueprint_bot
@@ -903,21 +898,16 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
 
 #[test]
 fn test_belief_range() {
-    // History: call 100,call 100,bet 100,call 100,call 0,
-    // Board: 9h5h9c5s
-    // Opponent hand: Jd3d
-    // Probability: 0
-    // Last strategy: {Action { action: Bet, amount: 19800 }: 0.0, Action { action: Call, amount: 0 }: 0.9491489131340132, Action { action: Bet, amount: 200 }: 0.05082210389274783, Action { action: Bet, amount: 400 }: 2.8982973239010102e-5}
-    // breakpoint
-    let my_hand = str2cards("9dJh");
-    let opp_hand = str2cards("Jd3d");
-    let board = str2cards("9h5h9c5s");
+    let my_hand = str2cards("As6s");
+    let opp_hand = str2cards("AdTs");
+    let board = str2cards("5c6cJd");
     let history = ActionHistory::from_strings(vec![
-        "Call 100",
-        "Call 100",
-        "Bet 100",
-        "Call 100",
-        "Call 0"
+        "Bet 200",
+        "Bet 400",
+        "Call 200",
+        "Call 0",
+        "Bet 800",
+        "Bet 1600"
     ]);
     let mut blueprint_bot = Bot::new();
     blueprint_bot.subgame_solving = false;
@@ -925,20 +915,5 @@ fn test_belief_range() {
         blueprint_bot.get_strategy(hole, board, history)
     });
     let prob = range.hand_prob(&opp_hand);
-    
-    let bot_strategy = blueprint_bot.get_strategy(
-        &opp_hand,
-        &str2cards("9h5h9c"),
-        &ActionHistory::from_strings(vec![
-            "Call 100",
-            "Call 100",
-            "Bet 100"
-        ])
-    );
-    println!("bot strategy: {:?}", bot_strategy);
     assert!(prob > 0.0);
 } 
-
-// START HERE: Something fishy is going on, find a specific case of the opp prob being 0 and debug why
-// exactly that is. it shouldnt be zero. Maybe you're passing in the wrong baord somewhere or something.
-// Weird. Maybe rewrite / redesign also. 

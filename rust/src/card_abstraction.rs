@@ -6,14 +6,14 @@
 
 use crate::card_utils::*;
 use crate::config::CONFIG;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use itertools::Itertools;
-use std::{collections::HashMap, fs::File, path::Path, io::BufReader};
-use once_cell::sync::Lazy;
 use moka::sync::Cache;
+use once_cell::sync::Lazy;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use std::{collections::HashMap, fs::File, io::BufReader, path::Path};
 
-static RIVER_EQUITY_CACHE: Lazy<Cache<SmallVecHand, f64>> = Lazy::new(|| 
-    Cache::new(125_756_657)   // Number of isomorphic river hands
+static RIVER_EQUITY_CACHE: Lazy<Cache<SmallVecHand, f64>> = Lazy::new(
+    || Cache::new(125_756_657), // Number of isomorphic river hands
 );
 
 const FLOP_PATH: &str = "products/flop_abstraction.bin";
@@ -62,12 +62,15 @@ impl Abstraction {
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
         let isomorphic = isomorphic_hand(cards, true);
         let hand = cards2hand(&isomorphic);
-        match cards.len() {
-            5 => *self.flop.get(&hand).unwrap(),
-            6 => *self.turn.get(&hand).unwrap(),
-            7 => *self.river.get(&hand).unwrap(),
+        let bin_result = match cards.len() {
+            5 => self.flop.get(&hand),
+            6 => self.turn.get(&hand),
+            7 => self.river.get(&hand),
             _ => panic!("Bad number of cards"),
-        }
+        };
+        bin_result
+            .expect(format!("Hand {} not found in abstraction", hand2str(hand)).as_str())
+            .clone()
     }
 }
 
@@ -87,7 +90,7 @@ pub fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
         let ehs2: Vec<u64> = bincode::deserialize_from(reader).unwrap();
         return ehs2;
     }
-    
+
     let isomorphic_hands = match n_cards {
         5 => load_flop_isomorphic(),
         6 => load_turn_isomorphic(),
@@ -117,7 +120,6 @@ pub fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
 }
 
 pub fn get_hand_counts(n_cards: usize) -> HashMap<u64, i32> {
-
     let path = format!("products/hand_counts_{n_cards}.bin");
 
     if Path::new(&path).exists() {
@@ -142,7 +144,7 @@ pub fn get_hand_counts(n_cards: usize) -> HashMap<u64, i32> {
             let hand = cards2hand(&isomorphic_hand(&cards, true));
             let current_count: i32 = match hand_counts.get(&hand) {
                 Some(count) => count.clone(),
-                None => 0
+                None => 0,
             };
             hand_counts.insert(hand, current_count + 1);
             bar.inc(1);
@@ -163,7 +165,8 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     };
     let hand_ehs2 = get_sorted_hand_ehs2(n_cards);
     let hand_counts = get_hand_counts(n_cards);
-    let total_hands: u64 = match n_cards {  // TODO: Change to sum(hand_counts)?
+    let total_hands: u64 = match n_cards {
+        // TODO: Change to sum(hand_counts)?
         5 => 25989600,
         6 => 305377800,
         7 => 2_809_475_760,
@@ -178,7 +181,7 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
         sum += count;
         clusters.insert(hand, bucket);
         debug_assert!(
-            bucket < n_buckets, 
+            bucket < n_buckets,
             "Hand {} has bucket {} which is outside the range of 0 to {}",
             hand2str(hand),
             bucket,
@@ -217,7 +220,6 @@ pub fn expected_hs2(hand: u64) -> f64 {
     }
     sum / count
 }
-
 
 fn river_equity(hand: &Vec<Card>) -> f64 {
     let iso = isomorphic_hand(hand, true);
