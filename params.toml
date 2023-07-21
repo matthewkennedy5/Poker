@@ -11,9 +11,9 @@ bet_abstraction = [
     [0.5, 1.0, -1.0],
     [0.5, 1.0, -1.0],
 ]
-flop_buckets = 1000    # Max:   1342562
-turn_buckets = 1000    # Max:  14403610
-river_buckets = 1000   # Max: 125756657
+flop_buckets = 100    # Max:   1342562
+turn_buckets = 100    # Max:  14403610
+river_buckets = 100   # Max: 125756657
 
 # DCFR
 decay = 0.9999
@@ -22,7 +22,7 @@ decay = 0.9999
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 1_000_000
+train_iters = 10_000_000
 lbr_iters = 200_000
 eval_every = 10_000
 warm_start = true
@@ -30,9 +30,9 @@ player_prune = false
 opp_prune = false
 
 # Realtime solving
-subgame_solving = true
-subgame_iters = 100
-depth_limit = 4   # -1 means always solve to the end of the game
+subgame_solving = false
+subgame_iters = 1_000_000
+depth_limit = -1   # -1 means always solve to the end of the game
 
 # Preflop chart
 preflop_strategy_path = "products/preflop_strategy.json"

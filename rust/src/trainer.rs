@@ -137,12 +137,8 @@ pub fn iterate(
     }
 
     let strategy = nodes.get_current_strategy(&infoset, bet_abstraction);
-    let mut regrets = [0.0; NUM_ACTIONS];
     if history.player == player {
         nodes.update_strategy_sum(&infoset, bet_abstraction, weights[player]);
-        if let Some(node) = nodes.get(&infoset) {
-            regrets = node.regrets;
-        }
     }
 
     let opponent = 1 - player;
@@ -152,19 +148,6 @@ pub fn iterate(
     let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
         .map(|i| {
             let prob = strategy[i];
-
-            // Pruning
-            // let player_prune = CONFIG.player_prune
-            //     && node.regrets[i] < -100.0 * CONFIG.stack_size as f64
-            //     && rand::thread_rng().gen_bool(0.95);
-            // let opp_prune = CONFIG.opp_prune && history.player == opponent && prob < 1e-6;
-            // if player_prune || opp_prune {
-            //     return 0.0;
-            // }
-
-            // if regrets[i] < -100.0 * CONFIG.stack_size as f64 && rand::thread_rng().gen_bool(0.95) {
-            //     return 0.0;
-            // }
 
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
@@ -176,9 +159,9 @@ pub fn iterate(
             };
 
             // Pruning experiment - TODO (I think this is right)
-            if weights[0] < 1e-10 && weights[1] < 1e-10 {
-                return 0.0;
-            }
+            // if weights[0] < 1e-10 && weights[1] < 1e-10 {
+            //     return 0.0;
+            // }
 
             let utility = iterate(
                 player,

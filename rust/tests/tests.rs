@@ -835,14 +835,14 @@ fn subgame_solving_beats_blueprint() {
     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
     let bar = pbar(iters as u64);
     let mut mean = 0.0;
-    for _i in 0..iters {
+    for i in 0..iters {
         let amount = play_hand_bots(&blueprint_bot, &subgame_bot);
         winnings.push(amount / CONFIG.big_blind as f64);
         // TODO: DRY with exploiter.rs
         if winnings.len() >= 2 {
             mean = statistical::mean(&winnings);
             let std = statistical::standard_deviation(&winnings, Some(mean));
-            let confidence = 1.96 * std / (iters as f64).sqrt();
+            let confidence = 1.96 * std / (i as f64).sqrt();
             println!("Subgame solver winnings vs blueprint: {mean} +/- {confidence} BB/h\n");
         }
         bar.inc(1);
@@ -863,28 +863,6 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
         let board = &hand[2..];
 
         let bot = if history.player == subgame_bot_position {
-            {
-                // Check that the Bayesian belief probability for the opponent's hand is above 0
-                let opp_range =
-                    Range::get_opponent_range(hole, board, &history, |hole, board, history| {
-                        blueprint_bot.get_strategy(hole, board, history)
-                    });
-                let opponent = 1 - history.player;
-                let opp_hand = get_hand(&deck, opponent, PREFLOP);
-                let prob = opp_range.hand_prob(&opp_hand);
-                // start here. For some reason the ranges.rs thinks its picking 
-                // actions with probability 0, but the very same blueprint_bot says its picking probabilities above 0.
-                if prob <= 0.0 {
-                    println!("History: {history}");
-                    println!("Player hand: {}", cards2str(&get_hand(&deck, history.player, PREFLOP)));
-                    println!("Board: {}", cards2str(board));
-                    println!("Opponent hand: {}", cards2str(&opp_hand));
-                    println!("Probability: {prob}");
-                    println!("Last strategy: {:?}", blueprint_bot.get_strategy(&opp_hand, board, &history.without_last_action()));
-                    println!("breakpoint");
-                }
-                assert!(prob > 0.0, "Unexpected opponent hand {:?}", cards2str(&opp_hand));
-            }
             subgame_bot
         } else {
             blueprint_bot
