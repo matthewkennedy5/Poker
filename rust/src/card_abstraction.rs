@@ -112,7 +112,7 @@ pub fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
     bar.finish_with_message("Done");
 
     hand_ehs2.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-    let sorted_hands: Vec<u64> = hand_ehs2.iter().map(|(hand, ehs2)| *hand).collect();
+    let sorted_hands: Vec<u64> = hand_ehs2.iter().map(|(hand, _ehs2)| *hand).collect();
 
     let buffer = File::create(path.as_str()).unwrap();
     bincode::serialize_into(buffer, &sorted_hands).unwrap();
@@ -165,13 +165,13 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     };
     let hand_ehs2 = get_sorted_hand_ehs2(n_cards);
     let hand_counts = get_hand_counts(n_cards);
-    let total_hands: u64 = match n_cards {
-        // TODO: Change to sum(hand_counts)?
-        5 => 25989600,
-        6 => 305377800,
+    let total_hands: u64 = hand_counts.values().map(|n| n.clone() as u64).sum();
+    debug_assert!(total_hands == match n_cards {
+        5 => 25_989_600,
+        6 => 305_377_800,
         7 => 2_809_475_760,
         _ => 0,
-    };
+    });
     let mut clusters = HashMap::new();
     let mut sum: u64 = 0;
     for hand in hand_ehs2 {

@@ -1,12 +1,11 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
+// #![allow(dead_code)]
+// #![allow(unused_variables)]
 #![allow(non_snake_case)]
 
 extern crate actix_files;
 extern crate actix_rt;
 extern crate actix_web;
 extern crate bincode;
-// extern crate bio;
 extern crate indicatif;
 extern crate itertools;
 extern crate rand;
@@ -27,7 +26,6 @@ mod trainer;
 mod nodes;
 mod trainer_utils;
 
-// TODO: Only expose public functions (dont use wildcard)
 pub use backend::*;
 pub use bot::*;
 pub use card_abstraction::*;
