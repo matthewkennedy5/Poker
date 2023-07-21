@@ -500,13 +500,8 @@ pub fn normalize_smallvec(v: &[f64]) -> SmallVec<[f64; NUM_ACTIONS]> {
 }
 
 pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
-    let actions: Vec<&Action> = strategy.keys().collect(); // TODO: Change to Vec<Action>, and other clippy refactors
-    let mut rng = thread_rng();
-    let action: Action = actions
-        .choose_weighted(&mut rng, |a| strategy.get(a).unwrap())
-        .unwrap_or(&&FOLD)  // TODO: Fix this bug where in rare cases, the probabilities are all 0s.
-        .clone()
-        .clone();
+    let actions: Vec<Action> = strategy.keys().map(|a| a.clone()).collect();
+    let action: Action = actions.choose_weighted(&mut thread_rng(), |a| strategy.get(a).unwrap()).unwrap().clone();
     action
 }
 
