@@ -460,20 +460,6 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
     }
 }
 
-// TODO: Delete this? 
-pub fn lookup_or_new(nodes: &Nodes, infoset: &InfoSet, bet_abstraction: &[Vec<f64>]) -> Node {
-    let num_actions = infoset.next_actions(bet_abstraction).len();
-    let node = match nodes.get(infoset) {
-        Some(n) => n.clone(),
-        None => Node::new(num_actions),
-    };
-    debug_assert!(
-        node.num_actions == num_actions,
-        "{} {}", node.num_actions, num_actions
-    );
-    node
-}
-
 // Normalizes the values of a HashMap so that its elements sum to 1.
 pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64> {
     let keys: Vec<T> = map.keys().cloned().collect();

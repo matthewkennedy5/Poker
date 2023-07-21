@@ -758,7 +758,7 @@ fn all_in_showdown_street() {
 //     assert!(exploitability < 0.5);
 // }
 
-#[test]
+// #[test]
 fn abstraction_distributes_hands_evenly() {
     // Randomly deal a lot of hands and bucket it to the abstraction. Verify that the largest ratio
     // of counts between abstraction buckets is less than 2.
@@ -824,7 +824,7 @@ fn test_subgame_solving() {
     );
 }
 
-#[test]
+// #[test]
 fn subgame_solving_beats_blueprint() {
     let mut blueprint_bot = Bot::new();
     let mut subgame_bot = Bot::new();

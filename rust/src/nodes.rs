@@ -132,7 +132,15 @@ impl Nodes {
         bet_abstraction: &[Vec<f64>],
     ) -> Strategy {
         let infoset = InfoSet::from_hand(hole, board, history);
-        let node = lookup_or_new(self, &infoset, bet_abstraction);
+        let num_actions = infoset.next_actions(bet_abstraction).len();
+        let node = match self.get(&infoset) {
+            Some(n) => n.clone(),
+            None => Node::new(num_actions),
+        };
+        debug_assert!(
+            node.num_actions == num_actions,
+            "{} {}", node.num_actions, num_actions
+        );
         let mut strategy = Strategy::new();
         let actions = infoset.next_actions(bet_abstraction);
         for (action, prob) in actions.iter().zip(node.cumulative_strategy()) {
