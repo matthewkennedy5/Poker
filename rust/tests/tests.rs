@@ -752,7 +752,7 @@ fn abstraction_distributes_hands_evenly() {
     let mut counts: Vec<i32> = vec![0; CONFIG.flop_buckets as usize];
     let mut deck = deck();
 
-    for i in 0..100_000 {
+    for _ in 0..100_000 {
         deck.shuffle(&mut thread_rng());
         let hand: &[Card] = &deck[0..5];
         let bucket = abstraction.bin(hand) as usize;

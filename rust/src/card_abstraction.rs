@@ -16,9 +16,9 @@ static RIVER_EQUITY_CACHE: Lazy<Cache<SmallVecHand, f64>> = Lazy::new(
     || Cache::new(125_756_657), // Number of isomorphic river hands
 );
 
-const FLOP_PATH: &str = "products/flop_abstraction.bin";
-const TURN_PATH: &str = "products/turn_abstraction.bin";
-const RIVER_PATH: &str = "products/river_abstraction.bin";
+pub const FLOP_ABSTRACTION_PATH: &str = "products/flop_abstraction.bin";
+pub const TURN_ABSTRACTION_PATH: &str = "products/turn_abstraction.bin";
+pub const RIVER_ABSTRACTION_PATH: &str = "products/river_abstraction.bin";
 
 pub struct Abstraction {
     flop: HashMap<u64, i32>,
@@ -29,9 +29,9 @@ pub struct Abstraction {
 impl Abstraction {
     pub fn new() -> Abstraction {
         Abstraction {
-            flop: load_abstraction(FLOP_PATH, 5, CONFIG.flop_buckets),
-            turn: load_abstraction(TURN_PATH, 6, CONFIG.turn_buckets),
-            river: load_abstraction(RIVER_PATH, 7, CONFIG.river_buckets),
+            flop: load_abstraction(FLOP_ABSTRACTION_PATH, 5, CONFIG.flop_buckets),
+            turn: load_abstraction(TURN_ABSTRACTION_PATH, 6, CONFIG.turn_buckets),
+            river: load_abstraction(RIVER_ABSTRACTION_PATH, 7, CONFIG.river_buckets),
         }
     }
 
@@ -156,7 +156,7 @@ pub fn get_hand_counts(n_cards: usize) -> HashMap<u64, i32> {
     hand_counts
 }
 
-fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
+pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     match n_cards {
         5 => println!("[INFO] Preparing the flop abstraction."),
         6 => println!("[INFO] Preparing the turn abstraction."),
@@ -189,9 +189,9 @@ fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
         );
     }
     let path = match n_cards {
-        5 => FLOP_PATH,
-        6 => TURN_PATH,
-        7 => RIVER_PATH,
+        5 => FLOP_ABSTRACTION_PATH,
+        6 => TURN_ABSTRACTION_PATH,
+        7 => RIVER_ABSTRACTION_PATH,
         _ => panic!("Bad hand length"),
     };
     serialize(clusters.clone(), path);
