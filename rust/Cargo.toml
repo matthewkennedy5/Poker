@@ -27,14 +27,12 @@ criterion = { version = "*", features = ["html_reports"] }
 smallvec = { version = "*", features = ["serde"] }
 dashmap = { version = "*", features = ["serde"]}
 
-[profile.release]
+[profile.release]   # For fastest speed
 debug = true
 debug-assertions = true
+overflow-checks = true
 
-[profile.release.*]
-debug-assertions = false
-
-[profile.dev]
+[profile.dev]   # For developing code
 opt-level = 1
 
 [[bench]]

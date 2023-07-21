@@ -15,7 +15,6 @@ struct HandCompJSON {
     cpuHand: Vec<String>,
 }
 
-// TODO: Can I unify this with trainer_utils::Action?
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct ActionJSON {
     action: String,
@@ -37,16 +36,7 @@ async fn get_cpu_action(infoset: web::Json<InfoSetJSON>) -> impl Responder {
     let history = parse_history(&infoset.history);
 
     let action = BOT.get_action(&cpu_cards, &board, &history);
-    let is_check = action
-        == Action {
-            action: ActionType::Call,
-            amount: 0,
-        };
-    let mut action_json = serde_json::to_string(&action).unwrap();
-    // TODO: can remove this Call/Check change now
-    if is_check {
-        action_json = action_json.replace("Check", "Call");
-    }
+    let action_json = serde_json::to_string(&action).unwrap();
     action_json
 }
 
