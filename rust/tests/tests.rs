@@ -3,6 +3,7 @@ use once_cell::sync::Lazy;
 use optimus::*;
 use rand::prelude::*;
 use rayon::prelude::*;
+use smallvec::*;
 use std::collections::HashSet;
 
 static BOT: Lazy<Bot> = Lazy::new(Bot::new);
@@ -880,3 +881,17 @@ fn test_belief_range() {
     let prob = range.hand_prob(&opp_hand);
     assert!(prob > 0.0);
 } 
+
+#[test]
+// Tests that the river equity cache fits in memory 
+fn river_equity_cache_mem_usage() {
+    let river_iso = load_river_isomorphic();
+    let bar = pbar(river_iso.len() as u64);
+    river_iso.into_par_iter().for_each(|hand| {
+        let smallvec_hand: SmallVecHand = hand2cards(hand).to_smallvec();
+        RIVER_EQUITY_CACHE.insert(smallvec_hand, 0.0);
+        bar.inc(1);
+    });
+    bar.finish();
+    assert_eq!(RIVER_EQUITY_CACHE.len(), 125_756_657);
+}

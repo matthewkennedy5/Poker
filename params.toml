@@ -23,9 +23,9 @@ nodes_path = "products/nodes.bin"
 
 # Training
 train_iters = 10_000_000
-lbr_iters = 20_000
-eval_every = 10_000
-warm_start = false
+lbr_iters = 100_000
+eval_every = 100_000
+warm_start = true
 player_prune = false
 opp_prune = false
 

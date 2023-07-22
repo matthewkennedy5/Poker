@@ -6,14 +6,15 @@
 
 use crate::card_utils::*;
 use crate::config::CONFIG;
+use dashmap::DashMap;
 use itertools::Itertools;
 use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{collections::HashMap, fs::File, io::BufReader, path::Path};
 
-static RIVER_EQUITY_CACHE: Lazy<Cache<SmallVecHand, f64>> = Lazy::new(
-    || Cache::new(125_756_657), // Number of isomorphic river hands
+pub static RIVER_EQUITY_CACHE: Lazy<DashMap<SmallVecHand, f64>> = Lazy::new(
+    || DashMap::new()
 );
 
 pub const FLOP_ABSTRACTION_PATH: &str = "products/flop_abstraction.bin";
@@ -221,7 +222,7 @@ pub fn expected_hs2(hand: u64) -> f64 {
     sum / count
 }
 
-fn river_equity(hand: &Vec<Card>) -> f64 {
+pub fn river_equity(hand: &Vec<Card>) -> f64 {
     let iso = isomorphic_hand(hand, true);
     if let Some(equity) = RIVER_EQUITY_CACHE.get(&iso) {
         return equity.clone();

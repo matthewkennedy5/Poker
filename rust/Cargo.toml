@@ -30,8 +30,8 @@ dashmap = { version = "*", features = ["serde"]}
 [profile.release] 
 debug = true
 debug-assertions = false
-overflow-checks = true
-lto = true
+overflow-checks = false
+lto = false
 
 [profile.dev]
 opt-level = 1
