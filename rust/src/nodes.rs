@@ -73,18 +73,22 @@ impl Nodes {
         let current_strategy: SmallVec<[f64; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
         if prob > 0.0 {
             for i in 0..current_strategy.len() {
-                // Add this action's probability to the cumulative strategy sum 
+                // Add this action's probability to the cumulative strategy sum
                 node.strategy_sum[i] += current_strategy[i] * prob;
             }
         }
         node.t += 1;
     }
-    
-    pub fn get_current_strategy(&self, infoset: &InfoSet, bet_abstraction: &[Vec<f64>]) -> SmallVec<[f64; NUM_ACTIONS]> {
+
+    pub fn get_current_strategy(
+        &self,
+        infoset: &InfoSet,
+        bet_abstraction: &[Vec<f64>],
+    ) -> SmallVec<[f64; NUM_ACTIONS]> {
         let num_actions = infoset.next_actions(bet_abstraction).len();
         let node = match self.get(infoset) {
             Some(n) => n,
-            None => Node::new(num_actions)
+            None => Node::new(num_actions),
         };
         let positive_regrets: SmallVec<[f64; NUM_ACTIONS]> = node
             .regrets
@@ -139,7 +143,9 @@ impl Nodes {
         };
         debug_assert!(
             node.num_actions == num_actions,
-            "{} {}", node.num_actions, num_actions
+            "{} {}",
+            node.num_actions,
+            num_actions
         );
         let mut strategy = Strategy::new();
         let actions = infoset.next_actions(bet_abstraction);

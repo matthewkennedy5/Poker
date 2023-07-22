@@ -117,12 +117,12 @@ impl ActionHistory {
 
     // Add an new action to this history, and update the state
     pub fn add(&mut self, action: &Action) {
-        // debug_assert!(   // this one is slow
-        //     self.is_legal_next_action(action),
-        //     "Action {:?} is illegal for history {:#?}",
-        //     action,
-        //     self
-        // );
+        debug_assert!(   // this one is slow
+            self.is_legal_next_action(action),
+            "Action {:?} is illegal for history {:#?}",
+            action,
+            self
+        );
         let action = action.clone();
         self.stacks[self.player as usize] -= action.amount;
         self.player = 1 - self.player;

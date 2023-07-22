@@ -8,7 +8,6 @@ use crate::card_utils::*;
 use crate::config::CONFIG;
 use dashmap::DashMap;
 use itertools::Itertools;
-use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{collections::HashMap, fs::File, io::BufReader, path::Path};
@@ -78,7 +77,12 @@ impl Abstraction {
 fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     match File::open(path) {
         Err(_error) => make_abstraction(n_cards, n_buckets),
-        Ok(_) => read_serialized(path),
+        Ok(_) => {
+            let abstraction = read_serialized(path);
+            assert_eq!(abstraction.values().max().unwrap().clone(), n_buckets - 1);
+            assert_eq!(abstraction.values().min().unwrap().clone(), 0);
+            abstraction
+        }
     }
 }
 
