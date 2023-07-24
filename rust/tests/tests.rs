@@ -810,7 +810,7 @@ fn test_subgame_solving() {
     );
 }
 
-// #[test]
+#[test]
 fn subgame_solving_beats_blueprint() {
     let mut blueprint_bot = Bot::new();
     let mut subgame_bot = Bot::new();

@@ -117,7 +117,7 @@ impl Bot {
         }
 
         let nodes = Nodes::new();
-        // let bar = pbar(CONFIG.subgame_iters);
+        let bar = pbar(CONFIG.subgame_iters);
         (0..CONFIG.subgame_iters).into_par_iter().for_each(|_i| {
             // Construct a plausible deck using:
             // - Our hand (player's hand)
@@ -150,9 +150,9 @@ impl Bot {
                     CONFIG.depth_limit
                 );
             }
-            // bar.inc(1);
+            bar.inc(1);
         });
-        // bar.finish();
+        bar.finish();
 
         // Debug info
         let infoset = InfoSet::from_hand(hole, &board, history);

@@ -6,7 +6,7 @@ use crate::trainer_utils::*;
 
 // If a hand's probability is below PROB_CUTOFF in the range, just skip it since it has a negligible
 // contribution to the range.
-pub const PROB_CUTOFF: f64 = 1e-10;
+pub const PROB_CUTOFF: f64 = 1e-12;
 
 #[derive(Debug, Clone)]
 pub struct Range {

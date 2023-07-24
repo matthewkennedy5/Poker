@@ -23,14 +23,14 @@ nodes_path = "products/nodes.bin"
 
 # Training
 train_iters = 10_000_000
-lbr_iters = 50_000
+lbr_iters = 200_000
 eval_every = 200_000
 warm_start = true
 player_prune = false
 opp_prune = false
 
 # Realtime solving
-subgame_solving = false
+subgame_solving = true
 subgame_iters = 1_000_000
 depth_limit = -1   # -1 means always solve to the end of the game
 

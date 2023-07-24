@@ -157,10 +157,9 @@ pub fn iterate(
                 _ => panic!("Bad player value"),
             };
 
-            // Pruning experiment - TODO (I think this is right)
-            // if weights[0] < 1e-10 && weights[1] < 1e-10 {
-            //     return 0.0;
-            // }
+            if weights[0] < 1e-10 && weights[1] < 1e-10 {
+                return 0.0;
+            }
 
             let utility = iterate(
                 player,
