@@ -9,7 +9,6 @@ use rayon::prelude::*;
 use moka::sync::Cache;
 use smallvec::ToSmallVec;
 
-// TODO: Rename preflop cache if you cache flop actions as well
 type PreflopCache = Cache<(i32, ActionHistory), Strategy>;
 
 pub struct Bot {
@@ -25,7 +24,7 @@ impl Bot {
         let blueprint = load_nodes(&CONFIG.nodes_path);
         Bot {
             blueprint,
-            preflop_cache: Cache::new(10_000_000),
+            preflop_cache: Cache::new(10_000),
             subgame_solving: CONFIG.subgame_solving
         }
     }
@@ -57,9 +56,9 @@ impl Bot {
                 Some(strategy) => strategy,
                 None => {
                     let strategy = self.unsafe_nested_subgame_solving(hole, board, history);
-                    // if history.street == PREFLOP || history.street == FLOP {
-                    self.preflop_cache.insert(key, strategy.clone());
-                    // }
+                    if history.street == PREFLOP {
+                        self.preflop_cache.insert(key, strategy.clone());
+                    }
                     strategy
                 }
             }
