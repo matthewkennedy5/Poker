@@ -449,10 +449,12 @@ def main():
         for score_list in tqdm(pool.imap(play_hands, input), total=num_hands, smoothing=0):
             scores += score_list
 
-    mean = np.mean(scores) / BIG_BLIND
-    std = np.std(scores) / BIG_BLIND
-    conf = 1.96 * std / np.sqrt(num_hands)
-    print(f'Winnings: {mean} +/- {conf} BB/h')
+            if len(scores) > 2:
+                mean = np.mean(scores) / BIG_BLIND
+                std = np.std(scores) / BIG_BLIND
+                conf = 1.96 * std / np.sqrt(num_hands)
+                print(f'Winnings: {mean} +/- {conf} BB/h')
+    
     
 if __name__ == '__main__':
     # os.chdir("rust")

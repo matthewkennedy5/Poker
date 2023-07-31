@@ -15,9 +15,6 @@ flop_buckets = 100    # Max:   1342562
 turn_buckets = 100    # Max:  14403610
 river_buckets = 100   # Max: 125756657
 
-# DCFR
-decay = 0.9999
-
 # Filenames
 nodes_path = "products/nodes.bin"
 
@@ -26,12 +23,10 @@ train_iters = 10_000_000
 lbr_iters = 200_000
 eval_every = 200_000
 warm_start = false
-player_prune = false
-opp_prune = false
 
 # Realtime solving
 subgame_solving = true
-subgame_iters = 10_000
+subgame_iters = 100_000    # TODO: Try more max iters with early stopping
 depth_limit = -1   # -1 means always solve to the end of the game
 
 # Preflop chart

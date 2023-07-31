@@ -71,13 +71,24 @@ impl Nodes {
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
         let current_strategy: SmallVec<[f64; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
-        if prob > 0.0 && node.t > (CONFIG.subgame_iters as f64 * 0.9) as u64 {
+        if prob > 0.0 {
             for i in 0..current_strategy.len() {
                 // Add this action's probability to the cumulative strategy sum
                 node.strategy_sum[i] += current_strategy[i] * prob;
             }
         }
         node.t += 1;
+    }
+
+    pub fn reset_strategy_sum(&self, infoset: &InfoSet, bet_abstraction: &[Vec<f64>]) {
+        let history = infoset.history.clone();
+        if !self.dashmap.contains_key(&history) {
+            self.initialize_node_vec(&history, bet_abstraction);
+        }
+        let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
+        let mut node_vec = node_vec_lock.lock().unwrap();
+        let mut node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
+        node.strategy_sum = [0.0; NUM_ACTIONS];
     }
 
     pub fn get_current_strategy(
@@ -159,7 +170,7 @@ impl Nodes {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
     pub regrets: [f64; NUM_ACTIONS],
-    strategy_sum: [f64; NUM_ACTIONS],
+    pub strategy_sum: [f64; NUM_ACTIONS],
     pub num_actions: usize,
     pub t: u64,
 }
@@ -174,7 +185,7 @@ impl Node {
         }
     }
 
-    fn cumulative_strategy(&self) -> SmallVec<[f64; NUM_ACTIONS]> {
+    pub fn cumulative_strategy(&self) -> SmallVec<[f64; NUM_ACTIONS]> {
         normalize_smallvec(&self.strategy_sum[..self.num_actions])
     }
 }

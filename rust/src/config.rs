@@ -24,9 +24,6 @@ pub struct Config {
     pub turn_buckets: i32,
     pub river_buckets: i32,
 
-    // DCFR parameters
-    pub decay: f64,
-
     // File paths
     pub nodes_path: String,
 
@@ -35,8 +32,6 @@ pub struct Config {
     pub lbr_iters: u64,
     pub eval_every: u64,
     pub warm_start: bool,
-    pub player_prune: bool,
-    pub opp_prune: bool,
 
     // Real time solving
     pub subgame_solving: bool,
