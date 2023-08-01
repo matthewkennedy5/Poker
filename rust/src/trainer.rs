@@ -16,7 +16,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
     let nodes = if warm_start {
         load_nodes(&CONFIG.nodes_path)
     } else {
-        Nodes::new()
+        Nodes::new(&CONFIG.bet_abstraction)
     };
     println!("[INFO] Beginning training.");
     let num_epochs = iters / eval_every;
@@ -30,7 +30,6 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
                 &ActionHistory::new(),
                 &nodes,
                 &Bot::new(),
-                &CONFIG.bet_abstraction,
                 -1,
             );
             bar.inc(1);
@@ -86,7 +85,6 @@ pub fn cfr_iteration(
     history: &ActionHistory,
     nodes: &Nodes,
     depth_limit_bot: &Bot,
-    bet_abstraction: &[Vec<f64>],
     depth_limit: i32,
 )
 {
@@ -100,7 +98,6 @@ pub fn cfr_iteration(
             [1.0, 1.0],
             &nodes,
             depth_limit_bot,
-            bet_abstraction,
             depth_limit,
         );
     });
@@ -113,7 +110,6 @@ pub fn iterate(
     weights: [f64; 2],
     nodes: &Nodes,
     depth_limit_bot: &Bot,
-    bet_abstraction: &[Vec<f64>],
     remaining_depth: i32,
 ) -> f64 
 {
@@ -131,30 +127,6 @@ pub fn iterate(
     // TODO: Let the opponent choose between several strategies
     if remaining_depth == 0 {
         loop {
-            // When the depth limit is reached, have both players play according to the blueprint 
-            // strategy to estimate the utility of the node. 
-
-            // // TODO: DRY with nodes.rs get_strategy() if this works. Only difference is that here I 
-            // // want an error if the blueprint strategy isn't found. and its awkward to query get_strategy
-            // let translated_history = history.translate(&CONFIG.bet_abstraction);
-            // let translated_infoset = InfoSet::from_deck(deck, &translated_history);
-            // let num_actions = translated_infoset.next_actions(&CONFIG.bet_abstraction).len();
-
-            // let blueprint_node = blueprint.get(&translated_infoset).expect("Translated infoset not in blueprint");
-            // debug_assert!(
-            //     blueprint_node.num_actions == num_actions,
-            //     "{} {}",
-            //     blueprint_node.num_actions,
-            //     num_actions
-            // );
-            // let mut strategy = Strategy::new();
-            // let actions = infoset.next_actions(bet_abstraction);
-            // for (action, prob) in actions.iter().zip(blueprint_node.cumulative_strategy()) {
-            //     strategy.insert(action.clone(), prob);
-            // }
-
-            // let action = sample_action_from_strategy(&strategy);
-
             let hand = get_hand(deck, player, history.street);
             let hole = &hand[..2];
             let board = &hand[2..];
@@ -167,13 +139,13 @@ pub fn iterate(
         }
     }
 
-    let strategy = nodes.get_current_strategy(&infoset, bet_abstraction);
+    let strategy = nodes.get_current_strategy(&infoset);
     if history.player == player {
-        nodes.update_strategy_sum(&infoset, bet_abstraction, weights[player]);
+        nodes.update_strategy_sum(&infoset, weights[player]);
     }
 
     let opponent = 1 - player;
-    let actions = infoset.next_actions(bet_abstraction);
+    let actions = infoset.next_actions(&nodes.bet_abstraction);
     let mut node_utility = 0.0;
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
@@ -200,7 +172,6 @@ pub fn iterate(
                 new_weights,
                 nodes,
                 depth_limit_bot,
-                bet_abstraction,
                 remaining_depth - 1,
             );
             node_utility += prob * utility;
@@ -212,7 +183,7 @@ pub fn iterate(
     if history.player == player {
         for (index, utility) in utilities.iter().enumerate() {
             let regret = utility - node_utility;
-            nodes.add_regret(&infoset, bet_abstraction, index, weights[opponent] * regret);
+            nodes.add_regret(&infoset, index, weights[opponent] * regret);
         }
     }
     node_utility

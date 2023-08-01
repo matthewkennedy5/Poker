@@ -71,9 +71,7 @@ impl Bot {
         // Only look at board cards for this street
         let board = &board[..board_length(history.street)];
         let translated = history.translate(&CONFIG.bet_abstraction);
-        let node_strategy =
-            self.blueprint
-                .get_strategy(hole, board, &translated, &CONFIG.bet_abstraction);
+        let node_strategy = self.blueprint.get_strategy(hole, board, &translated);
         let adjusted_strategy = node_strategy
             .iter()
             .map(|(action, prob)| (history.adjust_action(&action), prob.clone()))
@@ -113,10 +111,10 @@ impl Bot {
             new_abstraction[subgame_root.street].push(pot_frac);
         }
 
-        let nodes = Nodes::new();
+        debug_assert!(new_abstraction == CONFIG.bet_abstraction);   // TODO: Delete new_abstraction if this works
+
+        let nodes = Nodes::new(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(hole, &board, history);
-        // let prev_strategy: Mutex<SmallVec<[f64; NUM_ACTIONS]>> = Mutex::new(smallvec![-1.0; NUM_ACTIONS]);
-        // let i: Mutex<i32> = Mutex::new(0);
         let mut prev_strategy: SmallVec<[f64; NUM_ACTIONS]> = smallvec![-1.0; NUM_ACTIONS];
         let bar = pbar(CONFIG.subgame_iters);
 
@@ -125,7 +123,7 @@ impl Bot {
 
         for _ in 0..num_epochs {
             // Clear the cumulative strategy at the begging of each epoch
-            nodes.reset_strategy_sum(&infoset, &CONFIG.bet_abstraction);
+            nodes.reset_strategy_sum(&infoset);
 
             (0..epoch_size).into_par_iter().for_each(|_| {
                 // Construct a plausible deck using:
@@ -156,7 +154,6 @@ impl Bot {
                         [1.0, 1.0],
                         &nodes,
                         &self,
-                        &CONFIG.bet_abstraction,
                         CONFIG.depth_limit,
                     );
                 }
@@ -164,7 +161,6 @@ impl Bot {
             });
 
             // Stop early if the cumulative strategy has not changed in 1000 iters
-            // let mut i = i.lock().unwrap();
             let node = nodes
                 .get(&infoset)
                 .expect("Infoset not found in subgame nodes");
@@ -174,7 +170,6 @@ impl Bot {
                 .zip(prev_strategy.iter())
                 .map(|(&a, &b)| (a - b).abs())
                 .sum();
-            // println!("InfoSet: {infoset}");
             println!(
                 "Hand: {} Board: {} | History: {}",
                 cards2str(hole),
@@ -195,7 +190,7 @@ impl Bot {
         }
         bar.finish();
 
-        let strategy = nodes.get_strategy(hole, &board, history, &new_abstraction); // TODO: Should this just be CONFIG.bet_abstraction??
+        let strategy = nodes.get_strategy(hole, &board, history); 
         strategy
     }
 }

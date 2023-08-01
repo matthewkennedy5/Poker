@@ -10,14 +10,16 @@ pub const NUM_ACTIONS: usize = 5;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Nodes {
-    // TODO: Maybe change to Mutex since you only read via cloning anyway
     pub dashmap: DashMap<ActionHistory, Mutex<Vec<Node>>>,
+    pub bet_abstraction: Vec<Vec<f64>>,
 }
 
 impl Nodes {
-    pub fn new() -> Nodes {
+    // TODO REFACTOR: Change the bet_abstraction &[Vec<f64>] to be its own BetAbstraction type
+    pub fn new(bet_abstraction: &[Vec<f64>]) -> Nodes {
         Nodes {
             dashmap: DashMap::new(),
+            bet_abstraction: bet_abstraction.to_vec()
         }
     }
 
@@ -39,14 +41,13 @@ impl Nodes {
     pub fn add_regret(
         &self,
         infoset: &InfoSet,
-        bet_abstraction: &[Vec<f64>],
         action_index: usize,
         regret: f64,
     ) {
         let history = infoset.history.clone();
         // TODO: There's a data race here on initialization, but it's not that important
         if !self.dashmap.contains_key(&history) {
-            self.initialize_node_vec(&history, bet_abstraction);
+            self.initialize_node_vec(&history);
         }
         let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
         let mut node_vec = node_vec_lock.lock().unwrap();
@@ -56,10 +57,10 @@ impl Nodes {
         node.regrets[action_index] = accumulated_regret;
     }
 
-    pub fn update_strategy_sum(&self, infoset: &InfoSet, bet_abstraction: &[Vec<f64>], prob: f64) {
+    pub fn update_strategy_sum(&self, infoset: &InfoSet, prob: f64) {
         let history = infoset.history.clone();
         if !self.dashmap.contains_key(&history) {
-            self.initialize_node_vec(&history, bet_abstraction);
+            self.initialize_node_vec(&history);
         }
         let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
         let mut node_vec = node_vec_lock.lock().unwrap();
@@ -80,10 +81,10 @@ impl Nodes {
         node.t += 1;
     }
 
-    pub fn reset_strategy_sum(&self, infoset: &InfoSet, bet_abstraction: &[Vec<f64>]) {
+    pub fn reset_strategy_sum(&self, infoset: &InfoSet) {
         let history = infoset.history.clone();
         if !self.dashmap.contains_key(&history) {
-            self.initialize_node_vec(&history, bet_abstraction);
+            self.initialize_node_vec(&history);
         }
         let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
         let mut node_vec = node_vec_lock.lock().unwrap();
@@ -94,9 +95,8 @@ impl Nodes {
     pub fn get_current_strategy(
         &self,
         infoset: &InfoSet,
-        bet_abstraction: &[Vec<f64>],
     ) -> SmallVec<[f64; NUM_ACTIONS]> {
-        let num_actions = infoset.next_actions(bet_abstraction).len();
+        let num_actions = infoset.next_actions(&self.bet_abstraction).len();
         let node = match self.get(infoset) {
             Some(n) => n,
             None => Node::new(num_actions),
@@ -112,7 +112,7 @@ impl Nodes {
         regret_norm
     }
 
-    fn initialize_node_vec(&self, history: &ActionHistory, bet_abstraction: &[Vec<f64>]) {
+    fn initialize_node_vec(&self, history: &ActionHistory) {
         // Create the Vec<Node> at this history if it doesn't exist yet
         let n_buckets = if history.street == PREFLOP {
             169
@@ -125,7 +125,7 @@ impl Nodes {
         } else {
             panic!("Bad street")
         } as usize;
-        let new_node = Node::new(history.next_actions(bet_abstraction).len());
+        let new_node = Node::new(history.next_actions(&self.bet_abstraction).len());
         self.dashmap
             .insert(history.clone(), Mutex::new(vec![new_node; n_buckets]));
     }
@@ -144,10 +144,9 @@ impl Nodes {
         hole: &[Card],
         board: &[Card],
         history: &ActionHistory,
-        bet_abstraction: &[Vec<f64>],
     ) -> Strategy {
         let infoset = InfoSet::from_hand(hole, board, history);
-        let num_actions = infoset.next_actions(bet_abstraction).len();
+        let num_actions = infoset.next_actions(&self.bet_abstraction).len();
         let node = match self.get(&infoset) {
             Some(n) => n.clone(),
             None => Node::new(num_actions),
@@ -159,7 +158,7 @@ impl Nodes {
             num_actions
         );
         let mut strategy = Strategy::new();
-        let actions = infoset.next_actions(bet_abstraction);
+        let actions = infoset.next_actions(&self.bet_abstraction);
         for (action, prob) in actions.iter().zip(node.cumulative_strategy()) {
             strategy.insert(action.clone(), prob);
         }

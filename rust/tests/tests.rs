@@ -628,62 +628,6 @@ fn more_action_translation() {
     history.translate(&CONFIG.bet_abstraction);
 }
 
-// #[test]
-// fn depth_limited_solving() {
-//     // Depth-limited solving should output a similar strategy to solving to the end of the game.
-//     let action = Action {
-//         action: ActionType::Bet,
-//         amount: 300,
-//     };
-//     let history = ActionHistory::new();
-//     let solve_spot = |iters, depth| {
-//         let nodes = Bot::solve_subgame(&history, &Range::new(), &action, iters, depth);
-//         // This tests how we respond when we have As6c on the preflop and the opponent
-//         // opens with Bet 200
-//         let infoset = InfoSet::from_hand(
-//             &str2cards("As6c"),
-//             &Vec::new(),
-//             &ActionHistory::from_strings(vec!["Bet 200"]),
-//         );
-//         let node: Node = nodes.get(&infoset).unwrap().clone();
-//         node.cumulative_strategy()
-//     };
-//     let actions = history.next_actions(&CONFIG.bet_abstraction).to_vec();
-//     let full_strat = solve_spot(10_000_000, -1);
-
-//     for depth in 1..7 {
-//         let depth_strat = solve_spot(10_000, depth);
-//         println!("MSE of strategies at depth {}: {}", depth, {
-//             let mut sum = 0.0;
-//             for (a, b) in full_strat.iter().zip(depth_strat.iter()) {
-//                 sum += (a - b).powf(2.0);
-//             }
-//             sum / full_strat.len() as f64
-//         });
-//     }
-
-//     for iters in [1_000, 10_000, 100_000, 1_000_000] {
-//         let iters_strat = solve_spot(iters, 5);
-//         println!("MSE of strategies at iters {}: {}", iters, {
-//             let mut sum = 0.0;
-//             for (a, b) in full_strat.iter().zip(iters_strat.iter()) {
-//                 sum += (a - b).powf(2.0);
-//             }
-//             sum / full_strat.len() as f64
-//         });
-//     }
-
-//     let depth_strat = solve_spot(10_000_000, 5);
-//     assert!(
-//         full_strat
-//             .iter()
-//             .zip(depth_strat.iter())
-//             .all(|(a, b)| { (a - b).abs() < 0.1 }),
-//         "{:?}",
-//         actions
-//     );
-// }
-
 #[test]
 fn blinds_stack_sizes() {
     let history = ActionHistory::new();
@@ -894,4 +838,9 @@ fn river_equity_cache_mem_usage() {
     });
     bar.finish();
     assert_eq!(RIVER_EQUITY_CACHE.len(), 125_756_657);
+}
+
+#[test]
+fn test_depth_limit_probability() {
+    
 }
