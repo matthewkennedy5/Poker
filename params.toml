@@ -27,7 +27,7 @@ warm_start = false
 # Realtime solving
 subgame_solving = true
 subgame_iters = 100_000    # TODO: Try more max iters with early stopping
-depth_limit = -1   # -1 means always solve to the end of the game
+depth_limit = 5   # -1 means always solve to the end of the game
 
 # Preflop chart
 preflop_strategy_path = "products/preflop_strategy.json"

@@ -4,6 +4,7 @@ use crate::config::CONFIG;
 use crate::exploiter::*;
 use crate::nodes::*;
 use crate::trainer_utils::*;
+use crate::bot::Bot;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -22,11 +23,13 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
     for epoch in 0..num_epochs {
         println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
         let bar = card_utils::pbar(eval_every);
+
         (0..eval_every).into_par_iter().for_each(|_| {
             cfr_iteration(
                 &deck,
                 &ActionHistory::new(),
                 &nodes,
+                &Bot::new(),
                 &CONFIG.bet_abstraction,
                 -1,
             );
@@ -82,9 +85,11 @@ pub fn cfr_iteration(
     deck: &[Card],
     history: &ActionHistory,
     nodes: &Nodes,
+    depth_limit_bot: &Bot,
     bet_abstraction: &[Vec<f64>],
     depth_limit: i32,
-) {
+)
+{
     [DEALER, OPPONENT].iter().for_each(|&player| {
         let mut deck = deck.to_vec();
         deck.shuffle(&mut rand::thread_rng());
@@ -94,6 +99,7 @@ pub fn cfr_iteration(
             history,
             [1.0, 1.0],
             &nodes,
+            depth_limit_bot,
             bet_abstraction,
             depth_limit,
         );
@@ -106,10 +112,11 @@ pub fn iterate(
     history: &ActionHistory,
     weights: [f64; 2],
     nodes: &Nodes,
-    // blueprint: &Nodes,      // For depth limited solving
+    depth_limit_bot: &Bot,
     bet_abstraction: &[Vec<f64>],
     remaining_depth: i32,
-) -> f64 {
+) -> f64 
+{
     if history.hand_over() {
         return terminal_utility(deck, history, player);
     }
@@ -124,11 +131,36 @@ pub fn iterate(
     // TODO: Let the opponent choose between several strategies
     if remaining_depth == 0 {
         loop {
-            // Try the simplest thing first: uniform distribution over actions. It's a reasonable
-            // approximation of the utility. 
-            let actions = history.next_actions(bet_abstraction);
-            let action = actions.choose(&mut thread_rng()).unwrap();
-            history.add(action);
+            // When the depth limit is reached, have both players play according to the blueprint 
+            // strategy to estimate the utility of the node. 
+
+            // // TODO: DRY with nodes.rs get_strategy() if this works. Only difference is that here I 
+            // // want an error if the blueprint strategy isn't found. and its awkward to query get_strategy
+            // let translated_history = history.translate(&CONFIG.bet_abstraction);
+            // let translated_infoset = InfoSet::from_deck(deck, &translated_history);
+            // let num_actions = translated_infoset.next_actions(&CONFIG.bet_abstraction).len();
+
+            // let blueprint_node = blueprint.get(&translated_infoset).expect("Translated infoset not in blueprint");
+            // debug_assert!(
+            //     blueprint_node.num_actions == num_actions,
+            //     "{} {}",
+            //     blueprint_node.num_actions,
+            //     num_actions
+            // );
+            // let mut strategy = Strategy::new();
+            // let actions = infoset.next_actions(bet_abstraction);
+            // for (action, prob) in actions.iter().zip(blueprint_node.cumulative_strategy()) {
+            //     strategy.insert(action.clone(), prob);
+            // }
+
+            // let action = sample_action_from_strategy(&strategy);
+
+            let hand = get_hand(deck, player, history.street);
+            let hole = &hand[..2];
+            let board = &hand[2..];
+            let strategy = depth_limit_bot.get_strategy_action_translation(hole, board, &history);
+            let action = sample_action_from_strategy(&strategy);
+            history.add(&action);
             if history.hand_over() {
                 return terminal_utility(deck, &history, player);
             }
@@ -167,6 +199,7 @@ pub fn iterate(
                 &next_history,
                 new_weights,
                 nodes,
+                depth_limit_bot,
                 bet_abstraction,
                 remaining_depth - 1,
             );

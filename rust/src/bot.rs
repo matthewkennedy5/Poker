@@ -61,7 +61,7 @@ impl Bot {
         }
     }
 
-    fn get_strategy_action_translation(
+    pub fn get_strategy_action_translation(
         &self,
         hole: &[Card],
         board: &[Card],
@@ -155,6 +155,7 @@ impl Bot {
                         history,
                         [1.0, 1.0],
                         &nodes,
+                        &self,
                         &CONFIG.bet_abstraction,
                         CONFIG.depth_limit,
                     );
