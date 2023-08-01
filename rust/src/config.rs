@@ -4,10 +4,8 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::fs;
 
-
 pub static CONFIG: Lazy<Config> = Lazy::new(|| {
     let config_string = fs::read_to_string("../params.toml").unwrap();
-    
     toml::from_str(&config_string).expect("Could not parse TOML config file")
 });
 

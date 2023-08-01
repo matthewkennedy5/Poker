@@ -21,12 +21,11 @@ pub struct Bot {
 }
 
 impl Bot {
-    pub fn new() -> Bot {
-        let blueprint = load_nodes(&CONFIG.nodes_path);
+    pub fn new(blueprint: Nodes, subgame_solving: bool) -> Bot {
         Bot {
             blueprint,
             preflop_cache: Cache::new(10_000),
-            subgame_solving: CONFIG.subgame_solving,
+            subgame_solving: subgame_solving,
         }
     }
 

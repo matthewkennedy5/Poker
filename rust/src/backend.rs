@@ -1,5 +1,7 @@
 use crate::bot::Bot;
 use crate::trainer_utils::*;
+use crate::trainer::load_nodes;
+use crate::config::CONFIG;
 use crate::{card_utils::*, OPPONENT};
 use actix_cors::Cors;
 use actix_files as fs;
@@ -7,7 +9,10 @@ use actix_web::{web, App, HttpServer, Responder};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-static BOT: Lazy<Bot> = Lazy::new(Bot::new);
+static BOT: Lazy<Bot> = Lazy::new(|| Bot::new(
+    load_nodes(&CONFIG.nodes_path),
+    CONFIG.subgame_solving
+));
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct HandCompJSON {

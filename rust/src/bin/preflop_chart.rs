@@ -4,7 +4,10 @@ use std::fs::File;
 use std::io::Write;
 
 fn main() {
-    let bot = Bot::new();
+    let bot = Bot::new(
+        load_nodes(&CONFIG.nodes_path),
+        CONFIG.subgame_solving
+    );
     write_preflop_strategy(&bot, &CONFIG.preflop_strategy_path);
 }
 
