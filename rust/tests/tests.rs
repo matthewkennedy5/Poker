@@ -6,7 +6,12 @@ use rayon::prelude::*;
 use smallvec::*;
 use std::collections::HashSet;
 
-static BOT: Lazy<Bot> = Lazy::new(Bot::new);
+static BOT: Lazy<Bot> = Lazy::new(|| Bot::new(
+    load_nodes(&CONFIG.nodes_path),
+    CONFIG.subgame_solving,
+    false, 
+    CONFIG.depth_limit
+));
 
 #[test]
 fn card_bitmap() {
@@ -756,10 +761,18 @@ fn test_subgame_solving() {
 
 #[test]
 fn subgame_solving_beats_blueprint() {
-    let mut blueprint_bot = Bot::new();
-    let mut subgame_bot = Bot::new();
-    blueprint_bot.subgame_solving = false;
-    subgame_bot.subgame_solving = true;
+    let blueprint_bot = Bot::new(
+        load_nodes(&CONFIG.nodes_path),
+        false,
+        false, 
+        -1
+    );
+    let subgame_bot = Bot::new(
+        load_nodes(&CONFIG.nodes_path),
+        true,
+        false, 
+        CONFIG.depth_limit
+    );
 
     let iters = 1_000_000;
     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
@@ -817,8 +830,12 @@ fn test_belief_range() {
         "Bet 800",
         "Bet 1600"
     ]);
-    let mut blueprint_bot = Bot::new();
-    blueprint_bot.subgame_solving = false;
+    let blueprint_bot = Bot::new(
+        load_nodes(&CONFIG.nodes_path),
+        false,
+        false, 
+        -1
+    );
     let range = Range::get_opponent_range(&my_hand, &board, &history, |hole, board, history| {
         blueprint_bot.get_strategy(hole, board, history)
     });
@@ -842,5 +859,55 @@ fn river_equity_cache_mem_usage() {
 
 #[test]
 fn test_depth_limit_probability() {
+    // Compare the subgame solving strategy with and without depth limited solving. 
+    let full_subgame_bot = Bot::new(
+        load_nodes(&CONFIG.nodes_path),
+        true,
+        false,
+        -1
+    );
+    let depth_limit_bot = Bot::new(
+        load_nodes(&CONFIG.nodes_path),
+        true,
+        true,
+        -1,
+    );
+
+    let hands = 1_000;
+    let bar = pbar(hands as u64);
+    for i in 0..hands {
+        let mut deck: Vec<Card> = deck();
+        let mut rng = &mut rand::thread_rng();
+        deck.shuffle(&mut rng);
+        let mut history = ActionHistory::new();
+        while !history.hand_over() {
+            let hand = get_hand(&deck, history.player, history.street);
+            let hole = &hand[..2];
+            let board = &hand[2..];
     
+            let full_depth_strategy = full_subgame_bot.get_strategy(hole, board, &history);
+            let depth_limit_strategy = depth_limit_bot.get_strategy(hole, board, &history);
+
+            let mut total_squared_error = 0.0;
+            for action in full_depth_strategy.keys() {
+                let full_depth_prob = full_depth_strategy.get(action).unwrap().clone();
+                let depth_limited_prob = depth_limit_strategy.get(action).unwrap().clone();
+                let squared_error = (full_depth_prob - depth_limited_prob).powf(2.0);
+                total_squared_error += squared_error;
+            }
+            let mse = total_squared_error / full_depth_strategy.len() as f64;
+
+            println!("Hole: {}, Board: {}", cards2str(hole), cards2str(board));
+            println!("Full depth strategy: {:?}", full_depth_strategy);
+            println!("Depth limit strategy: {:?}", depth_limit_strategy);
+            println!("Mean squared error: {}", mse);
+            assert!(mse < 0.01);
+
+            let action = sample_action_from_strategy(&full_depth_strategy);
+            history.add(&action);
+        }
+
+        bar.inc(1);
+    }
+    bar.finish();
 }

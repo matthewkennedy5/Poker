@@ -18,7 +18,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
     } else {
         Nodes::new(&CONFIG.bet_abstraction)
     };
-    let dummy_depth_limit_hack = Bot::new(Nodes::new(&CONFIG.bet_abstraction), false);   // TODO REFACTOR
+    let dummy_depth_limit_hack = Bot::new(Nodes::new(&CONFIG.bet_abstraction), false, false, -1);   // TODO REFACTOR
     println!("[INFO] Beginning training.");
     let num_epochs = iters / eval_every;
     for epoch in 0..num_epochs {

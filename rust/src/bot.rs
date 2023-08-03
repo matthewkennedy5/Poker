@@ -15,17 +15,21 @@ type PreflopCache = Cache<(i32, ActionHistory), Strategy>;
 pub struct Bot {
     // Right now the blueprint stores the mixed strategy for each infoset. To reduce
     // memory usage, we could pre-sample actions and just store a mapping of infoset -> action.
-    pub blueprint: Nodes,
-    pub preflop_cache: PreflopCache,
-    pub subgame_solving: bool,
+    blueprint: Nodes,
+    preflop_cache: PreflopCache,
+    subgame_solving: bool,
+    early_stopping: bool,
+    depth_limit: i32,
 }
 
 impl Bot {
-    pub fn new(blueprint: Nodes, subgame_solving: bool) -> Bot {
+    pub fn new(blueprint: Nodes, subgame_solving: bool, early_stopping: bool, depth_limit: i32) -> Bot {
         Bot {
             blueprint,
             preflop_cache: Cache::new(10_000),
             subgame_solving: subgame_solving,
+            early_stopping: early_stopping,
+            depth_limit: depth_limit,
         }
     }
 
@@ -117,7 +121,7 @@ impl Bot {
         let mut prev_strategy: SmallVec<[f64; NUM_ACTIONS]> = smallvec![-1.0; NUM_ACTIONS];
         let bar = pbar(CONFIG.subgame_iters);
 
-        let epoch_size = 10_000;
+        let epoch_size = 100_000;
         let num_epochs = CONFIG.subgame_iters / epoch_size;
 
         for _ in 0..num_epochs {
@@ -153,7 +157,7 @@ impl Bot {
                         [1.0, 1.0],
                         &nodes,
                         &self,
-                        CONFIG.depth_limit,
+                        self.depth_limit
                     );
                 }
                 bar.inc(1);
@@ -169,19 +173,19 @@ impl Bot {
                 .zip(prev_strategy.iter())
                 .map(|(&a, &b)| (a - b).abs())
                 .sum();
-            println!(
-                "Hand: {} Board: {} | History: {}",
-                cards2str(hole),
-                cards2str(&board),
-                history
-            );
-            println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
-            println!("Node: {:?}", node);
-            println!(
-                "Strategy: {:?} Prev strategy: {:?}",
-                strategy, prev_strategy
-            );
-            if diff < 1e-3 {
+            // println!(
+            //     "Hand: {} Board: {} | History: {}",
+            //     cards2str(hole),
+            //     cards2str(&board),
+            //     history
+            // );
+            // println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
+            // println!("Node: {:?}", node);
+            // println!(
+            //     "Strategy: {:?} Prev strategy: {:?}",
+            //     strategy, prev_strategy
+            // );
+            if self.early_stopping && diff < 1e-3 {
                 println!("Stopping early because CFR strategy has converged.");
                 break;
             }

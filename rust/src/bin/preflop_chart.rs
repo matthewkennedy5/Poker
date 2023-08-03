@@ -6,7 +6,9 @@ use std::io::Write;
 fn main() {
     let bot = Bot::new(
         load_nodes(&CONFIG.nodes_path),
-        CONFIG.subgame_solving
+        CONFIG.subgame_solving,
+        false, 
+        CONFIG.depth_limit
     );
     write_preflop_strategy(&bot, &CONFIG.preflop_strategy_path);
 }
