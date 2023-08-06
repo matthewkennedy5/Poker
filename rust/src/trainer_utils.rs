@@ -117,7 +117,8 @@ impl ActionHistory {
 
     // Add an new action to this history, and update the state
     pub fn add(&mut self, action: &Action) {
-        debug_assert!(   // this one is slow
+        debug_assert!(
+            // this one is slow
             self.is_legal_next_action(action),
             "Action {:?} is illegal for history {:#?}",
             action,
@@ -501,7 +502,10 @@ pub fn normalize_smallvec(v: &[f64]) -> SmallVec<[f64; NUM_ACTIONS]> {
 
 pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
     let actions: Vec<Action> = strategy.keys().map(|a| a.clone()).collect();
-    let action: Action = actions.choose_weighted(&mut thread_rng(), |a| strategy.get(a).unwrap()).unwrap().clone();
+    let action: Action = actions
+        .choose_weighted(&mut thread_rng(), |a| strategy.get(a).unwrap())
+        .expect(&format!("Err sampling action from strategy: {:?}", strategy))
+        .clone();
     action
 }
 

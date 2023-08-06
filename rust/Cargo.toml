@@ -25,13 +25,13 @@ rs_poker = "*"
 moka = "*"
 criterion = { version = "*", features = ["html_reports"] }
 smallvec = { version = "*", features = ["serde"] }
-dashmap = { version = "*", features = ["serde"]}
+dashmap = { version = "*", features = ["serde"] }
 
 [profile.release] 
 debug = true
 debug-assertions = false
-incremental = false
 overflow-checks = false
+incremental = false
 
 [profile.dev]
 opt-level = 0
