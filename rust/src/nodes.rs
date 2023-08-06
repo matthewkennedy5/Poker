@@ -97,10 +97,10 @@ impl Nodes {
         infoset: &InfoSet,
     ) -> SmallVec<[f64; NUM_ACTIONS]> {
         let num_actions = infoset.next_actions(&self.bet_abstraction).len();
-        let node = match self.get(infoset) {
-            Some(n) => n,
-            None => Node::new(num_actions),
-        };
+        if !self.dashmap.contains_key(&infoset.history) {
+            self.initialize_node_vec(&infoset.history);
+        }
+        let node = self.get(infoset).unwrap();
         let positive_regrets: SmallVec<[f64; NUM_ACTIONS]> = node
             .regrets
             .iter()
@@ -149,7 +149,7 @@ impl Nodes {
         let num_actions = infoset.next_actions(&self.bet_abstraction).len();
         let node = match self.get(&infoset) {
             Some(n) => n.clone(),
-            None => Node::new(num_actions),
+            None => Node::new(num_actions)//, smallvec![0.0; NUM_ACTIONS]),
         };
         debug_assert!(
             node.num_actions == num_actions,
@@ -175,9 +175,10 @@ pub struct Node {
 }
 
 impl Node {
+    // pub fn new(num_actions: usize, priors: SmallVec<[f64; NUM_ACTIONS]>) -> Node {
     pub fn new(num_actions: usize) -> Node {
         Node {
-            regrets: [0.0; NUM_ACTIONS],
+            regrets: [0.0; NUM_ACTIONS], //priors.into_inner().unwrap(),
             strategy_sum: [0.0; NUM_ACTIONS],
             num_actions: num_actions,
             t: 0,

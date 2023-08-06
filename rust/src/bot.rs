@@ -121,11 +121,12 @@ impl Bot {
         let mut prev_strategy: SmallVec<[f64; NUM_ACTIONS]> = smallvec![-1.0; NUM_ACTIONS];
         let bar = pbar(CONFIG.subgame_iters);
 
-        let epoch_size = 1_000;
+        let epoch_size = 1_000_000;
         let num_epochs = CONFIG.subgame_iters / epoch_size;
+
         for _ in 0..num_epochs {
             // Clear the cumulative strategy at the begging of each epoch
-            // nodes.reset_strategy_sum(&infoset);
+            nodes.reset_strategy_sum(&infoset);
 
             (0..epoch_size).into_par_iter().for_each(|_| {
                 // Construct a plausible deck using:
@@ -134,9 +135,6 @@ impl Bot {
                 // - Current board cards
                 // - Then shuffle the rest of the deck for the remaining board cards
                 let opp_hand = opp_range.sample_hand();
-                let opponent_hands: Vec<Vec<Card>> =
-                    (0..10).map(|_| opp_range.sample_hand()).collect();
-
                 let mut current_deck: Vec<Card> = Vec::with_capacity(52);
                 if history.player == DEALER {
                     current_deck.extend(hole);
@@ -155,7 +153,6 @@ impl Bot {
                     iterate(
                         player.clone(),
                         &current_deck,
-                        &opponent_hands,
                         history,
                         [1.0, 1.0],
                         &nodes,
@@ -176,12 +173,12 @@ impl Bot {
                 .zip(prev_strategy.iter())
                 .map(|(&a, &b)| (a - b).abs())
                 .sum();
-            // println!(
-            //     "Hand: {} Board: {} | History: {}",
-            //     cards2str(hole),
-            //     cards2str(&board),
-            //     history
-            // );
+            println!(
+                "Hand: {} Board: {} | History: {}",
+                cards2str(hole),
+                cards2str(&board),
+                history
+            );
             println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
             println!("Node: {:?}", node);
             println!(

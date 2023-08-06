@@ -390,7 +390,6 @@ pub fn get_hand(deck: &[Card], player: usize, street: usize) -> Vec<Card> {
         FLOP => &deck[4..7],
         TURN => &deck[4..8],
         RIVER => &deck[4..9],
-        SHOWDOWN => &deck[4..9],
         _ => panic!("Invalid street"),
     };
 
@@ -426,8 +425,9 @@ impl InfoSet {
     }
 
     pub fn from_hand(hole: &[Card], board: &[Card], history: &ActionHistory) -> InfoSet {
-        let board = &board[..board_length(history.street)];
         debug_assert!(!board.contains(&hole[0]) && !board.contains(&hole[1]));
+        debug_assert!(board.len() == board_length(history.street));
+        let board = &board[..board_length(history.street)];
         let hand = [hole, board].concat();
         InfoSet {
             history: history.clone(),
