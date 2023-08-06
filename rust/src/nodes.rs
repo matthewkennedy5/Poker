@@ -51,7 +51,7 @@ impl Nodes {
         }
         let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
         let mut node_vec = node_vec_lock.lock().unwrap();
-        let mut node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
+        let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
         debug_assert!(action_index < node.num_actions);
         let accumulated_regret = node.regrets[action_index] + regret;
         node.regrets[action_index] = accumulated_regret;
@@ -64,7 +64,7 @@ impl Nodes {
         }
         let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
         let mut node_vec = node_vec_lock.lock().unwrap();
-        let mut node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
+        let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
         let positive_regrets: SmallVec<[f64; NUM_ACTIONS]> = node
             .regrets
             .iter()
@@ -88,7 +88,7 @@ impl Nodes {
         }
         let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
         let mut node_vec = node_vec_lock.lock().unwrap();
-        let mut node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
+        let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
         node.strategy_sum = [0.0; NUM_ACTIONS];
     }
 

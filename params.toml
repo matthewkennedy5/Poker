@@ -19,15 +19,15 @@ river_buckets = 100   # Max: 125756657
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 100_000_000
-lbr_iters = 100_000
-eval_every = 1_000_000
+train_iters = 1_000_000
+lbr_iters = 25_000
+eval_every = 1_000
 warm_start = true
 
 # Realtime solving
 subgame_solving = true
-subgame_iters = 1_000_000    # TODO: Try more max iters with early stopping
-depth_limit = 1   # -1 means always solve to the end of the game
+subgame_iters = 10_000_000    # TODO: Try more max iters with early stopping
+depth_limit = -1   # -1 means always solve to the end of the game
 
 # Preflop chart
 preflop_strategy_path = "products/preflop_strategy.json"

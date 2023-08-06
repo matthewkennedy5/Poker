@@ -911,3 +911,18 @@ fn test_depth_limit_probability() {
     }
     bar.finish();
 }
+
+#[test]
+fn test_subgame_strategy_stability() {
+    let bot = Bot::new(
+        load_nodes(&CONFIG.nodes_path),
+        true,
+        false,
+        -1
+    );
+    let strategy = bot.get_strategy(
+        &str2cards("8hAd"),
+        &str2cards("8dAc7s"),
+        &ActionHistory::from_strings(vec!["Call 100", "Call 100"])
+    );
+}

@@ -1,10 +1,11 @@
+use crate::bot::Bot;
 use crate::card_utils;
 use crate::card_utils::Card;
 use crate::config::CONFIG;
 use crate::exploiter::*;
 use crate::nodes::*;
+use crate::ranges::*;
 use crate::trainer_utils::*;
-use crate::bot::Bot;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -18,14 +19,14 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
     } else {
         Nodes::new(&CONFIG.bet_abstraction)
     };
-    let dummy_depth_limit_hack = Bot::new(Nodes::new(&CONFIG.bet_abstraction), false, false, -1);   // TODO REFACTOR
+    let dummy_depth_limit_hack = Bot::new(Nodes::new(&CONFIG.bet_abstraction), false, false, -1); // TODO REFACTOR
     println!("[INFO] Beginning training.");
     let num_epochs = iters / eval_every;
     for epoch in 0..num_epochs {
         println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
         let bar = card_utils::pbar(eval_every);
 
-        (0..eval_every).into_par_iter().for_each(|_| {
+        (0..eval_every).into_iter().for_each(|_| {
             cfr_iteration(
                 &deck,
                 &ActionHistory::new(),
@@ -87,14 +88,31 @@ pub fn cfr_iteration(
     nodes: &Nodes,
     depth_limit_bot: &Bot,
     depth_limit: i32,
-)
-{
+) {
     [DEALER, OPPONENT].iter().for_each(|&player| {
         let mut deck = deck.to_vec();
         deck.shuffle(&mut rand::thread_rng());
+        let mut range = Range::new();
+        range.remove_blockers(&deck[..9]);
+        let opponent_hands: Vec<Vec<Card>> = (0..1000).map(|_| range.sample_hand()).collect();
+        debug_assert!(
+            {
+                let player_hand = get_hand(&deck, player, RIVER);
+                let mut duplicates = false;
+                for opp_hand in opponent_hands.clone() {
+                    if player_hand.contains(&opp_hand[0]) || player_hand.contains(&opp_hand[1]) {
+                        duplicates = true;
+                    }
+                }
+                !duplicates
+            },
+            "Duplicates between opponent hand and other cards"
+        );
+
         iterate(
             player,
             &deck,
+            &opponent_hands,
             history,
             [1.0, 1.0],
             &nodes,
@@ -107,40 +125,91 @@ pub fn cfr_iteration(
 pub fn iterate(
     player: usize,
     deck: &[Card],
+    opponent_hands: &[Vec<Card>],
     history: &ActionHistory,
     weights: [f64; 2],
     nodes: &Nodes,
     depth_limit_bot: &Bot,
     remaining_depth: i32,
-) -> f64 
-{
+) -> f64 {
+    let opponent_hands: Vec<Vec<Card>> = opponent_hands.to_vec();
+
     if history.hand_over() {
-        return terminal_utility(deck, history, player);
+        // println!("History: {history}");
+        // println!(
+        //     "Player hand: {}",
+        //     card_utils::cards2str(&get_hand(deck, player, RIVER))
+        // );
+        let opp_hand_utilities: Vec<f64> = opponent_hands
+            .iter()
+            .map(|opp_hand| {
+                let mut opp_deck = Vec::with_capacity(52);
+                if player == DEALER {
+                    opp_deck.extend(&deck[0..2]);
+                    opp_deck.extend(opp_hand);
+                    opp_deck.extend(&deck[4..]);
+                } else {
+                    opp_deck.extend(opp_hand);
+                    opp_deck.extend(&deck[2..]);
+                }
+                let u = terminal_utility(&opp_deck, history, player);
+                if history.last_action().unwrap() != FOLD {
+                    // println!("opp_deck: {}", card_utils::cards2str(&opp_deck));
+                    // println!(
+                    //     "Player hand {} beats opponent hand {} by {}",
+                    //     card_utils::cards2str(&get_hand(&opp_deck, player, RIVER)),
+                    //     card_utils::cards2str(&get_hand(&opp_deck, 1 - player, RIVER)),
+                    //     u
+                    // );
+                }
+                u
+            })
+            .collect();
+        let utility_sum: f64 = opp_hand_utilities.iter().sum();
+        let avg_utility = utility_sum / opp_hand_utilities.len() as f64;
+        // println!("Average winnings across all opponent hands: {avg_utility}\n");
+        return avg_utility;
     }
 
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
-    let mut history = history.clone();
-    let infoset = InfoSet::from_deck(deck, &history);
+    let history = history.clone();
+    // let infoset = InfoSet::from_deck(deck, &history);
 
     // Depth limited solving - just sample actions until the end of the game to estimate the utility
     // of this information set
     // TODO: Let the opponent choose between several strategies
-    if remaining_depth == 0 {
-        loop {
-            let hand = get_hand(deck, player, history.street);
-            let hole = &hand[..2];
-            let board = &hand[2..];
-            let strategy = depth_limit_bot.get_strategy_action_translation(hole, board, &history);
-            let action = sample_action_from_strategy(&strategy);
-            history.add(&action);
-            if history.hand_over() {
-                return terminal_utility(deck, &history, player);
+    // if remaining_depth == 0 {
+    //     loop {
+    //         let hand = get_hand(deck, player, history.street);
+    //         let hole = &hand[..2];
+    //         let board = &hand[2..];
+    //         let strategy = depth_limit_bot.get_strategy_action_translation(hole, board, &history);
+    //         let action = sample_action_from_strategy(&strategy);
+    //         history.add(&action);
+    //         if history.hand_over() {
+    //             return terminal_utility(deck, &history, player);
+    //         }
+    //     }
+    // }
+
+    let infoset = InfoSet::from_deck(deck, &history);
+    let strategy = if history.player == player {
+        nodes.get_current_strategy(&infoset)
+    } else {
+        let mut avg_strategy = smallvec![0.0; NUM_ACTIONS];
+        for opp_hand in opponent_hands.clone() {
+            let opp_hand_infoset = InfoSet::from_hand(&opp_hand, &deck[4..], &history);
+            let opp_hand_strategy = nodes.get_current_strategy(&opp_hand_infoset);
+            // println!("Opponent hand {} has strategy {:?}", card_utils::cards2str(&opp_hand), opp_hand_strategy);
+            for i in 0..opp_hand_strategy.len() {
+                avg_strategy[i] += opp_hand_strategy[i] / opponent_hands.len() as f64;
             }
         }
-    }
+        // println!("Avg opponent strategy: {:?}", avg_strategy);
+        avg_strategy
+    };
 
-    let strategy = nodes.get_current_strategy(&infoset);
     if history.player == player {
         nodes.update_strategy_sum(&infoset, weights[player]);
     }
@@ -169,6 +238,7 @@ pub fn iterate(
             let utility = iterate(
                 player,
                 deck,
+                &opponent_hands,
                 &next_history,
                 new_weights,
                 nodes,
