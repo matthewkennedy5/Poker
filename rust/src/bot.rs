@@ -9,6 +9,8 @@ use rand::seq::SliceRandom;
 use rayon::prelude::*;
 use smallvec::ToSmallVec;
 use smallvec::*;
+use dashmap::DashMap;
+use std::sync::Mutex;
 
 type PreflopCache = Cache<(i32, ActionHistory), Strategy>;
 
@@ -116,12 +118,15 @@ impl Bot {
 
         debug_assert!(new_abstraction == CONFIG.bet_abstraction);   // TODO: Delete new_abstraction if this works
 
-        let nodes = Nodes::new(&CONFIG.bet_abstraction);
+        // let nodes = Nodes::new(&CONFIG.bet_abstraction);
+
+        let nodes = warm_start_nodes(&self.blueprint);
+
         let infoset = InfoSet::from_hand(hole, &board, history);
         let mut prev_strategy: SmallVec<[f64; NUM_ACTIONS]> = smallvec![-1.0; NUM_ACTIONS];
         let bar = pbar(CONFIG.subgame_iters);
 
-        let epoch_size = 1_000_000;
+        let epoch_size = 100_000;
         let num_epochs = CONFIG.subgame_iters / epoch_size;
 
         for _ in 0..num_epochs {
@@ -196,4 +201,13 @@ impl Bot {
         let strategy = nodes.get_strategy(hole, &board, history); 
         strategy
     }
+}
+
+fn warm_start_nodes(nodes: &Nodes) -> Nodes {
+    let warm_start: Nodes = nodes.clone();
+    let infosets: Vec<InfoSet> = Vec::new();
+    for infoset in infosets {
+        warm_start.normalize_regrets(&infoset);
+    }
+    warm_start
 }

@@ -57,6 +57,23 @@ impl Nodes {
         node.regrets[action_index] = accumulated_regret;
     }
 
+    pub fn normalize_regrets(
+        &self,
+        infoset: &InfoSet
+    ) {
+        let history = infoset.history.clone();
+        let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
+        let mut node_vec = node_vec_lock.lock().unwrap();
+        let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
+        // node.regrets = self.get_current_strategy(infoset).into_inner().unwrap();
+
+        let positive_regrets: SmallVec<[f64; NUM_ACTIONS]> = node.regrets.iter().map(|&r| if r >= 0.0 { r } else { 0.0 }).collect();
+        let sum: f64 = positive_regrets.iter().sum();
+        for i in 0..node.regrets.len() {
+            node.regrets[i] = positive_regrets[i] / sum;
+        }
+    }
+
     pub fn update_strategy_sum(&self, infoset: &InfoSet, prob: f64) {
         let history = infoset.history.clone();
         if !self.dashmap.contains_key(&history) {
@@ -149,7 +166,7 @@ impl Nodes {
         let num_actions = infoset.next_actions(&self.bet_abstraction).len();
         let node = match self.get(&infoset) {
             Some(n) => n.clone(),
-            None => Node::new(num_actions)//, smallvec![0.0; NUM_ACTIONS]),
+            None => Node::new(num_actions)
         };
         debug_assert!(
             node.num_actions == num_actions,
@@ -166,6 +183,24 @@ impl Nodes {
     }
 }
 
+impl Clone for Nodes {
+    fn clone(&self) -> Self {
+        let mut new_dashmap = DashMap::new();
+
+        for entry in self.dashmap.iter() {
+            let history = entry.key().clone();
+            let locked_nodes = entry.value().lock().unwrap();
+            let nodes_clone = locked_nodes.clone();
+            new_dashmap.insert(history, Mutex::new(nodes_clone));
+        }
+
+        Nodes {
+            dashmap: new_dashmap,
+            bet_abstraction: self.bet_abstraction.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
     pub regrets: [f64; NUM_ACTIONS],
@@ -175,10 +210,9 @@ pub struct Node {
 }
 
 impl Node {
-    // pub fn new(num_actions: usize, priors: SmallVec<[f64; NUM_ACTIONS]>) -> Node {
     pub fn new(num_actions: usize) -> Node {
         Node {
-            regrets: [0.0; NUM_ACTIONS], //priors.into_inner().unwrap(),
+            regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
             num_actions: num_actions,
             t: 0,
