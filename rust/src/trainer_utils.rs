@@ -478,7 +478,12 @@ pub fn normalize_smallvec(v: &[f64]) -> SmallVec<[f64; NUM_ACTIONS]> {
     for elem in v {
         debug_assert!(*elem >= 0.0);
     }
+    // println!("v: {:?}", v);
+    // if v.len() == 0 {
+    //     println!("breakpoint");
+    // }
     let sum: f64 = v.iter().sum();
+    debug_assert!(v.len() > 0);
     let norm: SmallVec<[f64; NUM_ACTIONS]> = v
         .iter()
         .map(|e| {
