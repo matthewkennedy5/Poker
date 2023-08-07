@@ -918,7 +918,7 @@ fn test_subgame_strategy_stability() {
         load_nodes(&CONFIG.nodes_path),
         true,
         false,
-        -1
+        4
     );
     let strategy = bot.get_strategy(
         &str2cards("8hAd"),
