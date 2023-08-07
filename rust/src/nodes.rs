@@ -109,6 +109,7 @@ impl Nodes {
             .collect();
         let regret_norm: SmallVec<[f64; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
         debug_assert!(regret_norm.len() == node.num_actions);
+        debug_assert!(num_actions == node.num_actions);
         regret_norm
     }
 

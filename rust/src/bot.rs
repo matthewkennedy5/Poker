@@ -121,7 +121,7 @@ impl Bot {
         let mut prev_strategy: SmallVec<[f64; NUM_ACTIONS]> = smallvec![-1.0; NUM_ACTIONS];
         let bar = pbar(CONFIG.subgame_iters);
 
-        let epoch_size = 1_000_000;
+        let epoch_size = 100_000;
         let num_epochs = CONFIG.subgame_iters / epoch_size;
 
         for _ in 0..num_epochs {
@@ -185,7 +185,7 @@ impl Bot {
                 "Strategy: {:?} Prev strategy: {:?}",
                 strategy, prev_strategy
             );
-            if self.early_stopping && diff < 1e-3 {
+            if self.early_stopping && diff < 0.01 {
                 println!("Stopping early because CFR strategy has converged.");
                 break;
             }

@@ -765,13 +765,13 @@ fn subgame_solving_beats_blueprint() {
         load_nodes(&CONFIG.nodes_path),
         false,
         false, 
-        -1
+        100,
     );
     let subgame_bot = Bot::new(
         load_nodes(&CONFIG.nodes_path),
         true,
-        false, 
-        CONFIG.depth_limit
+        true, 
+        5,
     );
 
     let iters = 1_000_000;
@@ -917,8 +917,8 @@ fn test_subgame_strategy_stability() {
     let bot = Bot::new(
         load_nodes(&CONFIG.nodes_path),
         true,
-        false,
-        -1
+        true,
+        5,
     );
     let strategy = bot.get_strategy(
         &str2cards("8hAd"),

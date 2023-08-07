@@ -6,6 +6,7 @@ use crate::nodes::*;
 use crate::trainer_utils::*;
 use crate::bot::Bot;
 use rand::prelude::*;
+use rand::{distributions::Distribution, distributions::WeightedIndex};
 use rayon::prelude::*;
 use smallvec::SmallVec;
 use std::fs::File;
@@ -121,31 +122,51 @@ pub fn iterate(
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
     let mut history = history.clone();
-    let infoset = InfoSet::from_deck(deck, &history);
+    let mut infoset = InfoSet::from_deck(deck, &history);
 
     // Depth limited solving - just sample actions until the end of the game to estimate the utility
     // of this information set
     // TODO: Let the opponent choose between several strategies
-    if remaining_depth == 0 {
-        loop {
-            let hand = get_hand(deck, player, history.street);
-            let hole = &hand[..2];
-            let board = &hand[2..];
-            let strategy = depth_limit_bot.get_strategy_action_translation(hole, board, &history);
-            let action = sample_action_from_strategy(&strategy);
-            history.add(&action);
-            if history.hand_over() {
-                return terminal_utility(deck, &history, player);
-            }
-        }
-    }
+    // if remaining_depth == 0 {
+    //     loop {
+    //         let hand = get_hand(deck, player, history.street);
+    //         let hole = &hand[..2];
+    //         let board = &hand[2..];
+    //         let strategy = depth_limit_bot.get_strategy_action_translation(hole, board, &history);
+    //         let action = sample_action_from_strategy(&strategy);
+    //         history.add(&action);
+    //         if history.hand_over() {
+    //             return terminal_utility(deck, &history, player);
+    //         }
+    //     }
+    // }
 
-    let strategy = nodes.get_current_strategy(&infoset);
+    let mut weights = weights;
+    let mut strategy = nodes.get_current_strategy(&infoset);
+    let opponent = 1 - player;
     if history.player == player {
         nodes.update_strategy_sum(&infoset, weights[player]);
+    } else if remaining_depth <= 0{
+        debug_assert!({
+            let sum: f64 = strategy.iter().sum();
+            (sum - 1.0).abs() < 1e-6
+        });
+        // println!("Strategy: {:?}", strategy);
+        let actions = infoset.next_actions(&nodes.bet_abstraction);
+        let dist = WeightedIndex::new(&strategy).unwrap();
+        let idx = dist.sample(&mut thread_rng());
+        let action = &actions[idx];
+        history.add(action);
+        let prob = &strategy[idx];
+        weights[opponent] *= prob;
+        if history.hand_over() {
+            return terminal_utility(deck, &history, player);
+        }
+
+        infoset = InfoSet::from_deck(deck, &history);
+        strategy = nodes.get_current_strategy(&infoset);
     }
 
-    let opponent = 1 - player;
     let actions = infoset.next_actions(&nodes.bet_abstraction);
     let mut node_utility = 0.0;
     // Recurse to further nodes in the game tree. Find the utilities for each action.
