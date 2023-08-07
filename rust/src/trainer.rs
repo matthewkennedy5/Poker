@@ -1,10 +1,10 @@
-use crate::bot::Bot;
 use crate::card_utils;
 use crate::card_utils::Card;
 use crate::config::CONFIG;
 use crate::exploiter::*;
 use crate::nodes::*;
 use crate::trainer_utils::*;
+use crate::bot::Bot;
 use rand::prelude::*;
 use rand::{distributions::Distribution, distributions::WeightedIndex};
 use rayon::prelude::*;
@@ -19,7 +19,6 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
     } else {
         Nodes::new(&CONFIG.bet_abstraction)
     };
-    let dummy_depth_limit_hack = Bot::new(Nodes::new(&CONFIG.bet_abstraction), false, false, -1); // TODO REFACTOR
     println!("[INFO] Beginning training.");
     let num_epochs = iters / eval_every;
     for epoch in 0..num_epochs {
@@ -31,7 +30,6 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
                 &deck,
                 &ActionHistory::new(),
                 &nodes,
-                &dummy_depth_limit_hack,
                 -1,
             );
             bar.inc(1);
@@ -86,7 +84,6 @@ pub fn cfr_iteration(
     deck: &[Card],
     history: &ActionHistory,
     nodes: &Nodes,
-    depth_limit_bot: &Bot,
     depth_limit: i32,
 ) {
     [DEALER, OPPONENT].iter().for_each(|&player| {
@@ -98,7 +95,7 @@ pub fn cfr_iteration(
             history,
             [1.0, 1.0],
             &nodes,
-            depth_limit_bot,
+            None,
             depth_limit,
         );
     });
@@ -110,7 +107,7 @@ pub fn iterate(
     history: &ActionHistory,
     weights: [f64; 2],
     nodes: &Nodes,
-    depth_limit_bot: &Bot,
+    depth_limit_bot: Option<&Bot>,
     remaining_depth: i32,
 ) -> f64 {
     if history.hand_over() {
@@ -125,45 +122,47 @@ pub fn iterate(
     // Depth limited solving - just sample actions until the end of the game to estimate the utility
     // of this information set
     if remaining_depth == 0 {
-        let biases = ["blueprint", "fold", "call", "bet"];
-        let utilities: Vec<f64> = biases
-            .iter()
-            .map(|&bias| {
-                let mut bias_history = history.clone();
-                loop {
-                    let hand = get_hand(deck, player, bias_history.street);
-                    let hole = &hand[..2];
-                    let board = &hand[2..];
-                    let mut strategy =
-                        depth_limit_bot.get_strategy_action_translation(hole, board, &bias_history);
-                    let bias = bias.clone();
+        if let Some(depth_limit_bot) = depth_limit_bot {
+            let biases = ["blueprint", "fold", "call", "bet"];
+            let utilities: Vec<f64> = biases
+                .iter()
+                .map(|&bias| {
+                    let mut bias_history = history.clone();
+                    loop {
+                        let hand = get_hand(deck, player, bias_history.street);
+                        let hole = &hand[..2];
+                        let board = &hand[2..];
+                        let mut strategy =
+                            depth_limit_bot.get_strategy_action_translation(hole, board, &bias_history);
+                        let bias = bias.clone();
 
-                    for (action, prob) in strategy.clone() {
-                        if (bias == "fold" && action.action == ActionType::Fold)
-                            || (bias == "call" && action.action == ActionType::Call)
-                            || (bias == "bet" && action.action == ActionType::Bet)
-                        {
-                            strategy.insert(action, prob * 10.0);
+                        for (action, prob) in strategy.clone() {
+                            if (bias == "fold" && action.action == ActionType::Fold)
+                                || (bias == "call" && action.action == ActionType::Call)
+                                || (bias == "bet" && action.action == ActionType::Bet)
+                            {
+                                strategy.insert(action, prob * 10.0);
+                            }
+                        }
+                        // println!("Strategy: {:?}", strategy);
+                        strategy = normalize(&strategy);
+
+                        let action = sample_action_from_strategy(&strategy);
+                        bias_history.add(&action);
+                        if bias_history.hand_over() {
+                            return terminal_utility(deck, &bias_history, player);
                         }
                     }
-                    // println!("Strategy: {:?}", strategy);
-                    strategy = normalize(&strategy);
-
-                    let action = sample_action_from_strategy(&strategy);
-                    bias_history.add(&action);
-                    if bias_history.hand_over() {
-                        return terminal_utility(deck, &bias_history, player);
-                    }
-                }
-            })
-            .collect();
-        debug_assert!(utilities.len() == 4);
-        let max_utility = utilities
-            .iter()
-            .cloned()
-            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-            .unwrap_or(0.0);
-        return max_utility;
+                })
+                .collect();
+            debug_assert!(utilities.len() == 4);
+            let max_utility = utilities
+                .iter()
+                .cloned()
+                .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                .unwrap_or(0.0);
+            return max_utility;
+        }
     }
 
     let mut weights = weights;
