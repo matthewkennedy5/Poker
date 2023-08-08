@@ -862,15 +862,15 @@ fn test_depth_limit_probability() {
     // Compare the subgame solving strategy with and without depth limited solving. 
     let full_subgame_bot = Bot::new(
         load_nodes(&CONFIG.nodes_path),
-        true,
         false,
-        -1
+        true,
+        -1,
     );
     let depth_limit_bot = Bot::new(
         load_nodes(&CONFIG.nodes_path),
+        false,
         true,
-        true,
-        -1,
+        5,
     );
 
     let hands = 1_000;

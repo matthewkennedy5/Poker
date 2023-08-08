@@ -96,6 +96,7 @@ pub fn cfr_iteration(
             [1.0, 1.0],
             &nodes,
             None,
+            None,
             depth_limit,
         );
     });
@@ -108,6 +109,7 @@ pub fn iterate(
     weights: [f64; 2],
     nodes: &Nodes,
     depth_limit_bot: Option<&Bot>,
+    bot_position: Option<usize>,
     remaining_depth: i32,
 ) -> f64 {
     if history.hand_over() {
@@ -123,45 +125,16 @@ pub fn iterate(
     // of this information set
     if remaining_depth == 0 {
         if let Some(depth_limit_bot) = depth_limit_bot {
-            let biases = ["blueprint", "fold", "call", "bet"];
-            let utilities: Vec<f64> = biases
-                .iter()
-                .map(|&bias| {
-                    let mut bias_history = history.clone();
-                    loop {
-                        let hand = get_hand(deck, player, bias_history.street);
-                        let hole = &hand[..2];
-                        let board = &hand[2..];
-                        let mut strategy =
-                            depth_limit_bot.get_strategy_action_translation(hole, board, &bias_history);
-                        let bias = bias.clone();
-
-                        for (action, prob) in strategy.clone() {
-                            if (bias == "fold" && action.action == ActionType::Fold)
-                                || (bias == "call" && action.action == ActionType::Call)
-                                || (bias == "bet" && action.action == ActionType::Bet)
-                            {
-                                strategy.insert(action, prob * 10.0);
-                            }
-                        }
-                        // println!("Strategy: {:?}", strategy);
-                        strategy = normalize(&strategy);
-
-                        let action = sample_action_from_strategy(&strategy);
-                        bias_history.add(&action);
-                        if bias_history.hand_over() {
-                            return terminal_utility(deck, &bias_history, player);
-                        }
-                    }
-                })
-                .collect();
-            debug_assert!(utilities.len() == 4);
-            let max_utility = utilities
-                .iter()
-                .cloned()
-                .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-                .unwrap_or(0.0);
-            return max_utility;
+            // TODO: Make sure history.player is the bot's opponent before going to the depth limit
+            return depth_limit_utility(
+                player, 
+                deck,
+                &history,
+                weights, 
+                nodes,
+                depth_limit_bot,
+                // TODO REFACTOR: Make a wrapper function to avoid passing all these optionals all the time
+            );
         }
     }
 
@@ -170,29 +143,7 @@ pub fn iterate(
     let opponent = 1 - player;
     if history.player == player {
         nodes.update_strategy_sum(&infoset, weights[player]);
-    } else if remaining_depth <= 0 {
-
-        // MCCFR depth limit method
-
-        debug_assert!({
-            let sum: f64 = strategy.iter().sum();
-            (sum - 1.0).abs() < 1e-6
-        });
-        // println!("Strategy: {:?}", strategy);
-        let actions = infoset.next_actions(&nodes.bet_abstraction);
-        let dist = WeightedIndex::new(&strategy).unwrap();
-        let idx = dist.sample(&mut thread_rng());
-        let action = &actions[idx];
-        history.add(action);
-        let prob = &strategy[idx];
-        weights[opponent] *= prob;
-        if history.hand_over() {
-            return terminal_utility(deck, &history, player);
-        }
-
-        infoset = InfoSet::from_deck(deck, &history);
-        strategy = nodes.get_current_strategy(&infoset);
-    }
+    } 
 
     let actions = infoset.next_actions(&nodes.bet_abstraction);
     let mut node_utility = 0.0;
@@ -221,6 +172,7 @@ pub fn iterate(
                 new_weights,
                 nodes,
                 depth_limit_bot,
+                bot_position,
                 remaining_depth - 1,
             );
             node_utility += prob * utility;
@@ -235,5 +187,74 @@ pub fn iterate(
             nodes.add_regret(&infoset, index, weights[opponent] * regret);
         }
     }
+    node_utility
+}
+
+// Implements Depth Limited Solving - at the depth limit, instead of choosing an action to play, the
+// opponent chooses a strategy to play until the end of the hand. This gives a good estimate of the
+// utility at the depth limit nodes because it allows the opponent to respond to the player's strategy. 
+// https://arxiv.org/pdf/1805.08195.pdf
+fn depth_limit_utility(
+    player: usize,
+    deck: &[Card], 
+    history: &ActionHistory, 
+    weights: [f64; 2], 
+    nodes: &Nodes, 
+    depth_limit_bot: &Bot
+) -> f64 {
+    let opponent = 1 - player;
+    // The history.player is the bot's opponent
+    let bot_opponent = 1 - history.player;
+    debug_assert!(false);
+    // im confused. this is gonna suck to debug. 
+    let infoset = InfoSet::from_deck(deck, history);
+    let strategy = nodes.get_current_strategy(&infoset);
+    let mut strategy_biases: Vec<Option<Action>> = infoset.next_actions(&nodes.bet_abstraction)
+        .iter().map(|s| Some(s.clone())).collect();
+    strategy_biases.push(None);
+    let utilities: Vec<f64> = strategy_biases.iter().map(|bias| {
+        // Play until the end of the game with the opponent using their biased strategy, or the 
+        // blueprint strategy. The terminal utility will update the regret for the depth limit 
+        // opponent node. 
+        let mut history_past_depth = history.clone();
+        loop {
+            let hand = get_hand(deck, history_past_depth.player, history_past_depth.street);
+            let hole = &hand[..2];
+            let board = &hand[2..];
+            let mut node_strategy = depth_limit_bot.get_strategy_action_translation(hole, board, &history_past_depth);
+            // Bias the strategy by multiplying one of the actions by 10 and renormalizing. Otherwise
+            // just play according to the blueprint strategy at the current infoset, if it's the bot's
+            // turn, or if we're in the blueprint meta-strategy for the opponent. 
+            if history_past_depth.player == bot_opponent{
+                if let Some(b) = bias {
+                    for (node_action, prob) in node_strategy.clone() {
+                        if node_action.action == b.action {
+                            node_strategy.insert(node_action, prob * 10.0);
+                        }
+                    }
+                    node_strategy = normalize(&node_strategy);
+                }
+            }
+
+            let action = sample_action_from_strategy(&node_strategy);
+            history_past_depth.add(&action);
+            if history_past_depth.hand_over() {
+                return terminal_utility(deck, &history_past_depth, player);
+            }
+        };
+    }).collect();
+    
+    let mut node_utility = 0.0;
+    for i in 0..strategy.len() {
+        node_utility += utilities[i] * strategy[i];
+    }
+
+    if history.player == player {
+        for (index, utility) in utilities.iter().enumerate() {
+            let regret = utility - node_utility;
+            nodes.add_regret(&infoset, index, weights[opponent] * regret);
+        }
+    }
+
     node_utility
 }

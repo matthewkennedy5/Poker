@@ -6,7 +6,6 @@ use std::time::Duration;
 
 fn bench_cfr(c: &mut Criterion) {
     let nodes: Nodes = Nodes::new(&CONFIG.bet_abstraction);
-    let dummy_depth_limit_hack = Bot::new(Nodes::new(&CONFIG.bet_abstraction), false, false, -1); // TODO REFACTOR
     let mut group = c.benchmark_group("cfr");
     group.warm_up_time(Duration::new(150, 0));
     group.bench_function("cfr", |b| {
@@ -15,7 +14,6 @@ fn bench_cfr(c: &mut Criterion) {
                 &deck(),
                 &ActionHistory::new(),
                 &nodes,
-                &dummy_depth_limit_hack,
                 -1
             )
         })

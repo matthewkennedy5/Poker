@@ -52,7 +52,7 @@ impl Nodes {
         let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
         let mut node_vec = node_vec_lock.lock().unwrap();
         let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
-        debug_assert!(action_index < node.num_actions);
+        // debug_assert!(action_index < node.num_actions);
         let accumulated_regret = node.regrets[action_index] + regret;
         node.regrets[action_index] = accumulated_regret;
     }
@@ -176,10 +176,9 @@ pub struct Node {
 }
 
 impl Node {
-    // pub fn new(num_actions: usize, priors: SmallVec<[f64; NUM_ACTIONS]>) -> Node {
     pub fn new(num_actions: usize) -> Node {
         Node {
-            regrets: [0.0; NUM_ACTIONS], //priors.into_inner().unwrap(),
+            regrets: [0.0; NUM_ACTIONS], 
             strategy_sum: [0.0; NUM_ACTIONS],
             num_actions: num_actions,
             t: 0,

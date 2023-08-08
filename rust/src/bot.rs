@@ -157,6 +157,7 @@ impl Bot {
                         [1.0, 1.0],
                         &nodes,
                         Some(&self),
+                        Some(history.player),
                         self.depth_limit
                     );
                 }

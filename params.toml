@@ -19,13 +19,13 @@ river_buckets = 100   # Max: 125756657
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 1_000_000
-lbr_iters = 25_000
-eval_every = 1_000
-warm_start = true
+train_iters = 100_000_000
+lbr_iters = 250_000
+eval_every = 1_000_000
+warm_start = false
 
 # Realtime solving
-subgame_solving = true
+subgame_solving = false
 subgame_iters = 10_000_000    # TODO: Try more max iters with early stopping
 depth_limit = -1   # -1 means always solve to the end of the game
 
