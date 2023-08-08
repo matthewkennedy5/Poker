@@ -23,7 +23,12 @@ pub struct Bot {
 }
 
 impl Bot {
-    pub fn new(blueprint: Nodes, subgame_solving: bool, early_stopping: bool, depth_limit: i32) -> Bot {
+    pub fn new(
+        blueprint: Nodes,
+        subgame_solving: bool,
+        early_stopping: bool,
+        depth_limit: i32,
+    ) -> Bot {
         Bot {
             blueprint,
             preflop_cache: Cache::new(10_000),
@@ -75,10 +80,18 @@ impl Bot {
         let board = &board[..board_length(history.street)];
         let translated = history.translate(&CONFIG.bet_abstraction);
         let node_strategy = self.blueprint.get_strategy(hole, board, &translated);
-        let adjusted_strategy = node_strategy
+        let adjusted_strategy: Strategy = node_strategy
             .iter()
             .map(|(action, prob)| (history.adjust_action(&action), prob.clone()))
             .collect();
+        let sum: f64 = adjusted_strategy.values().sum();
+        debug_assert!(
+            { (sum - 1.0).abs() < 0.01 },
+            "Adjusted strategy {:?} sums to {} for original strategy {:?}",
+            adjusted_strategy,
+            sum,
+            node_strategy
+        );
         adjusted_strategy
     }
 
@@ -114,7 +127,7 @@ impl Bot {
             new_abstraction[subgame_root.street].push(pot_frac);
         }
 
-        debug_assert!(new_abstraction == CONFIG.bet_abstraction);   // TODO: Delete new_abstraction if this works
+        debug_assert!(new_abstraction == CONFIG.bet_abstraction); // TODO: Delete new_abstraction if this works
 
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(hole, &board, history);
@@ -128,7 +141,7 @@ impl Bot {
             // Clear the cumulative strategy at the begging of each epoch
             nodes.reset_strategy_sum(&infoset);
 
-            (0..epoch_size).into_par_iter().for_each(|_| {
+            (0..epoch_size).into_iter().for_each(|_| {
                 // Construct a plausible deck using:
                 // - Our hand (player's hand)
                 // - Opponent hand sampled from our belief of their range
@@ -158,7 +171,7 @@ impl Bot {
                         &nodes,
                         Some(&self),
                         Some(history.player),
-                        self.depth_limit
+                        self.depth_limit,
                     );
                 }
                 bar.inc(1);
@@ -194,7 +207,7 @@ impl Bot {
         }
         bar.finish();
 
-        let strategy = nodes.get_strategy(hole, &board, history); 
+        let strategy = nodes.get_strategy(hole, &board, history);
         strategy
     }
 }

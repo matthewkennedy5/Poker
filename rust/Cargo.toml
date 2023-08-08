@@ -29,12 +29,13 @@ dashmap = { version = "*", features = ["serde"] }
 
 [profile.release] 
 debug = true
-debug-assertions = false
+debug-assertions = true
 overflow-checks = true
 incremental = true
+# lto = true
 
 [profile.dev]
-opt-level = 0
+opt-level = 1
 
 [[bench]]
 name="benches"

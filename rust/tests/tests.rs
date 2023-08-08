@@ -6,12 +6,14 @@ use rayon::prelude::*;
 use smallvec::*;
 use std::collections::HashSet;
 
-static BOT: Lazy<Bot> = Lazy::new(|| Bot::new(
-    load_nodes(&CONFIG.nodes_path),
-    CONFIG.subgame_solving,
-    false, 
-    CONFIG.depth_limit
-));
+static BOT: Lazy<Bot> = Lazy::new(|| {
+    Bot::new(
+        load_nodes(&CONFIG.nodes_path),
+        CONFIG.subgame_solving,
+        false,
+        CONFIG.depth_limit,
+    )
+});
 
 #[test]
 fn card_bitmap() {
@@ -761,18 +763,8 @@ fn test_subgame_solving() {
 
 #[test]
 fn subgame_solving_beats_blueprint() {
-    let blueprint_bot = Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        false,
-        false, 
-        100,
-    );
-    let subgame_bot = Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        true,
-        true, 
-        5,
-    );
+    let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
+    let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, 5);
 
     let iters = 1_000_000;
     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
@@ -823,28 +815,18 @@ fn test_belief_range() {
     let opp_hand = str2cards("AdTs");
     let board = str2cards("5c6cJd");
     let history = ActionHistory::from_strings(vec![
-        "Bet 200",
-        "Bet 400",
-        "Call 200",
-        "Call 0",
-        "Bet 800",
-        "Bet 1600"
+        "Bet 200", "Bet 400", "Call 200", "Call 0", "Bet 800", "Bet 1600",
     ]);
-    let blueprint_bot = Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        false,
-        false, 
-        -1
-    );
+    let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, -1);
     let range = Range::get_opponent_range(&my_hand, &board, &history, |hole, board, history| {
         blueprint_bot.get_strategy(hole, board, history)
     });
     let prob = range.hand_prob(&opp_hand);
     assert!(prob > 0.0);
-} 
+}
 
 #[test]
-// Tests that the river equity cache fits in memory 
+// Tests that the river equity cache fits in memory
 fn river_equity_cache_mem_usage() {
     let river_iso = load_river_isomorphic();
     let bar = pbar(river_iso.len() as u64);
@@ -859,19 +841,9 @@ fn river_equity_cache_mem_usage() {
 
 #[test]
 fn test_depth_limit_probability() {
-    // Compare the subgame solving strategy with and without depth limited solving. 
-    let full_subgame_bot = Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        false,
-        true,
-        -1,
-    );
-    let depth_limit_bot = Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        false,
-        true,
-        5,
-    );
+    // Compare the subgame solving strategy with and without depth limited solving.
+    let full_subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, true, -1);
+    let depth_limit_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, true, 5);
 
     let hands = 1_000;
     let bar = pbar(hands as u64);
@@ -884,7 +856,7 @@ fn test_depth_limit_probability() {
             let hand = get_hand(&deck, history.player, history.street);
             let hole = &hand[..2];
             let board = &hand[2..];
-    
+
             let full_depth_strategy = full_subgame_bot.get_strategy(hole, board, &history);
             let depth_limit_strategy = depth_limit_bot.get_strategy(hole, board, &history);
 
@@ -914,15 +886,20 @@ fn test_depth_limit_probability() {
 
 #[test]
 fn test_subgame_strategy_stability() {
-    let bot = Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        true,
-        true,
-        5,
-    );
+    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, 5);
     let strategy = bot.get_strategy(
         &str2cards("8hAd"),
         &str2cards("8dAc7s"),
-        &ActionHistory::from_strings(vec!["Call 100", "Call 100"])
+        &ActionHistory::from_strings(vec!["Call 100", "Call 100"]),
+    );
+    assert!(
+        strategy
+            .get(&Action {
+                action: ActionType::Bet,
+                amount: 100
+            })
+            .unwrap()
+            .clone()
+            > 0.95
     );
 }

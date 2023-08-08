@@ -1,12 +1,11 @@
+use crate::card_utils::*;
 use crate::card_utils;
-use crate::card_utils::Card;
 use crate::config::CONFIG;
 use crate::exploiter::*;
 use crate::nodes::*;
 use crate::trainer_utils::*;
 use crate::bot::Bot;
 use rand::prelude::*;
-use rand::{distributions::Distribution, distributions::WeightedIndex};
 use rayon::prelude::*;
 use smallvec::SmallVec;
 use std::fs::File;
@@ -126,15 +125,33 @@ pub fn iterate(
     if remaining_depth == 0 {
         if let Some(depth_limit_bot) = depth_limit_bot {
             // TODO: Make sure history.player is the bot's opponent before going to the depth limit
-            return depth_limit_utility(
-                player, 
-                deck,
-                &history,
-                weights, 
-                nodes,
-                depth_limit_bot,
-                // TODO REFACTOR: Make a wrapper function to avoid passing all these optionals all the time
-            );
+            // return depth_limit_utility(
+            //     player, 
+            //     deck,
+            //     &history,
+            //     weights, 
+            //     nodes,
+            //     depth_limit_bot,
+            //     // TODO REFACTOR: Make a wrapper function to avoid passing all these optionals all the time
+            // );
+            // println!("Estimating depth limit utility at infoset {infoset}");
+            loop {
+                let hand = get_hand(deck, history.player, history.street);
+                let hole = &hand[..2];
+                let board = &hand[2..];
+                let strategy = depth_limit_bot.get_strategy_action_translation(hole, board, &history);
+                // println!("Strategy: {:?}", strategy);
+                let action = sample_action_from_strategy(&strategy);
+                // println!("Hand: {} Board: {}", cards2str(hole), cards2str(board));
+                // println!("Sampled action {action} from strategy {:?}", strategy);
+                history.add(&action);
+                if history.hand_over() {
+                    let utility = terminal_utility(deck, &history, player);
+                    // println!("Depth limit node utility for traversing player {player}: {utility}");
+                    return utility;
+                }
+            }
+
         }
     }
 
@@ -206,7 +223,6 @@ fn depth_limit_utility(
     // The history.player is the bot's opponent
     let bot_opponent = 1 - history.player;
     debug_assert!(false);
-    // im confused. this is gonna suck to debug. 
     let infoset = InfoSet::from_deck(deck, history);
     let strategy = nodes.get_current_strategy(&infoset);
     let mut strategy_biases: Vec<Option<Action>> = infoset.next_actions(&nodes.bet_abstraction)

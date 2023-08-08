@@ -5,7 +5,12 @@ use crate::nodes::*;
 use once_cell::sync::Lazy;
 use rand::{prelude::SliceRandom, thread_rng};
 use smallvec::SmallVec;
-use std::{cmp::Eq, collections::HashMap, fmt, hash::Hash};
+use std::{
+    cmp::Eq,
+    collections::{HashMap, HashSet},
+    fmt,
+    hash::Hash,
+};
 
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
@@ -218,7 +223,7 @@ impl ActionHistory {
             return smallvec![];
         }
         let pot = self.pot();
-        let mut candidate_actions: SmallVec<[Action; NUM_ACTIONS]> = bet_abstraction[self.street]
+        let mut candidate_actions: HashSet<Action> = bet_abstraction[self.street]
             .iter()
             .map(|fraction| {
                 let bet_size = if fraction == &ALL_IN {
@@ -233,13 +238,25 @@ impl ActionHistory {
             })
             .collect();
 
-        candidate_actions.push(Action {
+        candidate_actions.insert(Action {
             action: ActionType::Call,
             amount: self.to_call(),
         });
-        candidate_actions.push(FOLD);
+        candidate_actions.insert(FOLD);
         candidate_actions.retain(|a| self.is_legal_next_action(a));
-        candidate_actions
+        debug_assert!(
+            {
+                // TODO: Might be better if these debug_asserts were standalone tests
+                let action_set: HashSet<Action> =
+                    candidate_actions.iter().map(|a| a.clone()).collect();
+                action_set.len() == candidate_actions.len()
+            },
+            "Duplicate next actions: {:?}",
+            candidate_actions
+        );
+        let actions_smallvec: SmallVec<[Action; NUM_ACTIONS]> =
+            candidate_actions.iter().map(|a| a.clone()).collect();
+        actions_smallvec
     }
 
     pub fn is_empty(&self) -> bool {
@@ -478,10 +495,6 @@ pub fn normalize_smallvec(v: &[f64]) -> SmallVec<[f64; NUM_ACTIONS]> {
     for elem in v {
         debug_assert!(*elem >= 0.0);
     }
-    // println!("v: {:?}", v);
-    // if v.len() == 0 {
-    //     println!("breakpoint");
-    // }
     let sum: f64 = v.iter().sum();
     debug_assert!(v.len() > 0);
     let norm: SmallVec<[f64; NUM_ACTIONS]> = v
@@ -509,7 +522,10 @@ pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
     let actions: Vec<Action> = strategy.keys().map(|a| a.clone()).collect();
     let action: Action = actions
         .choose_weighted(&mut thread_rng(), |a| strategy.get(a).unwrap())
-        .expect(&format!("Err sampling action from strategy: {:?}", strategy))
+        .expect(&format!(
+            "Err sampling action from strategy: {:?}",
+            strategy
+        ))
         .clone();
     action
 }

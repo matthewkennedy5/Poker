@@ -19,7 +19,7 @@ impl Nodes {
     pub fn new(bet_abstraction: &[Vec<f64>]) -> Nodes {
         Nodes {
             dashmap: DashMap::new(),
-            bet_abstraction: bet_abstraction.to_vec()
+            bet_abstraction: bet_abstraction.to_vec(),
         }
     }
 
@@ -38,12 +38,7 @@ impl Nodes {
 
     // TODO: let's refactor a better solution to avoid needing to pass bet_abstraction all over the place
 
-    pub fn add_regret(
-        &self,
-        infoset: &InfoSet,
-        action_index: usize,
-        regret: f64,
-    ) {
+    pub fn add_regret(&self, infoset: &InfoSet, action_index: usize, regret: f64) {
         let history = infoset.history.clone();
         // TODO: There's a data race here on initialization, but it's not that important
         if !self.dashmap.contains_key(&history) {
@@ -92,10 +87,7 @@ impl Nodes {
         node.strategy_sum = [0.0; NUM_ACTIONS];
     }
 
-    pub fn get_current_strategy(
-        &self,
-        infoset: &InfoSet,
-    ) -> SmallVec<[f64; NUM_ACTIONS]> {
+    pub fn get_current_strategy(&self, infoset: &InfoSet) -> SmallVec<[f64; NUM_ACTIONS]> {
         let num_actions = infoset.next_actions(&self.bet_abstraction).len();
         if !self.dashmap.contains_key(&infoset.history) {
             self.initialize_node_vec(&infoset.history);
@@ -140,17 +132,17 @@ impl Nodes {
         length
     }
 
-    pub fn get_strategy(
-        &self,
-        hole: &[Card],
-        board: &[Card],
-        history: &ActionHistory,
-    ) -> Strategy {
+    pub fn get_strategy(&self, hole: &[Card], board: &[Card], history: &ActionHistory) -> Strategy {
         let infoset = InfoSet::from_hand(hole, board, history);
         let num_actions = infoset.next_actions(&self.bet_abstraction).len();
+        debug_assert!(
+            num_actions > 0,
+            "No valid next actions for history {}",
+            infoset.history
+        );
         let node = match self.get(&infoset) {
             Some(n) => n.clone(),
-            None => Node::new(num_actions)//, smallvec![0.0; NUM_ACTIONS]),
+            None => Node::new(num_actions), 
         };
         debug_assert!(
             node.num_actions == num_actions,
@@ -160,9 +152,22 @@ impl Nodes {
         );
         let mut strategy = Strategy::new();
         let actions = infoset.next_actions(&self.bet_abstraction);
-        for (action, prob) in actions.iter().zip(node.cumulative_strategy()) {
-            strategy.insert(action.clone(), prob);
+        let cumulative_strategy = node.cumulative_strategy();
+        let sum: f64 = cumulative_strategy.iter().sum();
+        // println!("Infoset: {infoset}");
+        // println!("Actions: {:?}", actions);
+        // println!("Cumulative strategy: {:?}", cumulative_strategy);
+        debug_assert!((sum - 1.0).abs() < 0.01);
+        for (action, prob) in actions.iter().zip(node.cumulative_strategy().iter()) {
+            strategy.insert(action.clone(), prob.clone());
         }
+        let sum: f64 = strategy.values().sum();
+        debug_assert!(
+            { (sum - 1.0).abs() < 0.01 },
+            "Strategy {:?} sums to {}",
+            strategy,
+            sum,
+        );
         strategy
     }
 }
@@ -177,8 +182,9 @@ pub struct Node {
 
 impl Node {
     pub fn new(num_actions: usize) -> Node {
+        debug_assert!(num_actions > 0);
         Node {
-            regrets: [0.0; NUM_ACTIONS], 
+            regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
             num_actions: num_actions,
             t: 0,
