@@ -141,7 +141,7 @@ impl Bot {
             // Clear the cumulative strategy at the begging of each epoch
             nodes.reset_strategy_sum(&infoset);
 
-            (0..epoch_size).into_iter().for_each(|_| {
+            (0..epoch_size).into_par_iter().for_each(|_| {
                 // Construct a plausible deck using:
                 // - Our hand (player's hand)
                 // - Opponent hand sampled from our belief of their range

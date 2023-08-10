@@ -223,26 +223,28 @@ impl ActionHistory {
             return smallvec![];
         }
         let pot = self.pot();
-        let mut candidate_actions: HashSet<Action> = bet_abstraction[self.street]
-            .iter()
-            .map(|fraction| {
-                let bet_size = if fraction == &ALL_IN {
-                    self.stacks[self.player]
-                } else {
-                    (*fraction * (pot as f64)) as Amount
-                };
-                Action {
-                    action: ActionType::Bet,
-                    amount: bet_size,
-                }
-            })
-            .collect();
+            
+        let mut candidate_actions: Vec<Action> = Vec::with_capacity(NUM_ACTIONS);
+        for pot_fraction in bet_abstraction[self.street].iter() {
+            let bet_size = if pot_fraction == &ALL_IN {
+                self.stacks[self.player]
+            } else {
+                (pot_fraction * (pot as f64)) as Amount
+            };
+            let action = Action {
+                action: ActionType::Bet,
+                amount: bet_size,
+            };
+            if !candidate_actions.contains(&action) {
+                candidate_actions.push(action);
+            }
+        }
 
-        candidate_actions.insert(Action {
+        candidate_actions.push(Action {
             action: ActionType::Call,
             amount: self.to_call(),
         });
-        candidate_actions.insert(FOLD);
+        candidate_actions.push(FOLD);
         candidate_actions.retain(|a| self.is_legal_next_action(a));
         debug_assert!(
             {

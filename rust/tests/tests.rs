@@ -521,6 +521,18 @@ fn limp_is_call_not_bet() {
 }
 
 #[test]
+fn next_actions_are_sorted() {
+    // Tests that the next actions are returned in the correct order
+    let history = ActionHistory::from_strings(vec!["Call 100", "Call 100"]);
+    let next_actions = history.next_actions(&CONFIG.bet_abstraction);
+    // Order should be: 
+    // 1. Bet sizes in increasing order
+    // 2. Check/Call
+    // 3. Fold
+    assert_eq!(next_actions[next_actions.len()-1], Action {action: ActionType::Call, amount: 0});
+}
+
+#[test]
 fn all_in_call() {
     let mut history = ActionHistory::new();
     history.add(&Action {
