@@ -480,14 +480,8 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
 
 // Normalizes the values of a HashMap so that its elements sum to 1.
 pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64> {
-    let keys: Vec<T> = map.keys().cloned().collect();
-    let probs: Vec<f64> = keys.iter().map(|k| map.get(k).unwrap()).cloned().collect();
-    let norm_probs = normalize_smallvec(&probs);
-    let result: HashMap<T, f64> = keys
-        .iter()
-        .zip(norm_probs.iter())
-        .map(|(key, value)| (key.clone(), value.clone()))
-        .collect();
+    let sum: f64 = map.values().sum();
+    let result: HashMap<T, f64> = map.iter().map(|(key, value)| (key.clone(), value / sum)).collect();
     result
 }
 

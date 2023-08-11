@@ -4,7 +4,7 @@ use optimus::*;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::*;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 static BOT: Lazy<Bot> = Lazy::new(|| {
     Bot::new(
@@ -667,6 +667,19 @@ fn isomorphic_hand_len() {
     assert_eq!(flop.len(), 1342562);
     assert_eq!(turn.len(), 14403610);
     assert_eq!(river.len(), 125756657);
+}
+
+#[test]
+fn normalize_sum() {
+    let mut hashmap: HashMap<i32, f64> = HashMap::new();
+    hashmap.insert(0, 1.0);
+    hashmap.insert(1, 2.0);
+    hashmap.insert(2, 3.0);
+    hashmap.insert(3, 4.0);
+    hashmap.insert(4, 5.0);
+    let norm = normalize(&hashmap);
+    let sum: f64 = norm.values().sum();
+    assert!((sum - 1.0).abs() < 1e-12);
 }
 
 // Returns all the descendant action histories of history (not including terminal actions)
