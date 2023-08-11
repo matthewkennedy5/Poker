@@ -1,5 +1,4 @@
 use crate::itertools::Itertools;
-use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use rs_poker::core::{Hand, Rank, Rankable};
 use serde::{Deserialize, Serialize};
@@ -18,10 +17,7 @@ const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.txt";
 const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
 
 pub type SmallVecHand = SmallVec<[Card; 7]>;
-type IsomorphicHandCache = Cache<(SmallVecHand, bool), SmallVecHand>;
-
 pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(FastHandTable::new);
-static ISOMORPHIC_HAND_CACHE: Lazy<IsomorphicHandCache> = Lazy::new(|| Cache::new(100_000));
 
 pub const CLUBS: i32 = 0;
 pub const DIAMONDS: i32 = 1;
@@ -186,12 +182,7 @@ fn sort_isomorphic(cards: &[Card], streets: bool) -> SmallVecHand {
 }
 
 // https://stackoverflow.com/a/3831682
-pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVec<[Card; 7]> {
-    let inputs = (cards.to_smallvec(), streets);
-    if let Some(iso) = ISOMORPHIC_HAND_CACHE.get(&inputs) {
-        return iso;
-    }
-
+pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
     let cards = sort_isomorphic(cards, streets);
 
     let mut by_suits: SmallVec<[SmallVec<[u8; 7]>; 4]> = smallvec![smallvec![0; 7]; 4];
@@ -215,7 +206,7 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVec<[Card; 7]> {
         suit_mapping[old_suit] = new_suit;
     }
 
-    let mut isomorphic: SmallVec<[Card; 7]> = cards
+    let mut isomorphic: SmallVecHand = cards
         .into_iter()
         .map(|card| Card {
             rank: card.rank,
@@ -224,7 +215,6 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVec<[Card; 7]> {
         .collect();
 
     isomorphic = sort_isomorphic(&isomorphic, streets);
-    ISOMORPHIC_HAND_CACHE.insert(inputs, isomorphic.clone());
     isomorphic
 }
 

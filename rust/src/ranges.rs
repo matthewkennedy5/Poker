@@ -54,9 +54,9 @@ impl Range {
             }
 
             let strategy = get_strategy(&hole);
-            let p = *strategy
+            let p = strategy
                 .get(action)
-                .unwrap_or_else(|| panic!("Action {} is not in strategy: {:?}", action, strategy));
+                .expect(&format!("Action {} is not in strategy: {:?}", action, strategy));
 
             let new_prob = prob * p;
             self.range.insert(hole, new_prob); // Modify the range in place

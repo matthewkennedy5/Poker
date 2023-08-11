@@ -224,7 +224,7 @@ impl ActionHistory {
         }
         let pot = self.pot();
             
-        let mut candidate_actions: Vec<Action> = Vec::with_capacity(NUM_ACTIONS);
+        let mut candidate_actions: SmallVec<[Action; NUM_ACTIONS]> = SmallVec::with_capacity(NUM_ACTIONS);
         for pot_fraction in bet_abstraction[self.street].iter() {
             let bet_size = if pot_fraction == &ALL_IN {
                 self.stacks[self.player]
@@ -256,9 +256,7 @@ impl ActionHistory {
             "Duplicate next actions: {:?}",
             candidate_actions
         );
-        let actions_smallvec: SmallVec<[Action; NUM_ACTIONS]> =
-            candidate_actions.iter().map(|a| a.clone()).collect();
-        actions_smallvec
+        candidate_actions
     }
 
     pub fn is_empty(&self) -> bool {

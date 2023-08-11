@@ -1,6 +1,7 @@
 use criterion::*;
 use optimus::*;
 use std::time::Duration;
+use rand::prelude::*;
 
 // TODO: add a bench for the realtime solving time
 
@@ -22,9 +23,11 @@ fn bench_cfr(c: &mut Criterion) {
 }
 
 fn bench_isomorphic_hand(c: &mut Criterion) {
-    let cards = str2cards("As7h4c8d8c9dTh");
+    let mut deck = deck();
     c.bench_function("isomorphic", |b| {
         b.iter(|| {
+            deck.shuffle(&mut rand::thread_rng());
+            let cards = &deck[..7];
             isomorphic_hand(&cards, true)
         })
     });
