@@ -12,9 +12,7 @@ use once_cell::sync::Lazy;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{collections::HashMap, fs::File, io::BufReader, path::Path};
 
-pub static RIVER_EQUITY_CACHE: Lazy<DashMap<SmallVecHand, f64>> = Lazy::new(
-    || DashMap::new()
-);
+pub static RIVER_EQUITY_CACHE: Lazy<DashMap<SmallVecHand, f64>> = Lazy::new(|| DashMap::new());
 
 pub const FLOP_ABSTRACTION_PATH: &str = "products/flop_abstraction.bin";
 pub const TURN_ABSTRACTION_PATH: &str = "products/turn_abstraction.bin";
@@ -79,8 +77,14 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, 
         Err(_error) => make_abstraction(n_cards, n_buckets),
         Ok(_) => {
             let abstraction = read_serialized(path);
-            assert_eq!(abstraction.values().max().unwrap().clone(), n_buckets - 1);
-            assert_eq!(abstraction.values().min().unwrap().clone(), 0);
+            assert!(
+                {
+                    let max_bucket = abstraction.values().max().unwrap().clone();
+                    let min_bucket = abstraction.values().min().unwrap().clone();
+                    max_bucket == n_buckets - 1 && min_bucket == 0
+                },
+                "Number of abstraction buckets in params.toml does not match the abstraction file"
+            );
             abstraction
         }
     }
@@ -171,12 +175,15 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     let hand_ehs2 = get_sorted_hand_ehs2(n_cards);
     let hand_counts = get_hand_counts(n_cards);
     let total_hands: u64 = hand_counts.values().map(|n| n.clone() as u64).sum();
-    debug_assert!(total_hands == match n_cards {
-        5 => 25_989_600,
-        6 => 305_377_800,
-        7 => 2_809_475_760,
-        _ => 0,
-    });
+    debug_assert!(
+        total_hands
+            == match n_cards {
+                5 => 25_989_600,
+                6 => 305_377_800,
+                7 => 2_809_475_760,
+                _ => 0,
+            }
+    );
     let mut clusters = HashMap::new();
     let mut sum: u64 = 0;
     for hand in hand_ehs2 {

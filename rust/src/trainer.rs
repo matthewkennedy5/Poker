@@ -117,7 +117,7 @@ pub fn iterate(
 
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
-    let mut history = history.clone();
+    let history = history.clone();
     let mut infoset = InfoSet::from_deck(deck, &history);
 
     // Depth limited solving - just sample actions until the end of the game to estimate the utility
@@ -135,23 +135,41 @@ pub fn iterate(
             //     // TODO REFACTOR: Make a wrapper function to avoid passing all these optionals all the time
             // );
             // println!("Estimating depth limit utility at infoset {infoset}");
-            loop {
-                let hand = get_hand(deck, history.player, history.street);
-                let hole = &hand[..2];
-                let board = &hand[2..];
-                let strategy = depth_limit_bot.get_strategy_action_translation(hole, board, &history);
-                // println!("Strategy: {:?}", strategy);
-                let action = sample_action_from_strategy(&strategy);
-                // println!("Hand: {} Board: {}", cards2str(hole), cards2str(board));
-                // println!("Sampled action {action} from strategy {:?}", strategy);
-                history.add(&action);
-                if history.hand_over() {
-                    let utility = terminal_utility(deck, &history, player);
-                    // println!("Depth limit node utility for traversing player {player}: {utility}");
-                    return utility;
-                }
-            }
 
+            // Take an average of 10 rollouts at the depth limit to estimate the utility
+            let n_rollouts = 1000;
+            let mut utilities: Vec<f64> = Vec::with_capacity(n_rollouts);
+            for i in 0..n_rollouts {
+                let mut depth_history = history.clone();
+                loop {
+                    // TODO: You can also traverse each possible action for each player and analytically
+                    // find the exact expected utility given their strategies. This might be faster 
+                    // if the strategies are usually not mixed and if they are folding a lot. 
+                    let hand = get_hand(deck, depth_history.player, depth_history.street);
+                    let hole = &hand[..2];
+                    let board = &hand[2..];
+                    let strategy = depth_limit_bot.get_strategy_action_translation(hole, board, &depth_history);
+                    // println!("Strategy: {:?}", strategy);
+                    let action = sample_action_from_strategy(&strategy);
+                    // println!("Hand: {} Board: {}", cards2str(hole), cards2str(board));
+                    // println!("Sampled action {action} from strategy {:?}", strategy);
+                    depth_history.add(&action);
+                    if depth_history.hand_over() {
+                        let utility = terminal_utility(deck, &depth_history, player);
+                        // println!("Depth limit node utility for traversing player {player}: {utility}");
+                        // return utility;
+                        // sum += utility;
+                        utilities.push(utility);
+                        break;
+                    }
+                }
+            };
+
+            let mean = statistical::mean(&utilities);
+            // let std = statistical::standard_deviation(&utilities, Some(mean));
+            // let confidence = 1.96 * std / (n_rollouts as f64).sqrt();
+            // println!("Utility at depth limit {}: {mean} +/- {confidence}", history);
+            return mean;
         }
     }
 
@@ -159,7 +177,7 @@ pub fn iterate(
     let mut strategy = nodes.get_current_strategy(&infoset);
     let opponent = 1 - player;
     if history.player == player {
-        nodes.update_strategy_sum(&infoset, weights[player]);
+        nodes.update_strategy_sum(&infoset, weights[player] as f32);
     } 
 
     let actions = infoset.next_actions(&nodes.bet_abstraction);
@@ -167,7 +185,7 @@ pub fn iterate(
     // Recurse to further nodes in the game tree. Find the utilities for each action.
     let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
         .map(|i| {
-            let prob = strategy[i];
+            let prob = strategy[i] as f64;
 
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
@@ -262,7 +280,7 @@ fn depth_limit_utility(
     
     let mut node_utility = 0.0;
     for i in 0..strategy.len() {
-        node_utility += utilities[i] * strategy[i];
+        node_utility += utilities[i] * strategy[i] as f64;
     }
 
     if history.player == player {

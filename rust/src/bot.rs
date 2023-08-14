@@ -131,7 +131,7 @@ impl Bot {
 
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(hole, &board, history);
-        let mut prev_strategy: SmallVec<[f64; NUM_ACTIONS]> = smallvec![-1.0; NUM_ACTIONS];
+        let mut prev_strategy: SmallVecFloats = smallvec![-1.0; NUM_ACTIONS];
         let bar = pbar(CONFIG.subgame_iters);
 
         let epoch_size = 100_000;
@@ -182,23 +182,23 @@ impl Bot {
                 .get(&infoset)
                 .expect("Infoset not found in subgame nodes");
             let strategy = node.cumulative_strategy();
-            let diff: f64 = strategy
+            let diff: f32 = strategy
                 .iter()
                 .zip(prev_strategy.iter())
                 .map(|(&a, &b)| (a - b).abs())
                 .sum();
-            // println!(
-            //     "Hand: {} Board: {} | History: {}",
-            //     cards2str(hole),
-            //     cards2str(&board),
-            //     history
-            // );
-            // println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
-            // println!("Node: {:?}", node);
-            // println!(
-            //     "Strategy: {:?} Prev strategy: {:?}",
-            //     strategy, prev_strategy
-            // );
+            println!(
+                "Hand: {} Board: {} | History: {}",
+                cards2str(hole),
+                cards2str(&board),
+                history
+            );
+            println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
+            println!("Node: {:?}", node);
+            println!(
+                "Strategy: {:?} Prev strategy: {:?}",
+                strategy, prev_strategy
+            );
             if self.early_stopping && diff < 0.01 {
                 println!("Stopping early because CFR strategy has converged.");
                 break;

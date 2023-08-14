@@ -3,7 +3,7 @@ use optimus::*;
 use std::path::Path;
 
 fn main() {
-
+    
     if !Path::new(FLOP_ABSTRACTION_PATH).exists() {
         make_abstraction(5, CONFIG.flop_buckets);
     }

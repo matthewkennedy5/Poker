@@ -6,14 +6,14 @@ small_blind = 50
 # Bet abstractions, expressed as multiples of the pot size. -1 means "all-in".
 # This does not include the call and fold actions. 
 bet_abstraction = [
-    [1.0, 2.0, -1.0],
+    [1.0, 3.0, -1.0],
     [0.5, 1.0, -1.0],
     [0.5, 1.0, -1.0],
     [0.5, 1.0, -1.0],
 ]
-flop_buckets = 100    # Max:   1342562
-turn_buckets = 100    # Max:  14403610
-river_buckets = 100  # Max: 125756657
+flop_buckets = 10000    # Max:   1342562
+turn_buckets = 10000    # Max:  14403610
+river_buckets = 10000  # Max: 125756657
 
 # Filenames
 nodes_path = "products/nodes.bin"

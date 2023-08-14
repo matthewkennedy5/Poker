@@ -6,7 +6,7 @@ use smallvec::SmallVec;
 use std::sync::Mutex;
 
 // Upper limit on branching factor of blueprint game tree.
-pub const NUM_ACTIONS: usize = 5;
+pub const NUM_ACTIONS: usize = 4;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Nodes {
@@ -48,11 +48,11 @@ impl Nodes {
         let mut node_vec = node_vec_lock.lock().unwrap();
         let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
         // debug_assert!(action_index < node.num_actions);
-        let accumulated_regret = node.regrets[action_index] + regret;
+        let accumulated_regret = node.regrets[action_index] + regret as f32;
         node.regrets[action_index] = accumulated_regret;
     }
 
-    pub fn update_strategy_sum(&self, infoset: &InfoSet, prob: f64) {
+    pub fn update_strategy_sum(&self, infoset: &InfoSet, prob: f32) {
         let history = infoset.history.clone();
         if !self.dashmap.contains_key(&history) {
             self.initialize_node_vec(&history);
@@ -60,13 +60,13 @@ impl Nodes {
         let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
         let mut node_vec = node_vec_lock.lock().unwrap();
         let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
-        let positive_regrets: SmallVec<[f64; NUM_ACTIONS]> = node
+        let positive_regrets: SmallVecFloats = node
             .regrets
             .iter()
             .take(node.num_actions)
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
-        let current_strategy: SmallVec<[f64; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
+        let current_strategy: SmallVecFloats = normalize_smallvec(&positive_regrets);
         if prob > 0.0 {
             for i in 0..current_strategy.len() {
                 // Add this action's probability to the cumulative strategy sum
@@ -87,19 +87,19 @@ impl Nodes {
         node.strategy_sum = [0.0; NUM_ACTIONS];
     }
 
-    pub fn get_current_strategy(&self, infoset: &InfoSet) -> SmallVec<[f64; NUM_ACTIONS]> {
+    pub fn get_current_strategy(&self, infoset: &InfoSet) -> SmallVecFloats {
         let num_actions = infoset.next_actions(&self.bet_abstraction).len();
         if !self.dashmap.contains_key(&infoset.history) {
             self.initialize_node_vec(&infoset.history);
         }
         let node = self.get(infoset).unwrap();
-        let positive_regrets: SmallVec<[f64; NUM_ACTIONS]> = node
+        let positive_regrets: SmallVecFloats = node
             .regrets
             .iter()
             .take(node.num_actions)
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
-        let regret_norm: SmallVec<[f64; NUM_ACTIONS]> = normalize_smallvec(&positive_regrets);
+        let regret_norm: SmallVecFloats = normalize_smallvec(&positive_regrets);
         debug_assert!(regret_norm.len() == node.num_actions);
         debug_assert!(num_actions == node.num_actions);
         regret_norm
@@ -153,13 +153,13 @@ impl Nodes {
         let mut strategy = Strategy::new();
         let actions = infoset.next_actions(&self.bet_abstraction);
         let cumulative_strategy = node.cumulative_strategy();
-        let sum: f64 = cumulative_strategy.iter().sum();
+        let sum: f32 = cumulative_strategy.iter().sum();
         // println!("Infoset: {infoset}");
         // println!("Actions: {:?}", actions);
         // println!("Cumulative strategy: {:?}", cumulative_strategy);
         debug_assert!((sum - 1.0).abs() < 0.01);
         for (action, prob) in actions.iter().zip(node.cumulative_strategy().iter()) {
-            strategy.insert(action.clone(), prob.clone());
+            strategy.insert(action.clone(), prob.clone() as f64);
         }
         let sum: f64 = strategy.values().sum();
         debug_assert!(
@@ -174,8 +174,8 @@ impl Nodes {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
-    pub regrets: [f64; NUM_ACTIONS],
-    pub strategy_sum: [f64; NUM_ACTIONS],
+    pub regrets: [f32; NUM_ACTIONS],
+    pub strategy_sum: [f32; NUM_ACTIONS],
     pub num_actions: usize,
     pub t: u64,
 }
@@ -191,7 +191,7 @@ impl Node {
         }
     }
 
-    pub fn cumulative_strategy(&self) -> SmallVec<[f64; NUM_ACTIONS]> {
+    pub fn cumulative_strategy(&self) -> SmallVecFloats {
         normalize_smallvec(&self.strategy_sum[..self.num_actions])
     }
 }

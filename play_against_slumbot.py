@@ -47,7 +47,8 @@ SMALL_BLIND = 50
 BIG_BLIND = 100
 STACK_SIZE = 20000
 
-PRINT = True
+PRINT = False
+SUBGAME_SOLVING = False
 
 def ParseAction(action):
     """
@@ -332,7 +333,10 @@ def BotAction(response):
             json = response.json()
             break
         except:
-            time.sleep(600)
+            delay = 10
+            if SUBGAME_SOLVING:
+                delay = 600
+            time.sleep(delay)
 
     action = json['action']
     amount = json['amount']
@@ -420,7 +424,7 @@ def Login(username, password):
 def play_hands(num_hands):
     token = None
     scores = []
-    for i in trange(num_hands, smoothing=0):
+    for i in range(num_hands):
         token, score = PlayHand(token)
         scores.append(score)
     return scores
@@ -431,6 +435,7 @@ def main():
     parser.add_argument('--username', type=str)
     parser.add_argument('--password', type=str)
     parser.add_argument('--num_hands', type=int)
+    parser.add_argument('--subgame_solving', type=bool)
     args = parser.parse_args()
     username = args.username
     password = args.password
@@ -440,20 +445,25 @@ def main():
         token = None
     
     num_hands = args.num_hands
+    SUBGAME_SOLVING = args.subgame_solving
+
     num_procs = 1
     hands_per_cpu = int(num_hands / num_procs)
     input =[hands_per_cpu for p in range(num_procs)]
 
     scores = []
-    with mp.Pool(num_procs) as pool:
-        for score_list in tqdm(pool.imap(play_hands, input), total=num_hands, smoothing=0):
-            scores += score_list
+    # with mp.Pool(num_procs) as pool:
+    #     for score_list in tqdm(pool.imap(play_hands, input), total=num_hands, smoothing=0):
 
-            if len(scores) > 2:
-                mean = np.mean(scores) / BIG_BLIND
-                std = np.std(scores) / BIG_BLIND
-                conf = 1.96 * std / np.sqrt(num_hands)
-                print(f'Winnings: {mean} +/- {conf} BB/h')
+    for n in trange(num_hands):
+        score_list = play_hands(1)
+        scores += score_list
+
+        if len(scores) > 2:
+            mean = np.mean(scores) / BIG_BLIND
+            std = np.std(scores) / BIG_BLIND
+            conf = 1.96 * std / np.sqrt(len(scores))
+            print(f'Winnings: {mean} +/- {conf} BB/h')
     
     
 if __name__ == '__main__':

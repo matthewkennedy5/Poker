@@ -911,7 +911,8 @@ fn test_depth_limit_probability() {
 
 #[test]
 fn subgame_strategy_stability() {
-    for depth in [10, 8, 6, 4, 2].iter() {
+    // for depth in [10, 8, 6, 4, 2].iter() {
+        let depth = 5;
         let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, depth.clone());
         let strategy = bot.get_strategy(
             &str2cards("8hAd"),
@@ -919,7 +920,7 @@ fn subgame_strategy_stability() {
             &ActionHistory::from_strings(vec!["Call 100", "Call 100"]),
         );
         println!("Depth: {depth}, Strategy: {:?}", strategy);
-    }
+    // }
     // assert!(
     //     strategy
     //         .get(&Action {

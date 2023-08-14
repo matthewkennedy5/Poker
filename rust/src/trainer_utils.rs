@@ -31,6 +31,7 @@ pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 
 pub type Strategy = HashMap<Action, f64>;
 pub type Amount = u16;
+pub type SmallVecFloats = SmallVec<[f32; NUM_ACTIONS]>;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ActionType {
@@ -485,24 +486,24 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64>
     result
 }
 
-pub fn normalize_smallvec(v: &[f64]) -> SmallVec<[f64; NUM_ACTIONS]> {
+pub fn normalize_smallvec(v: &[f32]) -> SmallVecFloats {
     for elem in v {
         debug_assert!(*elem >= 0.0);
     }
-    let sum: f64 = v.iter().sum();
+    let sum: f32 = v.iter().sum();
     debug_assert!(v.len() > 0);
-    let norm: SmallVec<[f64; NUM_ACTIONS]> = v
+    let norm: SmallVecFloats = v
         .iter()
         .map(|e| {
             if sum == 0.0 {
                 // If all values are 0, then just return a uniform distribution
-                1.0 / v.len() as f64
+                1.0 / v.len() as f32
             } else {
                 e / sum
             }
         })
         .collect();
-    let norm_sum: f64 = norm.iter().sum();
+    let norm_sum: f32 = norm.iter().sum();
     debug_assert!(
         (norm_sum - 1.0).abs() < 1e-6,
         "Sum of normalized vector: {}. Input vector: {:?}",
