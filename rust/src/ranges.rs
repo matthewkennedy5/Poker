@@ -11,6 +11,9 @@ pub const PROB_CUTOFF: f64 = 1e-12;
 #[derive(Debug, Clone)]
 pub struct Range {
     // This is the full 1326 2 card preflop combinations, not isomorphic
+
+    // TODO: Store the range as a Vec<[Card; 2]>, Vec<f64> or something to avoid needing all the 
+    // HashMap overhead. These Range functions are very slow and slowing down the exploiter.
     pub range: HashMap<Vec<Card>, f64>,
 }
 

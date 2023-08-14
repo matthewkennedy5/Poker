@@ -187,18 +187,18 @@ impl Bot {
                 .zip(prev_strategy.iter())
                 .map(|(&a, &b)| (a - b).abs())
                 .sum();
-            println!(
-                "Hand: {} Board: {} | History: {}",
-                cards2str(hole),
-                cards2str(&board),
-                history
-            );
-            println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
-            println!("Node: {:?}", node);
-            println!(
-                "Strategy: {:?} Prev strategy: {:?}",
-                strategy, prev_strategy
-            );
+            // println!(
+            //     "Hand: {} Board: {} | History: {}",
+            //     cards2str(hole),
+            //     cards2str(&board),
+            //     history
+            // );
+            // println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
+            // println!("Node: {:?}", node);
+            // println!(
+            //     "Strategy: {:?} Prev strategy: {:?}",
+            //     strategy, prev_strategy
+            // );
             if self.early_stopping && diff < 0.01 {
                 println!("Stopping early because CFR strategy has converged.");
                 break;
