@@ -186,6 +186,7 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     );
     let mut clusters = HashMap::new();
     let mut sum: u64 = 0;
+    let bar = pbar(hand_ehs2.len() as u64);
     for hand in hand_ehs2 {
         // Bucket the hand according to the percentile of its E[HS^2]
         let count = hand_counts.get(&hand).unwrap().clone() as u64;
@@ -199,7 +200,9 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
             bucket,
             n_buckets
         );
+        bar.inc(1);
     }
+    bar.finish();
     let path = match n_cards {
         5 => FLOP_ABSTRACTION_PATH,
         6 => TURN_ABSTRACTION_PATH,

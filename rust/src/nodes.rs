@@ -182,7 +182,7 @@ pub struct Node {
 
 impl Node {
     pub fn new(num_actions: usize) -> Node {
-        debug_assert!(num_actions > 0);
+        debug_assert!(num_actions > 0 && num_actions <= NUM_ACTIONS);
         Node {
             regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
