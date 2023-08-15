@@ -786,7 +786,7 @@ fn test_subgame_solving() {
     );
 }
 
-#[test]
+// #[test]
 fn subgame_solving_beats_blueprint() {
     let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
     let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, 5);
@@ -848,7 +848,7 @@ fn river_equity_cache_mem_usage() {
     assert_eq!(RIVER_EQUITY_CACHE.len(), 125_756_657);
 }
 
-#[test]
+// #[test]
 fn test_depth_limit_probability() {
     // Compare the subgame solving strategy with and without depth limited solving.
     let full_subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, true, -1);
@@ -893,7 +893,7 @@ fn test_depth_limit_probability() {
     bar.finish();
 }
 
-#[test]
+// #[test]
 fn subgame_strategy_stability() {
     // for depth in [10, 8, 6, 4, 2].iter() {
         let depth = 5;

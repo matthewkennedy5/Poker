@@ -19,9 +19,9 @@ river_buckets = 100  # Max: 125756657
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 1_000_000
-lbr_iters = 10_000
-eval_every = 10_000
+train_iters = 100_000
+lbr_iters = 100_000
+eval_every = 100_000
 warm_start = false
 
 # Realtime solving

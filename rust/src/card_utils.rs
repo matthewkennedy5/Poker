@@ -523,7 +523,6 @@ pub fn read_serialized(path: &str) -> HashMap<u64, i32> {
 }
 
 pub fn serialize(hand_data: HashMap<u64, i32>, path: &str) {
-    // let buffer = File::create(path).unwrap();
     let file = File::create(path).unwrap();
     let buffer = BufWriter::new(file);
     bincode::serialize_into(buffer, &hand_data).unwrap();

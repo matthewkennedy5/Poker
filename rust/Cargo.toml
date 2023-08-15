@@ -28,7 +28,7 @@ smallvec = { version = "*", features = ["serde"] }
 dashmap = { version = "*", features = ["serde"] }
 
 [profile.release] 
-debug = false
+debug = true
 debug-assertions = false
 overflow-checks = false
 incremental = false
