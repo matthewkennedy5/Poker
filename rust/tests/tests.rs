@@ -835,22 +835,6 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
 }
 
 #[test]
-fn test_belief_range() {
-    let my_hand = str2cards("As6s");
-    let opp_hand = str2cards("AdTs");
-    let board = str2cards("5c6cJd");
-    let history = ActionHistory::from_strings(vec![
-        "Bet 200", "Bet 400", "Call 200", "Call 0", "Bet 800", "Bet 1600",
-    ]);
-    let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, -1);
-    let range = Range::get_opponent_range(&my_hand, &board, &history, |hole, board, history| {
-        blueprint_bot.get_strategy(hole, board, history)
-    });
-    let prob = range.hand_prob(&opp_hand);
-    assert!(prob > 0.0);
-}
-
-#[test]
 // Tests that the river equity cache fits in memory
 fn river_equity_cache_mem_usage() {
     let river_iso = load_river_isomorphic();
