@@ -28,8 +28,8 @@ smallvec = { version = "*", features = ["serde"] }
 dashmap = { version = "*", features = ["serde"] }
 
 [profile.release] 
-debug = true
-debug-assertions = true
+debug = false
+debug-assertions = false
 overflow-checks = false
 incremental = false
 lto = false

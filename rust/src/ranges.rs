@@ -1,46 +1,44 @@
 use rand::{distributions::Distribution, distributions::WeightedIndex};
-use std::collections::HashMap;
 
 use crate::card_utils::*;
 use crate::trainer_utils::*;
+use std::collections::HashMap;
 
 // If a hand's probability is below PROB_CUTOFF in the range, just skip it since it has a negligible
 // contribution to the range.
 pub const PROB_CUTOFF: f64 = 1e-12;
+const N_PREFLOP_HANDS: usize = 1326;
 
 #[derive(Debug, Clone)]
 pub struct Range {
     // This is the full 1326 2 card preflop combinations, not isomorphic
-
-    // TODO: Store the range as a Vec<[Card; 2]>, Vec<f64> or something to avoid needing all the 
-    // HashMap overhead. These Range functions are very slow and slowing down the exploiter.
-    pub range: HashMap<Vec<Card>, f64>,
+    pub hands: Vec<[Card; 2]>,
+    pub probs: Vec<f64>,
 }
 
 impl Range {
     pub fn new() -> Range {
-        let mut range = HashMap::new();
+        let mut hands: Vec<[Card; 2]> = Vec::new();
         let deck = deck();
         for i in 0..deck.len() {
-            for j in i+1..deck.len() {
-                let hand = vec![deck[i], deck[j]];
-                range.insert(hand, 1.0);
+            for j in i + 1..deck.len() {
+                let hand = [deck[i], deck[j]];
+                hands.push(hand);
             }
         }
-        debug_assert!(range.len() == 1326);
-        range = normalize(&range);
-        Range { range }
+        debug_assert!(hands.len() == N_PREFLOP_HANDS);
+        let probs = vec![1.0 / N_PREFLOP_HANDS as f64; N_PREFLOP_HANDS];
+        Range { hands: hands, probs: probs }
     }
 
-    // When new cards come on the table, the opponent's range cannot contain those
     pub fn remove_blockers(&mut self, blockers: &[Card]) {
-        let mut new_range = self.range.clone();
-        for hand in self.range.keys() {
+        for i in 0..self.hands.len() {
+            let hand = self.hands[i];
             if blockers.contains(&hand[0]) || blockers.contains(&hand[1]) {
-                new_range.remove(hand);
+                self.probs[i] = 0.0;
             }
         }
-        self.range = normalize(&new_range);
+        self.normalize_range(); // TODO: Another optimization is that you only need to normalize in getters
     }
 
     // Performs a Bayesian update of our beliefs about the opponent's range
@@ -48,41 +46,48 @@ impl Range {
     where
         F: Fn(&Vec<Card>) -> Strategy,
     {
-        let keys: Vec<_> = self.range.keys().cloned().collect();
-
-        for hole in keys {
-            let prob = self.range[&hole];
+        for i in 0..self.hands.len() {
+            let hand = self.hands[i];
+            let prob = self.probs[i];
             if prob < PROB_CUTOFF {
                 continue;
             }
 
-            let strategy = get_strategy(&hole);
-            let p = strategy
-                .get(action)
-                .expect(&format!("Action {} is not in strategy: {:?}", action, strategy));
+            let strategy = get_strategy(&hand.to_vec()); // TODO: Change to SmallVec
+            let p = strategy.get(action).expect(&format!(
+                "Action {} is not in strategy: {:?}",
+                action, strategy
+            ));
 
             let new_prob = prob * p;
-            self.range.insert(hole, new_prob); // Modify the range in place
+            self.probs[i] = new_prob;
         }
 
-        self.range = normalize(&self.range);
+        self.normalize_range();
     }
 
-    pub fn hand_prob(&self, hand: &[Card]) -> f64 {
-        let mut sorted: Vec<Card> = hand.to_vec();
-        sorted.sort();
-        *self
-            .range
-            .get(&sorted)
-            .expect(format!("Hand {} not found in range", cards2str(hand)).as_str())
+    // pub fn hand_prob(&self, hand: &[Card]) -> f64 {
+    //     let mut sorted: Vec<Card> = hand.to_vec();  // TODO: Array
+    //     sorted.sort();
+    //     *self
+    //         .range
+    //         .get(&sorted)
+    //         .expect(format!("Hand {} not found in range", cards2str(hand)).as_str())
+    // }
+
+    pub fn get_map(&self) -> HashMap<Vec<Card>, f64> {
+        self.hands
+            .iter()
+            .zip(self.probs.iter())
+            .map(|(hand, prob)| (hand.to_vec(), prob.clone()))
+            .collect()
     }
 
     pub fn sample_hand(&self) -> Vec<Card> {
-        let weights: Vec<f64> = self.range.values().cloned().collect();
-        let hands: Vec<&Vec<Card>> = self.range.keys().collect();
-        let dist = WeightedIndex::new(&weights).unwrap();
-        let hand = hands[dist.sample(&mut rand::thread_rng())];
-        hand.clone()
+        let dist = WeightedIndex::new(&self.probs).unwrap();
+        let index = dist.sample(&mut rand::thread_rng());
+        let hand = self.hands[index];
+        hand.to_vec()
     }
 
     // In this function, it's our turn and we're trying to figure out the range of the opponent
@@ -111,5 +116,14 @@ impl Range {
             history_iter.add(&action);
         }
         opp_range
+    }
+
+    pub fn normalize_range(&mut self) {
+        let sum: f64 = self.probs.iter().sum();
+        if sum == 0.0 {
+            self.probs = vec![1.0 / N_PREFLOP_HANDS as f64; N_PREFLOP_HANDS];
+        } else {
+            self.probs = self.probs.iter().map(|prob| prob / sum).collect();
+        }
     }
 }
