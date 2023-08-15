@@ -1,7 +1,7 @@
-use rand::{distributions::Distribution, distributions::WeightedIndex};
-
 use crate::card_utils::*;
 use crate::trainer_utils::*;
+use rand::distributions::WeightedIndex;
+use rand::prelude::*;
 use std::collections::HashMap;
 
 // If a hand's probability is below PROB_CUTOFF in the range, just skip it since it has a negligible
@@ -28,7 +28,10 @@ impl Range {
         }
         debug_assert!(hands.len() == N_PREFLOP_HANDS);
         let probs = vec![1.0 / N_PREFLOP_HANDS as f64; N_PREFLOP_HANDS];
-        Range { hands: hands, probs: probs }
+        Range {
+            hands: hands,
+            probs: probs,
+        }
     }
 
     pub fn remove_blockers(&mut self, blockers: &[Card]) {
@@ -42,9 +45,9 @@ impl Range {
     }
 
     // Performs a Bayesian update of our beliefs about the opponent's range
-    pub fn update<F>(&mut self, action: &Action, get_strategy: F)
+    pub fn update<F>(&mut self, hand_likelihood: F)
     where
-        F: Fn(&Vec<Card>) -> Strategy,
+        F: Fn(&[Card]) -> f64,
     {
         for i in 0..self.hands.len() {
             let hand = self.hands[i];
@@ -53,11 +56,11 @@ impl Range {
                 continue;
             }
 
-            let strategy = get_strategy(&hand.to_vec()); // TODO: Change to SmallVec
-            let p = strategy.get(action).expect(&format!(
-                "Action {} is not in strategy: {:?}",
-                action, strategy
-            ));
+            let p = hand_likelihood(&hand);
+            // let p = strategy.get(action).expect(&format!(
+            //     "Action {} is not in strategy: {:?}",
+            //     action, strategy
+            // ));
 
             let new_prob = prob * p;
             self.probs[i] = new_prob;
@@ -110,8 +113,12 @@ impl Range {
         for action in history.get_actions() {
             if history_iter.player == opponent {
                 // Update the opponent's range based on their action
-                let strategy = |hole: &Vec<Card>| get_strategy(hole, board, &history_iter);
-                opp_range.update(&action, strategy);
+                let likelihoods = |hole: &[Card]| {
+                    let strat = get_strategy(hole, board, &history_iter);
+                    let action = sample_action_from_strategy(&strat);
+                    strat.get(&action).unwrap().clone()
+                };
+                opp_range.update(likelihoods);
             }
             history_iter.add(&action);
         }

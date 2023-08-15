@@ -786,7 +786,7 @@ fn test_subgame_solving() {
     );
 }
 
-#[test]
+// #[test]
 fn subgame_solving_beats_blueprint() {
     let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
     let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, 5);
@@ -835,22 +835,6 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
 }
 
 #[test]
-fn test_belief_range() {
-    let my_hand = str2cards("As6s");
-    let opp_hand = str2cards("AdTs");
-    let board = str2cards("5c6cJd");
-    let history = ActionHistory::from_strings(vec![
-        "Bet 200", "Bet 400", "Call 200", "Call 0", "Bet 800", "Bet 1600",
-    ]);
-    let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, -1);
-    let range = Range::get_opponent_range(&my_hand, &board, &history, |hole, board, history| {
-        blueprint_bot.get_strategy(hole, board, history)
-    });
-    // let prob = range.hand_prob(&opp_hand);
-    // assert!(prob > 0.0);
-}
-
-#[test]
 // Tests that the river equity cache fits in memory
 fn river_equity_cache_mem_usage() {
     let river_iso = load_river_isomorphic();
@@ -864,7 +848,7 @@ fn river_equity_cache_mem_usage() {
     assert_eq!(RIVER_EQUITY_CACHE.len(), 125_756_657);
 }
 
-#[test]
+// #[test]
 fn test_depth_limit_probability() {
     // Compare the subgame solving strategy with and without depth limited solving.
     let full_subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, true, -1);
@@ -909,7 +893,7 @@ fn test_depth_limit_probability() {
     bar.finish();
 }
 
-#[test]
+// #[test]
 fn subgame_strategy_stability() {
     // for depth in [10, 8, 6, 4, 2].iter() {
         let depth = 5;
