@@ -32,7 +32,7 @@ debug = true
 debug-assertions = false
 overflow-checks = false
 incremental = false
-lto = false
+lto = 'thin'
 
 [profile.dev]
 opt-level = 1
