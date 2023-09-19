@@ -12,9 +12,9 @@ use std::{
 };
 
 const FAST_HAND_TABLE_PATH: &str = "products/fast_strengths.bin";
-const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.txt";
-const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.txt";
-const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.txt";
+const FLOP_CANONICAL_PATH: &str = "products/flop_isomorphic.bin";
+const TURN_CANONICAL_PATH: &str = "products/turn_isomorphic.bin";
+const RIVER_CANONICAL_PATH: &str = "products/river_isomorphic.bin";
 
 pub type SmallVecHand = SmallVec<[Card; 7]>;
 pub static FAST_HAND_TABLE: Lazy<FastHandTable> = Lazy::new(FastHandTable::new);
@@ -433,39 +433,34 @@ pub fn cards2bitmap(cards: &[Card]) -> u64 {
     bitmap
 }
 
-pub fn load_flop_isomorphic() -> HashSet<u64> {
+pub fn load_flop_isomorphic() -> Vec<u64> {
     load_isomorphic(5, FLOP_CANONICAL_PATH)
 }
 
-pub fn load_turn_isomorphic() -> HashSet<u64> {
+pub fn load_turn_isomorphic() -> Vec<u64> {
     load_isomorphic(6, TURN_CANONICAL_PATH)
 }
 
-pub fn load_river_isomorphic() -> HashSet<u64> {
+pub fn load_river_isomorphic() -> Vec<u64> {
     load_isomorphic(7, RIVER_CANONICAL_PATH)
 }
 
-fn load_isomorphic(n_cards: usize, path: &str) -> HashSet<u64> {
-    let mut isomorphic = HashSet::new();
+fn load_isomorphic(n_cards: usize, path: &str) -> Vec<u64> {
     match File::open(path) {
         Ok(file) => {
             let reader = BufReader::new(file);
-            for line in reader.lines() {
-                isomorphic.insert(str2hand(&line.unwrap()));
-            }
+            bincode::deserialize_from(reader).unwrap()
         }
         Err(_e) => {
             // Find the isomorphic hands and write them to disk.
-            isomorphic = deal_isomorphic(n_cards, true);
-            let mut buffer = File::create(path).unwrap();
-            for hand in &isomorphic {
-                buffer.write(hand2str(*hand).as_bytes()).unwrap();
-                buffer.write(b"\n").unwrap();
-            }
+            let isomorphic = deal_isomorphic(n_cards, true);
+            let file = File::create(path).unwrap();
+            let buffer = BufWriter::new(file);
+            bincode::serialize_into(buffer, &isomorphic).unwrap();
             println!("[INFO] Wrote isomorphic hands to {path}.");
+            isomorphic
         }
-    };
-    isomorphic
+    }
 }
 
 pub fn isomorphic_preflop_hands() -> HashSet<Vec<Card>> {
@@ -482,7 +477,7 @@ pub fn isomorphic_preflop_hands() -> HashSet<Vec<Card>> {
     preflop_hands
 }
 
-pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
+pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> Vec<u64> {
     match n_cards {
         5 => println!("[INFO] Finding all isomorphic flop hands."),
         6 => println!("[INFO] Finding all isomorphic turn hands."),
@@ -511,7 +506,8 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> HashSet<u64> {
             isomorphic.insert(hand);
         }
     }
-    isomorphic
+    let isomorphic_vec: Vec<u64> = isomorphic.iter().map(|i| *i).collect();
+    isomorphic_vec
 }
 
 // There are multiple places where I have to serialize a HashMap of cards->i32

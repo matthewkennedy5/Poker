@@ -9,8 +9,15 @@ use crate::config::CONFIG;
 use dashmap::DashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
+use rand::prelude::*;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::{collections::HashMap, fs::File, io::BufReader, path::Path};
+use std::sync::Mutex;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{BufReader, BufWriter},
+    path::Path,
+};
 
 pub static RIVER_EQUITY_CACHE: Lazy<DashMap<SmallVecHand, f64>> = Lazy::new(|| DashMap::new());
 
@@ -113,7 +120,7 @@ pub fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
     let mut hand_ehs2: Vec<(u64, f64)> = isomorphic_hands
         .par_iter()
         .map(|h| {
-            let ehs2 = expected_hs2(*h);
+            let ehs2 = equity_distribution_moment(*h, 2);
             bar.inc(1);
             (*h, ehs2)
         })
@@ -214,7 +221,7 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
 }
 
 // Returns the second moment of the hand's equity distribution.
-pub fn expected_hs2(hand: u64) -> f64 {
+pub fn equity_distribution_moment(hand: u64, moment: i32) -> f64 {
     // For river hands, this just returns HS^2 since there is no distribution
     // Flop and turn, deals rollouts for the E[HS^2] value.
     let hand = hand2cards(hand);
@@ -230,13 +237,61 @@ pub fn expected_hs2(hand: u64) -> f64 {
     for rollout in deck.iter().combinations(7 - hand.len()) {
         let full_hand = [hand.clone(), deepcopy(&rollout)].concat();
         let equity = river_equity(&full_hand);
-        sum += equity.powi(2);
+        sum += equity.powi(moment);
         count += 1.0;
     }
     sum / count
 }
 
-pub fn river_equity(hand: &Vec<Card>) -> f64 {
+// The equity here is different from the RIVER_EQUITY_CACHE. This is the equity across all possible
+// board rollout cards for a given player hole and opponent hole. The RIVER_EQUITY_CACHE is the
+// equity across all possible opponent hole cards for a given player hole and board.
+pub fn equity_distribution(hand: u64) -> Vec<f32> {
+    let hand = hand2cards(hand);
+    let board = &hand[2..];
+    const BUCKETS: usize = 50;
+    let mut equity_hist = vec![0.0; BUCKETS];
+    let mut deck = deck();
+    deck.retain(|c| !hand.contains(c));
+    for remaining_board in deck.iter().combinations(5 - board.len()) {
+        let mut rest_of_deck = deck.clone();
+        rest_of_deck.retain(|c| !remaining_board.contains(&c));
+        rest_of_deck.shuffle(&mut rand::thread_rng());
+        let mut n_wins: f64 = 0.0;
+        let mut n_runs: f64 = 0.0;
+        for opp_preflop in rest_of_deck.iter().combinations(2) {
+            let mut opp_hand = Vec::with_capacity(7);
+            opp_hand.extend(opp_preflop.clone());
+            opp_hand.extend(board);
+            opp_hand.extend(remaining_board.clone());
+
+            let mut my_hand = Vec::with_capacity(7);
+            my_hand.extend(hand.clone());
+            my_hand.extend(remaining_board.clone());
+
+            let my_strength = FAST_HAND_TABLE.hand_strength(&my_hand);
+            let opp_strength = FAST_HAND_TABLE.hand_strength(&opp_hand);
+
+            if my_strength > opp_strength {
+                n_wins += 1.0;
+            } else if my_strength == opp_strength {
+                n_wins += 0.5;
+            }
+            n_runs += 1.0
+        }
+        let equity = n_wins / (n_runs as f64);
+        let mut equity_bucket = (equity * BUCKETS as f64).floor() as usize;
+        if equity_bucket == BUCKETS {
+            equity_bucket = BUCKETS - 1;
+        }
+        equity_hist[equity_bucket] += 1.0;
+    }
+    let sum: f64 = equity_hist.iter().sum();
+    let normalized: Vec<f32> = equity_hist.iter().map(|e| (e / sum) as f32).collect();
+    normalized
+}
+
+pub fn river_equity(hand: &[Card]) -> f64 {
     let iso = isomorphic_hand(hand, true);
     if let Some(equity) = RIVER_EQUITY_CACHE.get(&iso) {
         return equity.clone();
@@ -253,7 +308,6 @@ pub fn river_equity(hand: &Vec<Card>) -> f64 {
     for opp_preflop in deck.iter().combinations(2) {
         n_runs += 1;
 
-        // Create the poker hands by concatenating cards
         let my_hand = hand.to_vec();
         let opp_hand = [deepcopy(&opp_preflop), board.clone()].concat();
 
@@ -269,4 +323,152 @@ pub fn river_equity(hand: &Vec<Card>) -> f64 {
     let equity = n_wins / (n_runs as f64);
     RIVER_EQUITY_CACHE.insert(iso, equity);
     return equity;
+}
+
+fn print_abstraction() {
+    let abs = Abstraction::new();
+    for bucket in 0..1000 {
+        println!("\nBucket {bucket}");
+        for sample in 0..10 {
+            let mut hands: Vec<&u64> = abs.turn.keys().collect();
+            hands.shuffle(&mut rand::thread_rng());
+            for hand in hands {
+                let b = abs.turn.get(hand).unwrap().clone();
+                if b == bucket {
+                    println!("{}", hand2str(hand.clone()));
+                    break;
+                }
+            }
+        }
+    }
+}
+
+pub fn create_abstraction_clusters() {
+    let dists = get_equity_distributions("flop");
+    let buckets = k_means_cluster(dists, CONFIG.flop_buckets);
+    let hands = load_flop_isomorphic();
+    let abstraction: HashMap<u64, i32> = hands
+        .iter()
+        .zip(buckets.iter())
+        .map(|(&hand, &bucket)| (hand, bucket))
+        .collect();
+    serialize(abstraction, "products/flop_abstraction.bin");
+
+    let dists = get_equity_distributions("turn");
+    let buckets = k_means_cluster(dists, CONFIG.turn_buckets);
+    let hands = load_turn_isomorphic();
+    let abstraction: HashMap<u64, i32> = hands
+        .iter()
+        .zip(buckets.iter())
+        .map(|(&hand, &bucket)| (hand, bucket))
+        .collect();
+    serialize(abstraction, "products/turn_abstraction.bin");
+}
+
+pub fn get_equity_distributions(street: &str) -> Vec<Vec<f32>> {
+    let path = format!("products/{street}_equity_distributions.bin");
+    match File::open(path) {
+        Err(_error) => {
+            println!("[INFO] Computing {street} equity distributions...");
+            let iso: Vec<u64> = if street == "flop" {
+                load_flop_isomorphic()
+            } else {
+                load_turn_isomorphic()
+            };
+            let bar = pbar(iso.len() as u64);
+            let dists: Vec<Vec<f32>> = iso
+                .par_iter()
+                .map(|hand| {
+                    let dist = equity_distribution(*hand);
+                    bar.inc(1);
+                    dist
+                })
+                .collect();
+            bar.finish_with_message("Done.");
+
+            let file = File::create(format!("products/{street}_equity_distributions.bin")).unwrap();
+            let buffer = BufWriter::new(file);
+            bincode::serialize_into(buffer, &dists).unwrap();
+            dists
+        }
+        Ok(file) => {
+            let reader = BufReader::new(file);
+            bincode::deserialize_from(reader).unwrap()
+        }
+    }
+}
+
+pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
+    assert!(k > 0 && k < 1_000_000_000);
+
+    // Pick random equity distributions (hands) to be initialized as the centers of the clusters
+    let mut centers: Vec<Vec<f32>> = distributions
+        .iter()
+        .choose_multiple(&mut thread_rng(), k as usize)
+        .iter()
+        .map(|v| v.to_vec())
+        .collect();
+
+    let mut clusters: Vec<i32> = vec![0; distributions.len()];
+
+    let iters = 100;
+    let bar = pbar(iters as u64);
+    for iter in 0..iters {
+        let distance_sum: Mutex<f64> = Mutex::new(0.0);
+        clusters = distributions
+            .par_iter()
+            .map(|x| {
+                // Find the closest center to each hand
+                let mut closest_center: i32 = 0;
+                let mut closest_distance = f32::INFINITY;
+                for (i, center) in centers.iter().enumerate() {
+                    let distance = earth_movers_distance(x, center);
+                    if distance < closest_distance {
+                        closest_center = i as i32;
+                        closest_distance = distance;
+                    }
+                }
+                let mut d = distance_sum.lock().unwrap();
+                *d += closest_distance as f64;
+                closest_center
+            })
+            .collect();
+
+        println!("Iteration {iter}: {}", distance_sum.lock().unwrap());
+
+        centers = (0..k)
+            .map(|cluster| {
+                // Find the Euclidian mean of each cluster - the new centroid
+                let mut sum: Vec<f32> = vec![0.0; distributions[0].len()];
+                let mut num_points = 0;
+                for i in 0..distributions.len() {
+                    if clusters[i] == cluster {
+                        num_points += 1;
+                        for j in 0..sum.len() {
+                            sum[j] = sum[j] + distributions[i][j];
+                        }
+                    }
+                }
+                let mean: Vec<f32> = sum.iter().map(|x| x / num_points as f32).collect();
+                mean
+            })
+            .collect();
+        bar.inc(1);
+    }
+    bar.finish();
+
+    clusters
+}
+
+fn earth_movers_distance(v1: &Vec<f32>, v2: &Vec<f32>) -> f32 {
+    debug_assert!(v1.len() == v2.len());
+    let mut cdf1 = 0.0;
+    let mut cdf2 = 0.0;
+    let mut emd = 0.0;
+    for i in 0..v1.len() {
+        cdf1 += v1[i];
+        cdf2 += v2[i];
+        emd += (cdf1 - cdf2).abs();
+    }
+    emd
 }

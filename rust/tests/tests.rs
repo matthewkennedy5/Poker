@@ -749,7 +749,7 @@ fn abstraction_buckets_in_range() {
 
     for street in [FLOP, TURN, RIVER].iter() {
         let street = street.clone();
-        let mut hands: HashSet<u64> = HashSet::new();
+        let mut hands: Vec<u64> = Vec::new();
         let n_buckets;
         if street == FLOP {
             hands = load_flop_isomorphic();
@@ -915,4 +915,39 @@ fn subgame_strategy_stability() {
     //         .clone()
     //         > 0.95
     // );
+}
+
+#[test]
+fn equity_distribution_expectations() {
+    // Test that the expectation of each hand's equity distribution is equal to the hand's equity.
+    for street in ["turn"].iter() {
+        let dists = get_equity_distributions(street);
+        let flop_hands = if street.clone() == "flop" {
+            load_flop_isomorphic()
+        } else {
+            load_turn_isomorphic()
+        };
+        let bar = pbar(dists.len() as u64);
+        (0..dists.len()).into_par_iter().for_each(|i| {
+            let hand = flop_hands[i];
+            let dist = dists[i].clone();
+            let hand_ehs: f64 = equity_distribution_moment(hand, 1);
+            let hand_ehs2: f64 = equity_distribution_moment(hand, 2);
+            // Calculate the expectation and second moment of the equity distribution, by taking the
+            // center of the discretized probability buckets
+            let mut dist_ehs: f64 = 0.0;
+            let mut dist_ehs2: f64 = 0.0;
+            let bucket_width = 1.0 / dist.len() as f64;
+            let offset = bucket_width / 2.0;
+            for (i, &p) in dist.iter().enumerate() {
+                let prob = (i as f64) * bucket_width + offset;
+                dist_ehs += p as f64 * prob;
+                dist_ehs2 += p as f64 * prob * prob;
+            }
+            assert!((hand_ehs - dist_ehs).abs() < 0.1, "{hand_ehs} != {dist_ehs}");
+            assert!((hand_ehs2 - dist_ehs2).abs() < 0.1, "{hand_ehs2} != {dist_ehs2}");
+            bar.inc(1);
+        });
+        bar.finish();
+    }
 }
