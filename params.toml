@@ -19,10 +19,10 @@ river_buckets = 10000  # Max: 125756657
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 10_000_000
+train_iters = 1_000_000_000
 lbr_iters = 1_000_000
 eval_every = 1_000_000
-warm_start = false
+warm_start = true
 
 # Realtime solving
 subgame_solving = false

@@ -11,6 +11,7 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use crate::rayon::iter::IntoParallelIterator;
 use std::sync::Mutex;
 use std::{
     collections::HashMap,
@@ -88,9 +89,9 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, 
                 {
                     let max_bucket = abstraction.values().max().unwrap().clone();
                     let min_bucket = abstraction.values().min().unwrap().clone();
-                    max_bucket == n_buckets - 1 && min_bucket == 0
+                    max_bucket >= n_buckets - 10 && min_bucket == 0
                 },
-                "Number of abstraction buckets in params.toml does not match the abstraction file"
+                "Number of {n_cards} abstraction buckets in params.toml does not match the abstraction file."
             );
             abstraction
         }
@@ -325,15 +326,28 @@ pub fn river_equity(hand: &[Card]) -> f64 {
     return equity;
 }
 
-fn print_abstraction() {
+pub fn bucket_sizes() {
     let abs = Abstraction::new();
-    for bucket in 0..1000 {
+    let mut lens: Vec<i32> = vec![0; CONFIG.flop_buckets as usize];
+    for (hand, bucket) in abs.turn {
+        lens[bucket as usize] += 1;
+    }
+    println!("Hands per bucket: {:?}", lens);
+    let min = lens.iter().filter(|x| x > &&0).min().unwrap();
+    println!("Smallest bucket: {min}");
+}
+
+pub fn print_abstraction() {
+    let abs = Abstraction::new();
+    // let street = "flop";
+    // let 
+    for bucket in 0..CONFIG.flop_buckets {
         println!("\nBucket {bucket}");
         for sample in 0..10 {
-            let mut hands: Vec<&u64> = abs.turn.keys().collect();
+            let mut hands: Vec<&u64> = abs.flop.keys().collect();
             hands.shuffle(&mut rand::thread_rng());
             for hand in hands {
-                let b = abs.turn.get(hand).unwrap().clone();
+                let b = abs.flop.get(hand).unwrap().clone();
                 if b == bucket {
                     println!("{}", hand2str(hand.clone()));
                     break;
@@ -411,7 +425,7 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
 
     let mut clusters: Vec<i32> = vec![0; distributions.len()];
 
-    let iters = 100;
+    let iters = 20;
     let bar = pbar(iters as u64);
     for iter in 0..iters {
         let distance_sum: Mutex<f64> = Mutex::new(0.0);
