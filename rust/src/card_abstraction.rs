@@ -11,7 +11,6 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use crate::rayon::iter::IntoParallelIterator;
 use std::sync::Mutex;
 use std::{
     collections::HashMap,

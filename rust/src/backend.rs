@@ -119,7 +119,7 @@ async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responde
 
 fn parse_history(h: &[ActionJSON]) -> ActionHistory {
     let mut history = ActionHistory::new();
-    for action_json in h.clone() {
+    for action_json in h {
         let action = Action {
             action: match action_json.action.as_str() {
                 "Bet" => ActionType::Bet,

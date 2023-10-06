@@ -2,7 +2,6 @@ use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::trainer_utils::*;
 use dashmap::DashMap;
-use smallvec::SmallVec;
 use std::sync::Mutex;
 
 // Upper limit on branching factor of blueprint game tree.

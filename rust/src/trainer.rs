@@ -122,7 +122,7 @@ pub fn iterate(
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
     let history = history.clone();
-    let mut infoset = InfoSet::from_deck(deck, &history);
+    let infoset = InfoSet::from_deck(deck, &history);
 
     // Depth limited solving - just sample actions until the end of the game to estimate the utility
     // of this information set
@@ -177,8 +177,8 @@ pub fn iterate(
         }
     }
 
-    let mut weights = weights;
-    let mut strategy = nodes.get_current_strategy(&infoset);
+    let weights = weights;
+    let strategy = nodes.get_current_strategy(&infoset);
     let opponent = 1 - player;
     if history.player == player {
         nodes.update_strategy_sum(&infoset, weights[player] as f32);
