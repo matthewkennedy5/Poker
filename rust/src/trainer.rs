@@ -50,20 +50,6 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
             }
         }
         println!("Fraction zeros: {}", zero as f64 / total as f64);
-
-        // Check how the 28o preflop node looks
-        // let o28 = InfoSet::from_hand(
-        //     &card_utils::str2cards("2c8h"),
-        //     &Vec::new(),
-        //     &ActionHistory::new(),
-        // );
-        let infoset = InfoSet {
-            history: ActionHistory::from_strings(vec!["Bet 300", "Call 300", "Call 0", "Call 0"]),
-            card_bucket: 9807
-        };
-        println!("InfoSet: {infoset}");
-        println!("Actions: {:?}", infoset.next_actions(&CONFIG.bet_abstraction));
-        println!("Node: {:?}", nodes.get(&infoset));
     }
     println!("{} nodes reached.", nodes.len());
 }
@@ -98,7 +84,7 @@ pub fn cfr_iteration(
             history,
             [1.0, 1.0],
             &nodes,
-            None,
+            None,   // TODO: delete depth_limit_bot? or something?
             None,
             depth_limit,
         );
