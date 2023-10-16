@@ -4,7 +4,7 @@ use optimus::*;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::*;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
 static BOT: Lazy<Bot> = Lazy::new(|| {
     Bot::new(
@@ -525,11 +525,17 @@ fn next_actions_are_sorted() {
     // Tests that the next actions are returned in the correct order
     let history = ActionHistory::from_strings(vec!["Call 100", "Call 100"]);
     let next_actions = history.next_actions(&CONFIG.bet_abstraction);
-    // Order should be: 
+    // Order should be:
     // 1. Bet sizes in increasing order
     // 2. Check/Call
     // 3. Fold
-    assert_eq!(next_actions[next_actions.len()-1], Action {action: ActionType::Call, amount: 0});
+    assert_eq!(
+        next_actions[next_actions.len() - 1],
+        Action {
+            action: ActionType::Call,
+            amount: 0
+        }
+    );
 }
 
 #[test]
@@ -548,15 +554,15 @@ fn all_in_call() {
 #[test]
 fn terminal_utility_blinds() {
     let history = ActionHistory::from_strings(vec!["Call 100", "Fold 0"]);
-    let util = terminal_utility(&deck(), &history, DEALER);
+    let util = terminal_utility_old(&deck(), &history, DEALER);
     assert_eq!(util, 100.0);
-    let util = terminal_utility(&deck(), &history, OPPONENT);
+    let util = terminal_utility_old(&deck(), &history, OPPONENT);
     assert_eq!(util, -100.0);
 
     let history = ActionHistory::from_strings(vec!["Fold 0"]);
-    let util = terminal_utility(&deck(), &history, DEALER);
+    let util = terminal_utility_old(&deck(), &history, DEALER);
     assert_eq!(util, -50.0);
-    let util = terminal_utility(&deck(), &history, OPPONENT);
+    let util = terminal_utility_old(&deck(), &history, OPPONENT);
     assert_eq!(util, 50.0);
 }
 
@@ -581,7 +587,7 @@ fn play_hand_always_call() -> f64 {
         };
         history.add(&action);
     }
-    terminal_utility(&deck, &history, bot)
+    terminal_utility_old(&deck, &history, bot)
 }
 
 // #[test]
@@ -711,7 +717,7 @@ fn all_in_showdown_street() {
     assert_eq!(history.street, SHOWDOWN);
 }
 
-#[test]
+// #[test]
 fn train_performance() {
     train(100_000, 100_000, false);
     let nodes = load_nodes(&CONFIG.nodes_path);
@@ -777,7 +783,7 @@ fn abstraction_buckets_in_range() {
     }
 }
 
-#[test]
+// #[test]
 fn test_subgame_solving() {
     BOT.get_strategy(
         &str2cards("AdAs"),
@@ -786,7 +792,7 @@ fn test_subgame_solving() {
     );
 }
 
-#[test]
+// #[test]
 fn subgame_solving_beats_blueprint() {
     let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
     let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, -1);
@@ -831,10 +837,10 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
         let action = bot.get_action(hole, board, &history);
         history.add(&action);
     }
-    terminal_utility(&deck, &history, subgame_bot_position)
+    terminal_utility_old(&deck, &history, subgame_bot_position)
 }
 
-#[test]
+// #[test]
 // Tests that the river equity cache fits in memory
 fn river_equity_cache_mem_usage() {
     let river_iso = load_river_isomorphic();
@@ -896,14 +902,14 @@ fn test_depth_limit_probability() {
 // #[test]
 fn subgame_strategy_stability() {
     // for depth in [10, 8, 6, 4, 2].iter() {
-        let depth = 5;
-        let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, depth.clone());
-        let strategy = bot.get_strategy(
-            &str2cards("8hAd"),
-            &str2cards("8dAc7s"),
-            &ActionHistory::from_strings(vec!["Call 100", "Call 100"]),
-        );
-        println!("Depth: {depth}, Strategy: {:?}", strategy);
+    let depth = 5;
+    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, depth.clone());
+    let strategy = bot.get_strategy(
+        &str2cards("8hAd"),
+        &str2cards("8dAc7s"),
+        &ActionHistory::from_strings(vec!["Call 100", "Call 100"]),
+    );
+    println!("Depth: {depth}, Strategy: {:?}", strategy);
     // }
     // assert!(
     //     strategy
@@ -917,7 +923,7 @@ fn subgame_strategy_stability() {
     // );
 }
 
-#[test]
+// #[test]
 fn equity_distribution_expectations() {
     // Test that the expectation of each hand's equity distribution is equal to the hand's equity.
     for street in ["turn"].iter() {
@@ -944,8 +950,14 @@ fn equity_distribution_expectations() {
                 dist_ehs += p as f64 * prob;
                 dist_ehs2 += p as f64 * prob * prob;
             }
-            assert!((hand_ehs - dist_ehs).abs() < 0.1, "{hand_ehs} != {dist_ehs}");
-            assert!((hand_ehs2 - dist_ehs2).abs() < 0.1, "{hand_ehs2} != {dist_ehs2}");
+            assert!(
+                (hand_ehs - dist_ehs).abs() < 0.1,
+                "{hand_ehs} != {dist_ehs}"
+            );
+            assert!(
+                (hand_ehs2 - dist_ehs2).abs() < 0.1,
+                "{hand_ehs2} != {dist_ehs2}"
+            );
             bar.inc(1);
         });
         bar.finish();

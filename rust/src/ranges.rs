@@ -57,26 +57,12 @@ impl Range {
             }
 
             let p = hand_likelihood(&hand);
-            // let p = strategy.get(action).expect(&format!(
-            //     "Action {} is not in strategy: {:?}",
-            //     action, strategy
-            // ));
-
             let new_prob = prob * p;
             self.probs[i] = new_prob;
         }
 
         self.normalize_range();
     }
-
-    // pub fn hand_prob(&self, hand: &[Card]) -> f64 {
-    //     let mut sorted: Vec<Card> = hand.to_vec();  // TODO: Array
-    //     sorted.sort();
-    //     *self
-    //         .range
-    //         .get(&sorted)
-    //         .expect(format!("Hand {} not found in range", cards2str(hand)).as_str())
-    // }
 
     pub fn get_map(&self) -> HashMap<Vec<Card>, f64> {
         self.hands

@@ -163,16 +163,16 @@ impl Bot {
                 current_deck.extend(rest_of_deck);
 
                 for player in [DEALER, OPPONENT].iter() {
-                    iterate(
-                        player.clone(),
-                        &current_deck,
-                        history,
-                        [1.0, 1.0],
-                        &nodes,
-                        Some(&self),
-                        Some(history.player),
-                        self.depth_limit,
-                    );
+                    // iterate(
+                    //     player.clone(),
+                    //     &current_deck,
+                    //     history,
+                    //     [1.0, 1.0],
+                    //     &nodes,
+                    //     Some(&self),
+                    //     Some(history.player),
+                    //     self.depth_limit,
+                    // );
                 }
                 bar.inc(1);
             });

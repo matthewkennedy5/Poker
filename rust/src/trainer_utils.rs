@@ -114,7 +114,7 @@ impl ActionHistory {
             // All-in action has happened
             return true;
         }
-        if self.street > RIVER {
+        if self.street > FLOP {
             // Showdown
             return true;
         }
@@ -224,8 +224,9 @@ impl ActionHistory {
             return smallvec![];
         }
         let pot = self.pot();
-            
-        let mut candidate_actions: SmallVec<[Action; NUM_ACTIONS]> = SmallVec::with_capacity(NUM_ACTIONS);
+
+        let mut candidate_actions: SmallVec<[Action; NUM_ACTIONS]> =
+            SmallVec::with_capacity(NUM_ACTIONS);
         for pot_fraction in bet_abstraction[self.street].iter() {
             let bet_size = if pot_fraction == &ALL_IN {
                 self.stacks[self.player]
@@ -482,7 +483,10 @@ fn hand_with_bucket(bucket: i32, street: usize) -> String {
 // Normalizes the values of a HashMap so that its elements sum to 1.
 pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64> {
     let sum: f64 = map.values().sum();
-    let result: HashMap<T, f64> = map.iter().map(|(key, value)| (key.clone(), value / sum)).collect();
+    let result: HashMap<T, f64> = map
+        .iter()
+        .map(|(key, value)| (key.clone(), value / sum))
+        .collect();
     result
 }
 
@@ -525,9 +529,28 @@ pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
     action
 }
 
+pub fn terminal_utility_old(deck: &[Card], history: &ActionHistory, player: usize) -> f64 {
+    let player_preflop_hand = get_hand(deck, player, PREFLOP);
+    let opp_preflop_hand = get_hand(deck, 1 - player, PREFLOP);
+    let board = &deck[4..9];
+    terminal_utility(
+        &player_preflop_hand,
+        &opp_preflop_hand,
+        board,
+        history,
+        player,
+    )
+}
+
 // Assuming history represents a terminal state (someone folded, or it's a showdown),
 // return the utility, in chips, that the given player gets.
-pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -> f64 {
+pub fn terminal_utility(
+    player_preflop_hand: &[Card],
+    opp_preflop_hand: &[Card],
+    board: &[Card],
+    history: &ActionHistory,
+    player: usize,
+) -> f64 {
     let opponent = 1 - player;
     if history.last_action().unwrap().action == ActionType::Fold {
         // Someone folded -- assign the chips to the winner.
@@ -543,10 +566,21 @@ pub fn terminal_utility(deck: &[Card], history: &ActionHistory, player: usize) -
 
     // Showdown time -- both players have contributed equally to the pot
     let pot = history.pot();
-    let player_hand = get_hand(deck, player, RIVER);
-    let opponent_hand = get_hand(deck, opponent, RIVER);
+    let player_hand = [player_preflop_hand, board].concat();
+    let opponent_hand = [opp_preflop_hand, board].concat();
     let player_strength = FAST_HAND_TABLE.hand_strength(&player_hand);
     let opponent_strength = FAST_HAND_TABLE.hand_strength(&opponent_hand);
+
+    // println!(
+    //     "Player hand   {} has strength {}",
+    //     cards2str(&player_hand),
+    //     player_strength
+    // );
+    // println!(
+    //     "Opponent hand {} has strength {}",
+    //     cards2str(&opponent_hand),
+    //     opponent_strength
+    // );
 
     if player_strength > opponent_strength {
         (pot / 2) as f64
