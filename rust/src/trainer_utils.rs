@@ -115,6 +115,7 @@ impl ActionHistory {
             return true;
         }
         if self.street > FLOP {
+            // Change to FLOP for flop holdem
             // Showdown
             return true;
         }
@@ -446,7 +447,6 @@ impl InfoSet {
 
     pub fn from_hand(hole: &[Card], board: &[Card], history: &ActionHistory) -> InfoSet {
         debug_assert!(!board.contains(&hole[0]) && !board.contains(&hole[1]));
-        debug_assert!(board.len() == board_length(history.street));
         let board = &board[..board_length(history.street)];
         let hand = [hole, board].concat();
         InfoSet {

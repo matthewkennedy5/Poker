@@ -25,7 +25,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         let bar = card_utils::pbar(eval_every);
 
         // Im trying without parallelization in order to see if thats causing the issue. but idk.
-        (0..eval_every).into_iter().for_each(|_| {
+        (0..eval_every).into_par_iter().for_each(|_| {
             cfr_iteration(&deck, &ActionHistory::new(), &nodes, -1);
             bar.inc(1);
         });
@@ -87,56 +87,70 @@ pub fn serialize_nodes(nodes: &Nodes) {
 }
 
 pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, depth_limit: i32) {
-    [DEALER, OPPONENT].iter().for_each(|&player| {
+    [DEALER, OPPONENT].iter().for_each(|&traverser| {
         let mut deck = deck.to_vec();
         deck.shuffle(&mut rand::thread_rng());
+        let opp_hand = [deck[0], deck[1]];
+        let board = [deck[2], deck[3], deck[4], deck[5], deck[6]];
+        let player_hand: [Card; 2] = [deck[7], deck[8]];
 
-        // iterate_sampled(
-        //     player,
-        //     &deck,
-        //     &ActionHistory::new(),
-        //     [1.0, 1.0],
-        //     nodes,
-        //     None,
-        //     None,
-        //     -1,
-        // );
-
-        let opp_hand = &deck[..2];
-        let board = &deck[2..7];
-
-        // TODO: Figure out a better way of getting rid of the impossible blocked preflop hands
-        let mut range = Range::new();
-        range.remove_blockers(opp_hand);
-        range.remove_blockers(board);
-        let mut preflop_hands = Vec::with_capacity(range.hands.len());
-        for hand_index in 0..range.hands.len() {
-            let prob = range.probs[hand_index];
-            if prob > 0.0 {
-                preflop_hands.push(range.hands[hand_index]);
-            }
-        }
-
-        let player_hand_probs = vec![1.0 / preflop_hands.len() as f64; preflop_hands.len()];
-        iterate_vectorized(
-            player,
-            &preflop_hands,
-            player_hand_probs,
+        iterate_sampled(
+            traverser,
+            player_hand,
             opp_hand,
-            1.0,
             board,
-            history,
-            &nodes,
+            &ActionHistory::new(),
+            [1.0, 1.0],
+            nodes,
             None,
             None,
-            depth_limit,
+            -1,
         );
+
+        // // TODO: Figure out a better way of getting rid of the impossible blocked preflop hands
+        // let mut range = Range::new();
+        // range.remove_blockers(opp_hand);
+        // range.remove_blockers(board);
+        // let mut preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(range.hands.len());
+        // for hand_index in 0..range.hands.len() {
+        //     let prob = range.probs[hand_index];
+        //     if prob > 0.0 {
+        //         preflop_hands.push(range.hands[hand_index]);
+        //     }
+        // }
+
+        // // Choose 1 random preflop hand
+        // let random_preflop_hands: Vec<[Card; 2]> = preflop_hands
+        //     .choose_multiple(&mut rand::thread_rng(), 1)
+        //     .map(|&c| c)
+        //     .collect();
+
+        // debug_assert!(random_preflop_hands.len() == 1);
+
+        // let player_hand_probs = vec![1.0; preflop_hands.len()];
+        // iterate_vectorized(
+        //     player,
+        //     // &preflop_hands,
+        //     &random_preflop_hands,
+        //     player_hand_probs,
+        //     opp_hand,
+        //     1.0,
+        //     board,
+        //     history,
+        //     &nodes,
+        //     None,
+        //     None,
+        //     depth_limit,
+        // );
     });
 }
 
 pub fn iterate_sampled(
-    player: usize,
-    deck: &[Card],
+    traverser: usize,
+    // traverser_preflop_hands: Vec<[Card; 2]>,
+    traverser_preflop_hand: [Card; 2],
+    opp_preflop_hand: [Card; 2],
+    board: [Card; 5],
     history: &ActionHistory,
     weights: [f64; 2],
     nodes: &Nodes,
@@ -144,19 +158,33 @@ pub fn iterate_sampled(
     bot_position: Option<usize>,
     remaining_depth: i32,
 ) -> f64 {
+    debug_assert!(traverser_preflop_hand.len() == 2);
+    debug_assert!(opp_preflop_hand.len() == 2);
+    debug_assert!(board.len() == 5);
     if history.hand_over() {
-        return terminal_utility_old(deck, history, player);
+        return terminal_utility(
+            &traverser_preflop_hand,
+            &opp_preflop_hand,
+            &board,
+            history,
+            traverser,
+        );
+        // return terminal_utility_old(deck, history, player);
     }
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
     let history = history.clone();
-    let mut infoset = InfoSet::from_deck(deck, &history);
+    let infoset = if history.player == traverser {
+        InfoSet::from_hand(&traverser_preflop_hand, &board, &history)
+    } else {
+        InfoSet::from_hand(&opp_preflop_hand, &board, &history)
+    };
 
-    let mut weights = weights;
-    let mut strategy = nodes.get_current_strategy(&infoset);
-    let opponent = 1 - player;
-    if history.player == player {
-        nodes.update_strategy_sum(&infoset, weights[player] as f32);
+    let weights = weights;
+    let strategy = nodes.get_current_strategy(&infoset);
+    let opponent = 1 - traverser;
+    if history.player == traverser {
+        nodes.update_strategy_sum(&infoset, weights[traverser] as f32);
     }
 
     let actions = infoset.next_actions(&nodes.bet_abstraction);
@@ -180,8 +208,10 @@ pub fn iterate_sampled(
             }
 
             let utility = iterate_sampled(
-                player,
-                deck,
+                traverser,
+                traverser_preflop_hand,
+                opp_preflop_hand,
+                board,
                 &next_history,
                 new_weights,
                 nodes,
@@ -195,7 +225,7 @@ pub fn iterate_sampled(
         .collect();
 
     // Update regrets for the traversing player
-    if history.player == player {
+    if history.player == traverser {
         for (index, utility) in utilities.iter().enumerate() {
             let regret = utility - node_utility;
             nodes.add_regret(&infoset, index, weights[opponent] * regret);

@@ -20,8 +20,8 @@ nodes_path = "products/nodes.bin"
 
 # Training
 train_iters = 10000000
-lbr_iters = 100_000
-eval_every = 100
+lbr_iters = 50_000
+eval_every = 1_000_000
 warm_start = false
 
 # Realtime solving
