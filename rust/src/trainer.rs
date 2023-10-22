@@ -92,15 +92,18 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
         deck.shuffle(&mut rand::thread_rng());
         let opp_hand = [deck[0], deck[1]];
         let board = [deck[2], deck[3], deck[4], deck[5], deck[6]];
-        let player_hand: [Card; 2] = [deck[7], deck[8]];
 
-        iterate_sampled(
+        // let player_hands: Vec<[Card; 2]> = vec![[deck[7], deck[8]], [deck[9], deck[10]]];
+        let player_hands: Vec<[Card; 2]> = vec![[deck[7], deck[8]]];
+
+        iterate(
             traverser,
-            player_hand,
+            player_hands,
             opp_hand,
             board,
             &ActionHistory::new(),
-            [1.0, 1.0],
+            1.0,
+            1.0,
             nodes,
             None,
             None,
@@ -145,46 +148,45 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
     });
 }
 
-pub fn iterate_sampled(
+pub fn iterate(
     traverser: usize,
-    // traverser_preflop_hands: Vec<[Card; 2]>,
-    traverser_preflop_hand: [Card; 2],
+    traverser_preflop_hands: Vec<[Card; 2]>,
     opp_preflop_hand: [Card; 2],
     board: [Card; 5],
     history: &ActionHistory,
-    weights: [f64; 2],
+    traverser_reach_prob: f64,
+    opp_reach_prob: f64,
     nodes: &Nodes,
     depth_limit_bot: Option<&Bot>,
     bot_position: Option<usize>,
     remaining_depth: i32,
-) -> f64 {
-    debug_assert!(traverser_preflop_hand.len() == 2);
+) -> Vec<f64> {
     debug_assert!(opp_preflop_hand.len() == 2);
     debug_assert!(board.len() == 5);
     if history.hand_over() {
-        return terminal_utility(
-            &traverser_preflop_hand,
+        let util = terminal_utility(
+            &traverser_preflop_hands[0],
             &opp_preflop_hand,
             &board,
             history,
             traverser,
         );
+        return vec![util];
         // return terminal_utility_old(deck, history, player);
     }
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
     let history = history.clone();
     let infoset = if history.player == traverser {
-        InfoSet::from_hand(&traverser_preflop_hand, &board, &history)
+        InfoSet::from_hand(&traverser_preflop_hands[0], &board, &history)
     } else {
         InfoSet::from_hand(&opp_preflop_hand, &board, &history)
     };
 
-    let weights = weights;
     let strategy = nodes.get_current_strategy(&infoset);
     let opponent = 1 - traverser;
     if history.player == traverser {
-        nodes.update_strategy_sum(&infoset, weights[traverser] as f32);
+        nodes.update_strategy_sum(&infoset, traverser_reach_prob as f32);
     }
 
     let actions = infoset.next_actions(&nodes.bet_abstraction);
@@ -197,30 +199,33 @@ pub fn iterate_sampled(
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
 
-            let new_weights = match history.player {
-                0 => [weights[0] * prob, weights[1]],
-                1 => [weights[0], weights[1] * prob],
-                _ => panic!("Bad player value"),
-            };
+            let mut traverser_reach_prob = traverser_reach_prob;
+            let mut opp_reach_prob = opp_reach_prob;
+            if history.player == traverser {
+                traverser_reach_prob *= prob;
+            } else {
+                opp_reach_prob *= prob;
+            }
 
-            if weights[0] < 1e-10 && weights[1] < 1e-10 {
+            if traverser_reach_prob < 1e-10 && opp_reach_prob < 1e-10 {
                 return 0.0;
             }
 
-            let utility = iterate_sampled(
+            let utility = iterate(
                 traverser,
-                traverser_preflop_hand,
+                traverser_preflop_hands.clone(),
                 opp_preflop_hand,
                 board,
                 &next_history,
-                new_weights,
+                traverser_reach_prob,
+                opp_reach_prob,
                 nodes,
                 depth_limit_bot,
                 bot_position,
                 remaining_depth - 1,
             );
-            node_utility += prob * utility;
-            utility
+            node_utility += prob * utility[0];
+            utility[0]
         })
         .collect();
 
@@ -228,141 +233,141 @@ pub fn iterate_sampled(
     if history.player == traverser {
         for (index, utility) in utilities.iter().enumerate() {
             let regret = utility - node_utility;
-            nodes.add_regret(&infoset, index, weights[opponent] * regret);
+            nodes.add_regret(&infoset, index, opp_reach_prob * regret);
         }
     }
-    node_utility
+    vec![node_utility]
 }
 
-pub fn iterate_vectorized(
-    traverser: usize,
-    preflop_hands: &[[Card; 2]],
-    traverser_hand_probs: Vec<f64>,
-    opp_hand: &[Card],
-    opp_hand_prob: f64,
-    board: &[Card],
-    history: &ActionHistory,
-    nodes: &Nodes,
-    depth_limit_bot: Option<&Bot>,
-    bot_position: Option<usize>,
-    remaining_depth: i32,
-) -> Vec<f64> {
-    if history.hand_over() {
-        // TODO: You could also vectorize terminal_utility itself if that's faster
-        // let mut terminal_utils = [0.0; 1326];
-        // for i in 0..preflop_hands.len() {
-        //     terminal_utils[i] =
-        //         terminal_utility(&preflop_hands[i], opp_hand, board, history, traverser);
-        // }
-        // return terminal_utils;
+// pub fn iterate_vectorized(
+//     traverser: usize,
+//     preflop_hands: &[[Card; 2]],
+//     traverser_hand_probs: Vec<f64>,
+//     opp_hand: &[Card],
+//     opp_hand_prob: f64,
+//     board: &[Card],
+//     history: &ActionHistory,
+//     nodes: &Nodes,
+//     depth_limit_bot: Option<&Bot>,
+//     bot_position: Option<usize>,
+//     remaining_depth: i32,
+// ) -> Vec<f64> {
+//     if history.hand_over() {
+//         // TODO: You could also vectorize terminal_utility itself if that's faster
+//         // let mut terminal_utils = [0.0; 1326];
+//         // for i in 0..preflop_hands.len() {
+//         //     terminal_utils[i] =
+//         //         terminal_utility(&preflop_hands[i], opp_hand, board, history, traverser);
+//         // }
+//         // return terminal_utils;
 
-        let terminal_utils: Vec<f64> = preflop_hands
-            .iter()
-            .map(|&h| {
-                // if traverser == DEALER {
-                terminal_utility(&h, opp_hand, board, history, traverser)
-                // } else {
-                // terminal_utility(&opp_hand, &h, board, history, traverser)
-                // }
-            })
-            .collect();
-        return terminal_utils;
-    }
+//         let terminal_utils: Vec<f64> = preflop_hands
+//             .iter()
+//             .map(|&h| {
+//                 // if traverser == DEALER {
+//                 terminal_utility(&h, opp_hand, board, history, traverser)
+//                 // } else {
+//                 // terminal_utility(&opp_hand, &h, board, history, traverser)
+//                 // }
+//             })
+//             .collect();
+//         return terminal_utils;
+//     }
 
-    // Look up the DCFR node for this information set, or make a new one if it
-    // doesn't exist
-    let mut infosets: Vec<InfoSet> = Vec::with_capacity(preflop_hands.len());
-    let mut strategies: Vec<SmallVecFloats> = Vec::with_capacity(preflop_hands.len());
-    for i in 0..preflop_hands.len() {
-        let player_hand = preflop_hands[i];
-        let infoset = InfoSet::from_hand(
-            &player_hand,
-            &board[..board_length(history.street)],
-            history,
-        );
-        let strategy = nodes.get_current_strategy(&infoset);
-        infosets.push(infoset.clone());
-        strategies.push(strategy);
-        if history.player == traverser {
-            let actions = history.get_actions();
-            nodes.update_strategy_sum(&infoset, traverser_hand_probs[i] as f32);
-            // TODO: maybe rename player_hand_probs to player_reach_probs or something
-        }
-    }
+//     // Look up the DCFR node for this information set, or make a new one if it
+//     // doesn't exist
+//     let mut infosets: Vec<InfoSet> = Vec::with_capacity(preflop_hands.len());
+//     let mut strategies: Vec<SmallVecFloats> = Vec::with_capacity(preflop_hands.len());
+//     for i in 0..preflop_hands.len() {
+//         let player_hand = preflop_hands[i];
+//         let infoset = InfoSet::from_hand(
+//             &player_hand,
+//             &board[..board_length(history.street)],
+//             history,
+//         );
+//         let strategy = nodes.get_current_strategy(&infoset);
+//         infosets.push(infoset.clone());
+//         strategies.push(strategy);
+//         if history.player == traverser {
+//             let actions = history.get_actions();
+//             nodes.update_strategy_sum(&infoset, traverser_hand_probs[i] as f32);
+//             // TODO: maybe rename player_hand_probs to player_reach_probs or something
+//         }
+//     }
 
-    // For opponent chance sampling, we only have infoset and strategy if its the opponents turn.
-    // This is ugly but will go away when we vectorize the opponent.
-    let opponent = 1 - traverser;
-    // let mut infoset: Option<InfoSet> = None;
-    let mut strategy: Option<SmallVecFloats> = None;
-    if history.player == opponent {
-        let infoset_val =
-            InfoSet::from_hand(&opp_hand, &board[..board_length(history.street)], history);
-        // infoset = Some(infoset_val.clone());
-        strategy = Some(nodes.get_current_strategy(&infoset_val));
-    }
+//     // For opponent chance sampling, we only have infoset and strategy if its the opponents turn.
+//     // This is ugly but will go away when we vectorize the opponent.
+//     let opponent = 1 - traverser;
+//     // let mut infoset: Option<InfoSet> = None;
+//     let mut strategy: Option<SmallVecFloats> = None;
+//     if history.player == opponent {
+//         let infoset_val =
+//             InfoSet::from_hand(&opp_hand, &board[..board_length(history.street)], history);
+//         // infoset = Some(infoset_val.clone());
+//         strategy = Some(nodes.get_current_strategy(&infoset_val));
+//     }
 
-    let actions = history.next_actions(&nodes.bet_abstraction);
-    // let mut node_utility = 0.0;
-    let mut node_utilities: Vec<f64> = vec![0.0; preflop_hands.len()];
-    // Recurse to further nodes in the game tree. Find the utilities for each action.
-    // TODO: Maybe just use arrays everywhere instead of SmallVec. I think you often know the size of things
-    let utilities: Vec<Vec<f64>> = (0..actions.len())
-        .map(|i| {
-            let mut next_history = history.clone();
-            next_history.add(&actions[i]);
+//     let actions = history.next_actions(&nodes.bet_abstraction);
+//     // let mut node_utility = 0.0;
+//     let mut node_utilities: Vec<f64> = vec![0.0; preflop_hands.len()];
+//     // Recurse to further nodes in the game tree. Find the utilities for each action.
+//     // TODO: Maybe just use arrays everywhere instead of SmallVec. I think you often know the size of things
+//     let utilities: Vec<Vec<f64>> = (0..actions.len())
+//         .map(|i| {
+//             let mut next_history = history.clone();
+//             next_history.add(&actions[i]);
 
-            // Update the player reach probabilities based on the probability of this action for each
-            // possible player hand
-            let mut new_player_probs = traverser_hand_probs.clone();
-            let mut new_opp_hand_prob = opp_hand_prob.clone();
-            if history.player == traverser {
-                for hand_index in 0..preflop_hands.len() {
-                    new_player_probs[hand_index] *= strategies[hand_index][i] as f64;
-                }
-            } else {
-                new_opp_hand_prob *= strategy.clone().unwrap()[i] as f64;
-            }
+//             // Update the player reach probabilities based on the probability of this action for each
+//             // possible player hand
+//             let mut new_player_probs = traverser_hand_probs.clone();
+//             let mut new_opp_hand_prob = opp_hand_prob.clone();
+//             if history.player == traverser {
+//                 for hand_index in 0..preflop_hands.len() {
+//                     new_player_probs[hand_index] *= strategies[hand_index][i] as f64;
+//                 }
+//             } else {
+//                 new_opp_hand_prob *= strategy.clone().unwrap()[i] as f64;
+//             }
 
-            // Not sure how to handle pruning for this. Not sure you can in the same way
-            // if weights[0] < 1e-10 && weights[1] < 1e-10 {
-            //     return 0.0;
-            // }
+//             // Not sure how to handle pruning for this. Not sure you can in the same way
+//             // if weights[0] < 1e-10 && weights[1] < 1e-10 {
+//             //     return 0.0;
+//             // }
 
-            let u = iterate_vectorized(
-                traverser,
-                preflop_hands,
-                new_player_probs,
-                opp_hand,
-                new_opp_hand_prob,
-                board,
-                &next_history,
-                nodes,
-                depth_limit_bot,
-                bot_position,
-                remaining_depth - 1,
-            );
-            for hand_index in 0..preflop_hands.len() {
-                let prob = strategies[hand_index][i] as f64;
-                let utility = u[hand_index] as f64;
-                node_utilities[hand_index] += prob * utility;
-            }
+//             let u = iterate_vectorized(
+//                 traverser,
+//                 preflop_hands,
+//                 new_player_probs,
+//                 opp_hand,
+//                 new_opp_hand_prob,
+//                 board,
+//                 &next_history,
+//                 nodes,
+//                 depth_limit_bot,
+//                 bot_position,
+//                 remaining_depth - 1,
+//             );
+//             for hand_index in 0..preflop_hands.len() {
+//                 let prob = strategies[hand_index][i] as f64;
+//                 let utility = u[hand_index] as f64;
+//                 node_utilities[hand_index] += prob * utility;
+//             }
 
-            u
-        })
-        .collect();
+//             u
+//         })
+//         .collect();
 
-    // Update regrets for the traversing player
-    if history.player == traverser {
-        for (action_index, u) in utilities.iter().enumerate() {
-            for hand_index in 0..preflop_hands.len() {
-                let regret = u[hand_index] - node_utilities[hand_index];
-                nodes.add_regret(&infosets[hand_index], action_index, opp_hand_prob * regret);
-            }
-        }
-    }
-    node_utilities
-}
+//     // Update regrets for the traversing player
+//     if history.player == traverser {
+//         for (action_index, u) in utilities.iter().enumerate() {
+//             for hand_index in 0..preflop_hands.len() {
+//                 let regret = u[hand_index] - node_utilities[hand_index];
+//                 nodes.add_regret(&infosets[hand_index], action_index, opp_hand_prob * regret);
+//             }
+//         }
+//     }
+//     node_utilities
+// }
 
 // Implements Depth Limited Solving - at the depth limit, instead of choosing an action to play, the
 // opponent chooses a strategy to play until the end of the hand. This gives a good estimate of the
