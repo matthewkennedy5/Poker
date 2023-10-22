@@ -25,7 +25,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         let bar = card_utils::pbar(eval_every);
 
         // Im trying without parallelization in order to see if thats causing the issue. but idk.
-        (0..eval_every).into_par_iter().for_each(|_| {
+        (0..eval_every).into_iter().for_each(|_| {
             cfr_iteration(&deck, &ActionHistory::new(), &nodes, -1);
             bar.inc(1);
         });
@@ -34,6 +34,11 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
 
         let infoset = InfoSet::from_hand(&str2cards("7c2d"), &Vec::new(), &ActionHistory::new());
+        // let infoset = InfoSet::from_hand(
+        //     &str2cards("7c2d"),
+        //     &str2cards("AdJc7h9d2d"),
+        //     &ActionHistory::from_strings(vec!["Bet 300", "Call 300", "Call 0"]),
+        // );
         println!("InfoSet: {infoset}");
         println!(
             "Actions: {:?}",
@@ -41,13 +46,27 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         );
         println!("Node: {:?}", nodes.get(&infoset));
 
-        let infoset = InfoSet::from_hand(&str2cards("AcAd"), &Vec::new(), &ActionHistory::new());
-        println!("InfoSet: {infoset}");
-        println!(
-            "Actions: {:?}",
-            infoset.next_actions(&CONFIG.bet_abstraction)
-        );
-        println!("Node: {:?}", nodes.get(&infoset));
+        // Check what percent of nodes have t = 0
+        let mut zero = 0;
+        let mut total = 0;
+        for reference in &nodes.dashmap {
+            let history_nodes = reference.lock().unwrap();
+            for n in history_nodes.iter() {
+                total += 1;
+                if n.t == 0 {
+                    zero += 1;
+                }
+            }
+        }
+        println!("Fraction zeros: {}", zero as f64 / total as f64);
+
+        // let infoset = InfoSet::from_hand(&str2cards("AcAd"), &Vec::new(), &ActionHistory::new());
+        // println!("InfoSet: {infoset}");
+        // println!(
+        //     "Actions: {:?}",
+        //     infoset.next_actions(&CONFIG.bet_abstraction)
+        // );
+        // println!("Node: {:?}", nodes.get(&infoset));
     }
     println!("{} nodes reached.", nodes.len());
 }
@@ -71,6 +90,18 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
     [DEALER, OPPONENT].iter().for_each(|&player| {
         let mut deck = deck.to_vec();
         deck.shuffle(&mut rand::thread_rng());
+
+        // iterate_sampled(
+        //     player,
+        //     &deck,
+        //     &ActionHistory::new(),
+        //     [1.0, 1.0],
+        //     nodes,
+        //     None,
+        //     None,
+        //     -1,
+        // );
+
         let opp_hand = &deck[..2];
         let board = &deck[2..7];
 
@@ -86,8 +117,8 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
             }
         }
 
-        let player_hand_probs = vec![1.0; preflop_hands.len()];
-        iterate(
+        let player_hand_probs = vec![1.0 / preflop_hands.len() as f64; preflop_hands.len()];
+        iterate_vectorized(
             player,
             &preflop_hands,
             player_hand_probs,
@@ -103,7 +134,77 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
     });
 }
 
-pub fn iterate(
+pub fn iterate_sampled(
+    player: usize,
+    deck: &[Card],
+    history: &ActionHistory,
+    weights: [f64; 2],
+    nodes: &Nodes,
+    depth_limit_bot: Option<&Bot>,
+    bot_position: Option<usize>,
+    remaining_depth: i32,
+) -> f64 {
+    if history.hand_over() {
+        return terminal_utility_old(deck, history, player);
+    }
+    // Look up the DCFR node for this information set, or make a new one if it
+    // doesn't exist
+    let history = history.clone();
+    let mut infoset = InfoSet::from_deck(deck, &history);
+
+    let mut weights = weights;
+    let mut strategy = nodes.get_current_strategy(&infoset);
+    let opponent = 1 - player;
+    if history.player == player {
+        nodes.update_strategy_sum(&infoset, weights[player] as f32);
+    }
+
+    let actions = infoset.next_actions(&nodes.bet_abstraction);
+    let mut node_utility = 0.0;
+    // Recurse to further nodes in the game tree. Find the utilities for each action.
+    let utilities: Vec<f64> = (0..actions.len())
+        .map(|i| {
+            let prob = strategy[i] as f64;
+
+            let mut next_history = history.clone();
+            next_history.add(&actions[i]);
+
+            let new_weights = match history.player {
+                0 => [weights[0] * prob, weights[1]],
+                1 => [weights[0], weights[1] * prob],
+                _ => panic!("Bad player value"),
+            };
+
+            if weights[0] < 1e-10 && weights[1] < 1e-10 {
+                return 0.0;
+            }
+
+            let utility = iterate_sampled(
+                player,
+                deck,
+                &next_history,
+                new_weights,
+                nodes,
+                depth_limit_bot,
+                bot_position,
+                remaining_depth - 1,
+            );
+            node_utility += prob * utility;
+            utility
+        })
+        .collect();
+
+    // Update regrets for the traversing player
+    if history.player == player {
+        for (index, utility) in utilities.iter().enumerate() {
+            let regret = utility - node_utility;
+            nodes.add_regret(&infoset, index, weights[opponent] * regret);
+        }
+    }
+    node_utility
+}
+
+pub fn iterate_vectorized(
     traverser: usize,
     preflop_hands: &[[Card; 2]],
     traverser_hand_probs: Vec<f64>,
@@ -128,17 +229,11 @@ pub fn iterate(
         let terminal_utils: Vec<f64> = preflop_hands
             .iter()
             .map(|&h| {
-                let u = terminal_utility(&h, opp_hand, board, history, traverser);
-                // println!(
-                //     "Hand: {}, Opp Hand: {}, Board: {}, History: {}, Traverser: {}",
-                //     cards2str(&h),
-                //     cards2str(opp_hand),
-                //     cards2str(board),
-                //     history,
-                //     traverser
-                // );
-                // println!("Terminal Utility: {u}");
-                u
+                // if traverser == DEALER {
+                terminal_utility(&h, opp_hand, board, history, traverser)
+                // } else {
+                // terminal_utility(&opp_hand, &h, board, history, traverser)
+                // }
             })
             .collect();
         return terminal_utils;
@@ -159,6 +254,7 @@ pub fn iterate(
         infosets.push(infoset.clone());
         strategies.push(strategy);
         if history.player == traverser {
+            let actions = history.get_actions();
             nodes.update_strategy_sum(&infoset, traverser_hand_probs[i] as f32);
             // TODO: maybe rename player_hand_probs to player_reach_probs or something
         }
@@ -203,7 +299,7 @@ pub fn iterate(
             //     return 0.0;
             // }
 
-            let u = iterate(
+            let u = iterate_vectorized(
                 traverser,
                 preflop_hands,
                 new_player_probs,
@@ -217,8 +313,9 @@ pub fn iterate(
                 remaining_depth - 1,
             );
             for hand_index in 0..preflop_hands.len() {
-                node_utilities[hand_index] +=
-                    strategies[hand_index][i] as f64 * u[hand_index] as f64;
+                let prob = strategies[hand_index][i] as f64;
+                let utility = u[hand_index] as f64;
+                node_utilities[hand_index] += prob * utility;
             }
 
             u

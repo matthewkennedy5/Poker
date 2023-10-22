@@ -6,7 +6,7 @@ fn main() {
     // create_abstraction_clusters();
     // print_abstraction();
 
-    // If the abstraction file doesn't exist, we want to first create the 
+    // If the abstraction file doesn't exist, we want to first create the
     // abstraction before the Lazy cell is called, because the Lazy initializer
     // prevents parallelization
     if !Path::new(FLOP_ABSTRACTION_PATH).exists() {
@@ -22,4 +22,3 @@ fn main() {
     train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
     // bucket_sizes();
 }
-
