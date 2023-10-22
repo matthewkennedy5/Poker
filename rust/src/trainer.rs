@@ -34,11 +34,6 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
 
         let infoset = InfoSet::from_hand(&str2cards("7c2d"), &Vec::new(), &ActionHistory::new());
-        // let infoset = InfoSet::from_hand(
-        //     &str2cards("7c2d"),
-        //     &str2cards("AdJc7h9d2d"),
-        //     &ActionHistory::from_strings(vec!["Bet 300", "Call 300", "Call 0"]),
-        // );
         println!("InfoSet: {infoset}");
         println!(
             "Actions: {:?}",
@@ -93,8 +88,23 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
         let opp_hand = [deck[0], deck[1]];
         let board = [deck[2], deck[3], deck[4], deck[5], deck[6]];
 
-        let player_hands: Vec<[Card; 2]> = vec![[deck[7], deck[8]], [deck[9], deck[10]]];
-        // let player_hands: Vec<[Card; 2]> = vec![[deck[7], deck[8]]];
+        // let player_hands: Vec<[Card; 2]> = vec![[deck[7], deck[8]], [deck[9], deck[10]]];
+        // let mut player_hands: Vec<[Card; 2]> = Vec::with_capacity(30);
+        // for i in (7..51).step_by(2) {
+        //     player_hands.push([deck[i], deck[i + 1]]);
+        // }
+
+        let mut range = Range::new();
+        range.remove_blockers(&opp_hand);
+        range.remove_blockers(&board);
+        let mut player_hands = Vec::with_capacity(range.hands.len());
+        for hand_index in 0..range.hands.len() {
+            let prob = range.probs[hand_index];
+            if prob > 0.0 {
+                player_hands.push(range.hands[hand_index]);
+            }
+        }
+
         let traverser_reach_probs = vec![1.0; player_hands.len()];
 
         iterate(
@@ -110,42 +120,6 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
             None,
             -1,
         );
-
-        // // TODO: Figure out a better way of getting rid of the impossible blocked preflop hands
-        // let mut range = Range::new();
-        // range.remove_blockers(opp_hand);
-        // range.remove_blockers(board);
-        // let mut preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(range.hands.len());
-        // for hand_index in 0..range.hands.len() {
-        //     let prob = range.probs[hand_index];
-        //     if prob > 0.0 {
-        //         preflop_hands.push(range.hands[hand_index]);
-        //     }
-        // }
-
-        // // Choose 1 random preflop hand
-        // let random_preflop_hands: Vec<[Card; 2]> = preflop_hands
-        //     .choose_multiple(&mut rand::thread_rng(), 1)
-        //     .map(|&c| c)
-        //     .collect();
-
-        // debug_assert!(random_preflop_hands.len() == 1);
-
-        // let player_hand_probs = vec![1.0; preflop_hands.len()];
-        // iterate_vectorized(
-        //     player,
-        //     // &preflop_hands,
-        //     &random_preflop_hands,
-        //     player_hand_probs,
-        //     opp_hand,
-        //     1.0,
-        //     board,
-        //     history,
-        //     &nodes,
-        //     None,
-        //     None,
-        //     depth_limit,
-        // );
     });
 }
 
