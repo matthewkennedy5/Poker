@@ -29,7 +29,6 @@ dashmap = { version = "*", features = ["serde"] }
 
 [profile.release]
 debug = true
-debug-assertions = false
 
 [profile.dev]
 opt-level = 1
