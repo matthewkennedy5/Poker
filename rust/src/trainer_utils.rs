@@ -114,7 +114,7 @@ impl ActionHistory {
             // All-in action has happened
             return true;
         }
-        if self.street > RIVER {
+        if self.street > FLOP {
             // Change to FLOP for flop holdem
             // Showdown
             return true;
