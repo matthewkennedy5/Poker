@@ -98,8 +98,17 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
         }
         let opp_hands = player_hands.clone();
 
-        let traverser_reach_probs = vec![1.0; player_hands.len()];
-        let opp_reach_probs = traverser_reach_probs.clone();
+        let mut traverser_reach_probs = vec![1.0; player_hands.len()];
+        // let opp_reach_probs = traverser_reach_probs.clone();
+
+        // Test - let's try sampling a single opponent hand to have a prob of 1.0, all other hands have
+        // a prob of 0.0. This should work and give the same behavior, unless there's a bug just with
+        // the implementation code, not the logic. Or something.
+        let mut opp_reach_probs = vec![0.0; player_hands.len()];
+        let rand_index: usize = rand::thread_rng().gen_range(0..opp_reach_probs.len());
+        opp_reach_probs[rand_index] = 1.0;
+        // Remove the blocker from the traverser
+        traverser_reach_probs[rand_index] = 0.0;
 
         iterate(
             traverser,
@@ -142,7 +151,8 @@ pub fn iterate(
                 for i in 0..N {
                     let opp_hand = preflop_hands[i];
                     let opp_prob = opp_reach_probs[i];
-                    if traverser_hand.contains(&opp_hand[0])
+                    if opp_prob < 1e-10
+                        || traverser_hand.contains(&opp_hand[0])
                         || traverser_hand.contains(&opp_hand[1])
                     {
                         continue;
@@ -152,7 +162,7 @@ pub fn iterate(
                         * terminal_utility(traverser_hand, &opp_hand, &board, history, traverser);
                     n += 1;
                 }
-                let avg_util = total_util / n as f64;
+                let avg_util = if n > 0 { total_util / n as f64 } else { 0.0 };
                 avg_util
             })
             .collect();
