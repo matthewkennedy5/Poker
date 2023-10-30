@@ -86,6 +86,7 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
         let mut deck = deck.to_vec();
         deck.shuffle(&mut rand::thread_rng());
         let opp_hand = [deck[0], deck[1]];
+        let opp_hands = vec![opp_hand];
         let board = [deck[2], deck[3], deck[4], deck[5], deck[6]];
 
         // let player_hands: Vec<[Card; 2]> = vec![[deck[7], deck[8]], [deck[9], deck[10]]];
@@ -106,15 +107,16 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
         }
 
         let traverser_reach_probs = vec![1.0; player_hands.len()];
+        let opp_reach_probs = vec![1.0];
 
         iterate(
             traverser,
             player_hands,
-            opp_hand,
+            opp_hands,
             board,
             &ActionHistory::new(),
             traverser_reach_probs,
-            1.0,
+            opp_reach_probs,
             nodes,
             None,
             None,
@@ -126,23 +128,22 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
 pub fn iterate(
     traverser: usize,
     traverser_preflop_hands: Vec<[Card; 2]>,
-    opp_preflop_hand: [Card; 2],
+    opp_preflop_hands: Vec<[Card; 2]>,
     board: [Card; 5],
     history: &ActionHistory,
     traverser_reach_probs: Vec<f64>,
-    opp_reach_prob: f64,
+    opp_reach_probs: Vec<f64>,
     nodes: &Nodes,
     depth_limit_bot: Option<&Bot>,
     bot_position: Option<usize>,
     remaining_depth: i32,
 ) -> Vec<f64> {
-    debug_assert!(opp_preflop_hand.len() == 2);
     debug_assert!(board.len() == 5);
     let N = traverser_preflop_hands.len();
     if history.hand_over() {
         let utils: Vec<f64> = traverser_preflop_hands
             .iter()
-            .map(|h| terminal_utility(h, &opp_preflop_hand, &board, history, traverser))
+            .map(|h| terminal_utility(h, &opp_preflop_hands[0], &board, history, traverser))
             .collect();
         return utils;
     }
@@ -155,7 +156,7 @@ pub fn iterate(
             .map(|h| InfoSet::from_hand(h, &board, &history))
             .collect()
     } else {
-        vec![InfoSet::from_hand(&opp_preflop_hand, &board, &history)]
+        vec![InfoSet::from_hand(&opp_preflop_hands[0], &board, &history)]
     };
 
     let strategies: Vec<SmallVecFloats> = infosets
@@ -183,7 +184,7 @@ pub fn iterate(
             next_history.add(&actions[i]);
 
             let mut traverser_reach_probs = traverser_reach_probs.clone();
-            let mut opp_reach_prob = opp_reach_prob;
+            let mut opp_reach_prob = opp_reach_probs[0];
             if history.player == traverser {
                 for i in 0..N {
                     traverser_reach_probs[i] *= probs[i] as f64;
@@ -200,11 +201,11 @@ pub fn iterate(
             let utility: Vec<f64> = iterate(
                 traverser,
                 traverser_preflop_hands.clone(),
-                opp_preflop_hand,
+                opp_preflop_hands.clone(),
                 board,
                 &next_history,
                 traverser_reach_probs,
-                opp_reach_prob,
+                vec![opp_reach_prob],
                 nodes,
                 depth_limit_bot,
                 bot_position,
@@ -230,7 +231,7 @@ pub fn iterate(
         for (action_idx, action_utility) in action_utilities.iter().enumerate() {
             for (hand_idx, utility) in action_utility.iter().enumerate() {
                 let regret = utility - node_utility[hand_idx];
-                nodes.add_regret(&infosets[hand_idx], action_idx, opp_reach_prob * regret);
+                nodes.add_regret(&infosets[hand_idx], action_idx, opp_reach_probs[0] * regret);
             }
         }
     }
