@@ -139,14 +139,19 @@ pub fn iterate(
     remaining_depth: i32,
 ) -> Vec<f64> {
     debug_assert!(board.len() == 5);
+    debug_assert!(opp_preflop_hands.len() == opp_reach_probs.len());
     let N = traverser_preflop_hands.len();
     if history.hand_over() {
         let utils: Vec<f64> = traverser_preflop_hands
             .iter()
             .map(|h| {
                 let mut total_util = 0.0;
-                for opp_hand in opp_preflop_hands.clone() {
-                    total_util += terminal_utility(h, &opp_hand, &board, history, traverser);
+                // for opp_hand in opp_preflop_hands.clone() {
+                for i in 0..opp_preflop_hands.len() {
+                    let opp_hand = opp_preflop_hands[i];
+                    let opp_prob = opp_reach_probs[i];
+                    total_util +=
+                        opp_prob * terminal_utility(h, &opp_hand, &board, history, traverser);
                 }
                 total_util / opp_preflop_hands.len() as f64
             })
@@ -230,8 +235,9 @@ pub fn iterate(
                 } else {
                     // The opponent's probably of taking this action is the average of probabilities
                     // across the possible hands they could have. (weighting by reach prob?) hmm. no?
-                    let sum: f32 = probs.iter().sum();
-                    sum / probs.len() as f32
+                    // let sum: f32 = probs.iter().sum();
+                    // sum / probs.len() as f32
+                    1.0
                 };
                 // prob[n] should sum to 1 over all player actions
                 node_utility[n] += prob as f64 * utility[n];
@@ -250,7 +256,7 @@ pub fn iterate(
         for (action_idx, action_utility) in action_utilities.iter().enumerate() {
             for (hand_idx, utility) in action_utility.iter().enumerate() {
                 let regret = utility - node_utility[hand_idx];
-                nodes.add_regret(&infosets[hand_idx], action_idx, avg_opp_reach_prob * regret);
+                nodes.add_regret(&infosets[hand_idx], action_idx, regret);
             }
         }
     }
