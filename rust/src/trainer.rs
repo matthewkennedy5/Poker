@@ -86,36 +86,22 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
         let mut deck = deck.to_vec();
         deck.shuffle(&mut rand::thread_rng());
         let board = [deck[0], deck[1], deck[2], deck[3], deck[4]];
-        let mut opp_hands: Vec<[Card; 2]> = Vec::with_capacity(30);
-        for i in (5..31).step_by(2) {
-            opp_hands.push([deck[i], deck[i + 1]]);
-        }
-
-        // let player_hands: Vec<[Card; 2]> = vec![[deck[7], deck[8]], [deck[9], deck[10]]];
-        // let mut player_hands: Vec<[Card; 2]> = Vec::with_capacity(30);
-        // for i in (7..51).step_by(2) {
-        //     player_hands.push([deck[i], deck[i + 1]]);
-        // }
-
         let mut range = Range::new();
-        range.remove_blockers(&opp_hands[0]);
-        range.remove_blockers(&opp_hands[1]);
         range.remove_blockers(&board);
-        let mut player_hands = Vec::with_capacity(range.hands.len());
+        let mut preflop_hands = Vec::with_capacity(range.hands.len());
         for hand_index in 0..range.hands.len() {
             let prob = range.probs[hand_index];
             if prob > 0.0 {
-                player_hands.push(range.hands[hand_index]);
+                preflop_hands.push(range.hands[hand_index]);
             }
         }
 
-        let traverser_reach_probs = vec![1.0; player_hands.len()];
-        let opp_reach_probs = vec![1.0; opp_hands.len()];
+        let traverser_reach_probs = vec![1.0; preflop_hands.len()];
+        let opp_reach_probs = vec![1.0; preflop_hands.len()];
 
         iterate(
             traverser,
-            player_hands,
-            opp_hands,
+            preflop_hands,
             board,
             &ActionHistory::new(),
             traverser_reach_probs,
@@ -130,8 +116,7 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
 
 pub fn iterate(
     traverser: usize,
-    traverser_preflop_hands: Vec<[Card; 2]>,
-    opp_preflop_hands: Vec<[Card; 2]>,
+    preflop_hands: Vec<[Card; 2]>,
     board: [Card; 5],
     history: &ActionHistory,
     traverser_reach_probs: Vec<f64>,
@@ -141,22 +126,25 @@ pub fn iterate(
     bot_position: Option<usize>,
     remaining_depth: i32,
 ) -> Vec<f64> {
-    debug_assert!(board.len() == 5);
-    debug_assert!(opp_preflop_hands.len() == opp_reach_probs.len());
-    let N = traverser_preflop_hands.len();
+    let N = preflop_hands.len();
+    assert!(opp_reach_probs.len() == N);
+    assert!(traverser_reach_probs.len() == N);
     if history.hand_over() {
-        let utils: Vec<f64> = traverser_preflop_hands
+        let utils: Vec<f64> = preflop_hands
             .iter()
             .map(|h| {
                 let mut total_util = 0.0;
-                // for opp_hand in opp_preflop_hands.clone() {
-                for i in 0..opp_preflop_hands.len() {
-                    let opp_hand = opp_preflop_hands[i];
+
+                for i in 0..preflop_hands.len() {
+                    let opp_hand = preflop_hands[i];
+                    if h.contains(&opp_hand[0]) || h.contains(&opp_hand[1]) {
+                        continue;
+                    }
                     let opp_prob = opp_reach_probs[i];
                     total_util +=
                         opp_prob * terminal_utility(h, &opp_hand, &board, history, traverser);
                 }
-                total_util / opp_preflop_hands.len() as f64
+                total_util / preflop_hands.len() as f64
             })
             .collect();
         return utils;
@@ -165,12 +153,12 @@ pub fn iterate(
     // doesn't exist
     let history = history.clone();
     let infosets: Vec<InfoSet> = if history.player == traverser {
-        traverser_preflop_hands
+        preflop_hands
             .iter()
             .map(|h| InfoSet::from_hand(h, &board, &history))
             .collect()
     } else {
-        opp_preflop_hands
+        preflop_hands
             .iter()
             .map(|h| InfoSet::from_hand(h, &board, &history))
             .collect()
@@ -220,8 +208,7 @@ pub fn iterate(
 
             let utility: Vec<f64> = iterate(
                 traverser,
-                traverser_preflop_hands.clone(),
-                opp_preflop_hands.clone(),
+                preflop_hands.clone(),
                 board,
                 &next_history,
                 traverser_reach_probs,
@@ -236,22 +223,13 @@ pub fn iterate(
                 let prob: f32 = if history.player == traverser {
                     probs[n]
                 } else {
-                    // The opponent's probably of taking this action is the average of probabilities
-                    // across the possible hands they could have. (weighting by reach prob?) hmm. no?
-                    // let sum: f32 = probs.iter().sum();
-                    // sum / probs.len() as f32
                     1.0
                 };
-                // prob[n] should sum to 1 over all player actions
                 node_utility[n] += prob as f64 * utility[n];
             }
             utility
         })
         .collect();
-
-    let opp_reach_probs_sum: f64 = opp_reach_probs.iter().sum();
-    // Might be some weird detail here with blockers
-    let avg_opp_reach_prob: f64 = opp_reach_probs_sum / N as f64;
 
     // Update regrets for the traversing player
     if history.player == traverser {
