@@ -85,8 +85,11 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
     [DEALER, OPPONENT].iter().for_each(|&traverser| {
         let mut deck = deck.to_vec();
         deck.shuffle(&mut rand::thread_rng());
-        let opp_hands = vec![[deck[0], deck[1]], [deck[2], deck[3]]];
-        let board = [deck[4], deck[5], deck[6], deck[7], deck[8]];
+        let board = [deck[0], deck[1], deck[2], deck[3], deck[4]];
+        let mut opp_hands: Vec<[Card; 2]> = Vec::with_capacity(30);
+        for i in (5..31).step_by(2) {
+            opp_hands.push([deck[i], deck[i + 1]]);
+        }
 
         // let player_hands: Vec<[Card; 2]> = vec![[deck[7], deck[8]], [deck[9], deck[10]]];
         // let mut player_hands: Vec<[Card; 2]> = Vec::with_capacity(30);
