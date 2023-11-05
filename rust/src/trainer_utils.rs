@@ -114,8 +114,8 @@ impl ActionHistory {
             // All-in action has happened
             return true;
         }
-        if self.street > FLOP {
-            // Change to FLOP for flop holdem
+        if self.street > RIVER {
+            // Change to FLOP for flop holdem, RIVER for texas holdem
             // Showdown
             return true;
         }
@@ -792,18 +792,18 @@ pub fn terminal_utility_vectorized(
         history,
         player,
     );
-    // debug_assert!({
-    //     let slow = terminal_utility_vectorized_slow(
-    //         preflop_hands,
-    //         opp_reach_probs,
-    //         board,
-    //         history,
-    //         player,
-    //     );
-    //     fast.iter()
-    //         .zip(slow.iter())
-    //         .all(|(&a, &b)| (a - b).abs() < 1e-6)
-    // });
+    debug_assert!({
+        let slow = terminal_utility_vectorized_slow(
+            preflop_hands,
+            opp_reach_probs,
+            board,
+            history,
+            player,
+        );
+        fast.iter()
+            .zip(slow.iter())
+            .all(|(&a, &b)| (a - b).abs() < 1e-6)
+    });
     fast
 }
 

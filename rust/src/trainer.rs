@@ -25,7 +25,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         let bar = card_utils::pbar(eval_every);
 
         // Im trying without parallelization in order to see if thats causing the issue. but idk.
-        (0..eval_every).into_iter().for_each(|_| {
+        (0..eval_every).into_par_iter().for_each(|_| {
             cfr_iteration(&deck, &ActionHistory::new(), &nodes, -1);
             bar.inc(1);
         });
