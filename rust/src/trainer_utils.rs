@@ -598,45 +598,45 @@ struct HandData {
     prob: f64,
 }
 
-pub fn terminal_utility_vectorized_fast(
+fn fast_fold_eval(
     preflop_hands: Vec<[Card; 2]>,
     opp_reach_probs: Vec<f64>,
     board: &[Card],
     history: &ActionHistory,
     player: usize,
 ) -> Vec<f64> {
-    if history.last_action().unwrap().action == ActionType::Fold {
-        // Someone folded -- assign the chips to the winner.
-        let winner = history.player;
-        let folder = 1 - winner;
-        let mut winnings: f64 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
-        if player == folder {
-            winnings = -winnings;
-        }
-        // Start here: account for blockers instead off summing all opp_reach_probs
-        let utils: Vec<f64> = preflop_hands
-            .iter()
-            .map(|h| {
-                let mut total_prob = 0.0;
-                for i in 0..preflop_hands.len() {
-                    let h2 = preflop_hands[i];
-                    if !h.contains(&h2[0]) && !h.contains(&h2[1]) {
-                        total_prob += opp_reach_probs[i];
-                    }
-                }
-                total_prob * winnings / preflop_hands.len() as f64
-            })
-            .collect();
-
-        return utils;
+    // Someone folded -- assign the chips to the winner.
+    let winner = history.player;
+    let folder = 1 - winner;
+    let mut winnings: f64 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
+    if player == folder {
+        winnings = -winnings;
     }
+    // Sum the opp_prob across all possible opp hands for each player hand, excluding blockers
+    let utils: Vec<f64> = preflop_hands
+        .iter()
+        .map(|h| {
+            let mut total_prob = 0.0;
+            for i in 0..preflop_hands.len() {
+                let h2 = preflop_hands[i];
+                if !h.contains(&h2[0]) && !h.contains(&h2[1]) {
+                    total_prob += opp_reach_probs[i];
+                }
+            }
+            total_prob * winnings / preflop_hands.len() as f64
+        })
+        .collect();
 
-    // Ok so the basic idea here is:
-    //  - sort the hands by strength
-    //  - (complication) for each of 52 cards, keep track of the total probability it blocks
-    //  - for each hand: keep track of total prob of hands better, worse, and equal.
-    //  - then in the loop, add or subtract from those total probs.
+    return utils;
+}
 
+fn get_hand_data(
+    preflop_hands: &Vec<[Card; 2]>,
+    opp_reach_probs: &Vec<f64>,
+    board: &[Card],
+    history: &ActionHistory,
+    player: usize,
+) -> Vec<HandData> {
     let mut hand_data: Vec<HandData> = (0..preflop_hands.len())
         .map(|i| {
             let h = preflop_hands[i];
@@ -649,8 +649,40 @@ pub fn terminal_utility_vectorized_fast(
             }
         })
         .collect();
-    hand_data.sort_by(|a, b| a.strength.cmp(&b.strength));
+    hand_data
+}
 
+fn adjust_probs(
+    prob_worse: f64,
+    prob_better: f64,
+    d: &HandData,
+    hand_data: &[HandData],
+) -> (f64, f64) {
+    // Adjust for blockers
+    let mut prob_worse_adjusted = prob_worse;
+    let mut prob_better_adjusted = prob_better;
+    for d2 in hand_data {
+        if d.hand.contains(&d2.hand[0]) || d.hand.contains(&d2.hand[1]) {
+            // blocker
+            if d2.strength > d.strength {
+                prob_better_adjusted -= d2.prob;
+            } else if d2.strength < d.strength {
+                prob_worse_adjusted -= d2.prob;
+            }
+        }
+    }
+    (prob_worse_adjusted, prob_better_adjusted)
+}
+
+fn get_utils(
+    preflop_hands: &Vec<[Card; 2]>,
+    opp_reach_probs: &Vec<f64>,
+    board: &[Card],
+    history: &ActionHistory,
+    player: usize,
+    hand_data: &[HandData],
+    sort_indices: &[usize],
+) -> Vec<f64> {
     // Go from the worst hand to the best hand, changing the probs as you go.
     let total_prob: f64 = opp_reach_probs.iter().sum();
     let mut prob_equal = 0.0; // Total prob of opponent hands equal to current hand
@@ -658,8 +690,8 @@ pub fn terminal_utility_vectorized_fast(
     let mut prob_better: f64 = opp_reach_probs.iter().sum();
     let mut idx_equal = 0;
     let mut idx_better = 0;
-    let mut utils: HashMap<[Card; 2], f64> = HashMap::new();
-    for d in hand_data.clone() {
+    let mut utils: Vec<f64> = vec![0.0; preflop_hands.len()];
+    for (i, d) in hand_data.clone().iter().enumerate() {
         // Just moved to a better player hand - need to move some opponent hands from "equal" to
         // "worse", and from "better" to "equal".
 
@@ -685,32 +717,65 @@ pub fn terminal_utility_vectorized_fast(
             idx_better += 1;
         }
 
-        // Adjust for blockers
-        let mut prob_worse_adjusted = prob_worse;
-        let mut prob_better_adjusted = prob_better;
-        for d2 in hand_data.clone() {
-            if d.hand.contains(&d2.hand[0]) || d.hand.contains(&d2.hand[1]) {
-                // blocker
-                if d2.strength > d.strength {
-                    prob_better_adjusted -= d2.prob;
-                } else if d2.strength < d.strength {
-                    prob_worse_adjusted -= d2.prob;
-                }
-            }
-        }
+        let (prob_worse_adjusted, prob_better_adjusted) =
+            adjust_probs(prob_worse, prob_better, &d, &hand_data);
 
         let util = history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted)
             / preflop_hands.len() as f64;
-        utils.insert(d.hand, util);
+
+        let index = sort_indices[i];
+        utils[index] = util;
     }
     // No hands can be better than the best hand
     // assert!(prob_better == 0.0, "prob_better: {}", prob_better);
+    utils
+}
 
-    let utils_vec: Vec<f64> = preflop_hands
-        .iter()
-        .map(|h| utils.get(h).unwrap().clone())
-        .collect();
-    utils_vec
+pub fn terminal_utility_vectorized_fast(
+    preflop_hands: Vec<[Card; 2]>,
+    opp_reach_probs: Vec<f64>,
+    board: &[Card],
+    history: &ActionHistory,
+    player: usize,
+) -> Vec<f64> {
+    if history.last_action().unwrap().action == ActionType::Fold {
+        return fast_fold_eval(preflop_hands, opp_reach_probs, board, history, player);
+    }
+
+    // let mut hand_data: Vec<HandData> = (0..preflop_hands.len())
+    //     .map(|i| {
+    //         let h = preflop_hands[i];
+    //         let river_hand = [h[0], h[1], board[0], board[1], board[2], board[3], board[4]];
+    //         let strength = FAST_HAND_TABLE.hand_strength(&river_hand);
+    //         HandData {
+    //             hand: h,
+    //             strength: strength,
+    //             prob: opp_reach_probs[i],
+    //         }
+    //     })
+    //     .collect();
+
+    let mut hand_data = get_hand_data(&preflop_hands, &opp_reach_probs, board, history, player);
+    let mut sort_indices: Vec<usize> = (0..hand_data.len()).collect();
+    // Sort the indices based on the strength in hand_data. This can be used to recover the index
+    // of the hand in the unsorted vector.
+    sort_indices.sort_by_key(|&i| hand_data[i].strength);
+    hand_data.sort_by(|a, b| a.strength.cmp(&b.strength));
+
+    // Ok so the basic idea here is:
+    //  - sort the hands by strength
+    //  - (complication) for each of 52 cards, keep track of the total probability it blocks
+    //  - for each hand: keep track of total prob of hands better, worse, and equal.
+    //  - then in the loop, add or subtract from those total probs.
+    get_utils(
+        &preflop_hands,
+        &opp_reach_probs,
+        board,
+        history,
+        player,
+        &hand_data,
+        &sort_indices,
+    )
 }
 
 pub fn terminal_utility_vectorized(
@@ -727,15 +792,18 @@ pub fn terminal_utility_vectorized(
         history,
         player,
     );
-    // let slow =
-    //     terminal_utility_vectorized_slow(preflop_hands, opp_reach_probs, board, history, player);
-    // assert!(
-    //     fast == slow,
-    //     "\n\n History: {} \n Fast: {:?}\nSlow: {:?}",
-    //     history,
-    //     fast,
-    //     slow
-    // );
+    // debug_assert!({
+    //     let slow = terminal_utility_vectorized_slow(
+    //         preflop_hands,
+    //         opp_reach_probs,
+    //         board,
+    //         history,
+    //         player,
+    //     );
+    //     fast.iter()
+    //         .zip(slow.iter())
+    //         .all(|(&a, &b)| (a - b).abs() < 1e-6)
+    // });
     fast
 }
 
