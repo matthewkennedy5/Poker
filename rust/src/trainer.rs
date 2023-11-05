@@ -25,7 +25,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         let bar = card_utils::pbar(eval_every);
 
         // Im trying without parallelization in order to see if thats causing the issue. but idk.
-        (0..eval_every).into_par_iter().for_each(|_| {
+        (0..eval_every).into_iter().for_each(|_| {
             cfr_iteration(&deck, &ActionHistory::new(), &nodes, -1);
             bar.inc(1);
         });
@@ -127,27 +127,30 @@ pub fn iterate(
     remaining_depth: i32,
 ) -> Vec<f64> {
     let N = preflop_hands.len();
-    assert!(opp_reach_probs.len() == N);
-    assert!(traverser_reach_probs.len() == N);
     if history.hand_over() {
-        let utils: Vec<f64> = preflop_hands
-            .iter()
-            .map(|h| {
-                let mut total_util = 0.0;
+        // let utils: Vec<f64> = preflop_hands
+        //     .iter()
+        //     .map(|h| {
+        //         let mut total_util = 0.0;
 
-                for i in 0..preflop_hands.len() {
-                    let opp_hand = preflop_hands[i];
-                    if h.contains(&opp_hand[0]) || h.contains(&opp_hand[1]) {
-                        continue;
-                    }
-                    let opp_prob = opp_reach_probs[i];
-                    total_util +=
-                        opp_prob * terminal_utility(h, &opp_hand, &board, history, traverser);
-                }
-                total_util / preflop_hands.len() as f64
-            })
-            .collect();
-        return utils;
+        //         for i in 0..preflop_hands.len() {
+        //             let opp_hand = preflop_hands[i];
+        //             if h.contains(&opp_hand[0]) || h.contains(&opp_hand[1]) {
+        //                 continue;
+        //             }
+        //             let opp_prob = opp_reach_probs[i];
+        //             total_util +=
+        //                 opp_prob * terminal_utility(h, &opp_hand, &board, history, traverser);
+        //         }
+        //         total_util / preflop_hands.len() as f64
+        //     })
+        //     .collect();
+
+        let utils_vec =
+            terminal_utility_vectorized(preflop_hands, opp_reach_probs, &board, history, traverser);
+
+        // assert_eq!(utils_vec, utils);
+        return utils_vec;
     }
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
