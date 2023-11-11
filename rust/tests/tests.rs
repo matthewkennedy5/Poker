@@ -4,7 +4,7 @@ use optimus::*;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::*;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
 static BOT: Lazy<Bot> = Lazy::new(|| {
     Bot::new(
@@ -525,11 +525,17 @@ fn next_actions_are_sorted() {
     // Tests that the next actions are returned in the correct order
     let history = ActionHistory::from_strings(vec!["Call 100", "Call 100"]);
     let next_actions = history.next_actions(&CONFIG.bet_abstraction);
-    // Order should be: 
+    // Order should be:
     // 1. Bet sizes in increasing order
     // 2. Check/Call
     // 3. Fold
-    assert_eq!(next_actions[next_actions.len()-1], Action {action: ActionType::Call, amount: 0});
+    assert_eq!(
+        next_actions[next_actions.len() - 1],
+        Action {
+            action: ActionType::Call,
+            amount: 0
+        }
+    );
 }
 
 #[test]
@@ -662,11 +668,49 @@ fn blinds_stack_sizes() {
 #[test]
 fn isomorphic_hand_len() {
     let flop = load_flop_isomorphic();
-    let turn = load_turn_isomorphic();
-    let river = load_river_isomorphic();
     assert_eq!(flop.len(), 1342562);
+    println!("Flop len: {}", flop.len());
+    let turn = load_turn_isomorphic();
     assert_eq!(turn.len(), 14403610);
+    println!("Turn len: {}", turn.len());
+    let river = load_river_isomorphic();
     assert_eq!(river.len(), 125756657);
+    println!("River len: {}", river.len());
+}
+
+#[test]
+fn isomorphic_hand_example() {
+    // Suit order: 2 clubs, 1 heart, 2 spades, 2 diamonds = 7
+    //              4cTc      2h       8s4s       KdTd
+    //
+    // so should go:  spades -> clubs, clubs -> diamonds, diamonds -> hearts, hearts -> spades
+    //
+    // . my code goes:  diamonds -> clubs, clubs -> diamonds, spades -> hearts
+
+    let hand: Vec<Card> = str2cards("2h8sKd4c4sTcTd");
+    let expected_result = str2cards("8c2s4c4dTdThKh");
+    //  my result: 8d2s4cTc4dThKh
+
+    // by suits:
+    //     clubs: 4cTc
+    //     diamonds: KdTd
+    //     hearts: 2h
+    //     spades: 8s4s
+    //
+    //  order should be: spades < clubs < diamonds < hearts
+    //               so: spades->clubs, clubs->diamonds, diamonds->hearts, hearts->spades
+
+    // if ge:            diamonds < clubs < spades < hearts
+    //                   diamonds->clubs, clubs->diamonds, spades->hearts, hearts->spades
+
+    // expected result goes: spades->clubs, clubs->diamonds, diamonds->hearts, hearts->spades (yep!)
+
+    // my code goes: clubs->clubs, spades->diamonds, diamonds->hearts, hearts->spades
+    //                  clubs < spades < diamonds < hearts
+
+    let result: Vec<Card> = isomorphic_hand(&hand, true).to_vec();
+    assert_eq!(result, expected_result, "{}", cards2str(&result));
+    // Card { rank: 8, suit: 0 }, Card { rank: 2, suit: 3 }, Card { rank: 4, suit: 0 }, Card { rank: 4, suit: 1 }, Card { rank: 10, suit: 1 }, Card { rank: 10, suit: 2 }, Card { rank: 13, suit: 2 }]
 }
 
 #[test]
@@ -896,14 +940,14 @@ fn test_depth_limit_probability() {
 // #[test]
 fn subgame_strategy_stability() {
     // for depth in [10, 8, 6, 4, 2].iter() {
-        let depth = 5;
-        let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, depth.clone());
-        let strategy = bot.get_strategy(
-            &str2cards("8hAd"),
-            &str2cards("8dAc7s"),
-            &ActionHistory::from_strings(vec!["Call 100", "Call 100"]),
-        );
-        println!("Depth: {depth}, Strategy: {:?}", strategy);
+    let depth = 5;
+    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, depth.clone());
+    let strategy = bot.get_strategy(
+        &str2cards("8hAd"),
+        &str2cards("8dAc7s"),
+        &ActionHistory::from_strings(vec!["Call 100", "Call 100"]),
+    );
+    println!("Depth: {depth}, Strategy: {:?}", strategy);
     // }
     // assert!(
     //     strategy
@@ -944,8 +988,14 @@ fn equity_distribution_expectations() {
                 dist_ehs += p as f64 * prob;
                 dist_ehs2 += p as f64 * prob * prob;
             }
-            assert!((hand_ehs - dist_ehs).abs() < 0.1, "{hand_ehs} != {dist_ehs}");
-            assert!((hand_ehs2 - dist_ehs2).abs() < 0.1, "{hand_ehs2} != {dist_ehs2}");
+            assert!(
+                (hand_ehs - dist_ehs).abs() < 0.1,
+                "{hand_ehs} != {dist_ehs}"
+            );
+            assert!(
+                (hand_ehs2 - dist_ehs2).abs() < 0.1,
+                "{hand_ehs2} != {dist_ehs2}"
+            );
             bar.inc(1);
         });
         bar.finish();

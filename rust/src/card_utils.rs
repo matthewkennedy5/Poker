@@ -182,9 +182,28 @@ fn sort_isomorphic(cards: &[Card], streets: bool) -> SmallVecHand {
 }
 
 // https://stackoverflow.com/a/3831682
+
+// Permutations:
+// - Card order
+// - Switching around suits
+
+// Rules for a canonical hand:
+//
+// 1. The cards are in sorted order (suit first then rank)
+//
+// 2. Most cards to least cards: clubs, diamonds, hearts, spades.
+//
+// 3. If two suits have the same number of cards, the ranks in the first suit
+//      must be lower or equal lexicographically (e.g., [1, 3] <= [2, 4]).
+//
+// 4. Must be a valid hand (no duplicate cards)
+//
+// If streets == true, it separately considers the preflop and postflop (private vs public info).
+//
 pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
     let cards = sort_isomorphic(cards, streets);
 
+    // by_suits creates a lookup of suit -> ranks with that suit in the hand
     let mut by_suits: SmallVec<[SmallVec<[u8; 7]>; 4]> = smallvec![smallvec![0; 7]; 4];
     for card in &cards {
         by_suits[card.suit as usize].push(card.rank);
@@ -195,7 +214,16 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
         let a_len = by_suits[*a].len();
         let b_len = by_suits[*b].len();
         if a_len == b_len {
-            by_suits[*a].cmp(&by_suits[*b])
+            // If 2 suits have the same number of cards (len), then sort them lexicographically based
+            // on their ranks
+            // by_suits[*a].cmp(&by_suits[*b])
+
+            let mut sorted_a = by_suits[*a].clone();
+            sorted_a.sort_unstable();
+            let mut sorted_b = by_suits[*b].clone();
+            sorted_b.sort_unstable();
+
+            sorted_a.cmp(&sorted_b)
         } else {
             b_len.cmp(&a_len)
         }
@@ -467,9 +495,27 @@ pub fn isomorphic_preflop_hands() -> HashSet<Vec<Card>> {
     let mut preflop_hands: HashSet<Vec<Card>> = HashSet::new();
     for i in 2..15 {
         for j in i..15 {
-            preflop_hands.insert(vec![Card {rank: i as u8, suit: CLUBS as u8}, Card {rank: j as u8, suit: DIAMONDS as u8}]);
+            preflop_hands.insert(vec![
+                Card {
+                    rank: i as u8,
+                    suit: CLUBS as u8,
+                },
+                Card {
+                    rank: j as u8,
+                    suit: DIAMONDS as u8,
+                },
+            ]);
             if i != j {
-                preflop_hands.insert(vec![Card {rank: i as u8, suit: CLUBS as u8}, Card {rank: j as u8, suit: CLUBS as u8}]);
+                preflop_hands.insert(vec![
+                    Card {
+                        rank: i as u8,
+                        suit: CLUBS as u8,
+                    },
+                    Card {
+                        rank: j as u8,
+                        suit: CLUBS as u8,
+                    },
+                ]);
             }
         }
     }
