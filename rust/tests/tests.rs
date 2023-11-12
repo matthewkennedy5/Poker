@@ -1,3 +1,5 @@
+use dashmap::DashMap;
+use itertools::Itertools;
 use once_cell::sync::Lazy;
 #[cfg(test)]
 use optimus::*;
@@ -668,13 +670,13 @@ fn blinds_stack_sizes() {
 #[test]
 fn isomorphic_hand_len() {
     let flop = load_flop_isomorphic();
-    assert_eq!(flop.len(), 1342562);
+    assert_eq!(flop.len(), 1_342_562);
     println!("Flop len: {}", flop.len());
     let turn = load_turn_isomorphic();
-    assert_eq!(turn.len(), 14403610);
+    assert_eq!(turn.len(), 14_403_610);
     println!("Turn len: {}", turn.len());
     let river = load_river_isomorphic();
-    assert_eq!(river.len(), 125756657);
+    assert_eq!(river.len(), 125_756_657);
     println!("River len: {}", river.len());
 }
 
@@ -711,6 +713,56 @@ fn isomorphic_hand_example() {
     let result: Vec<Card> = isomorphic_hand(&hand, true).to_vec();
     assert_eq!(result, expected_result, "{}", cards2str(&result));
     // Card { rank: 8, suit: 0 }, Card { rank: 2, suit: 3 }, Card { rank: 4, suit: 0 }, Card { rank: 4, suit: 1 }, Card { rank: 10, suit: 1 }, Card { rank: 10, suit: 2 }, Card { rank: 13, suit: 2 }]
+}
+
+#[test]
+fn isomorphic_hand_ehs() {
+    // Make sure that every hand that maps to the same isomorphic_hand has the same E[HS] and E[HS^2].
+
+    let deck = deck();
+    let n_cards = 7;
+
+    let iso_ehs: DashMap<u64, f64> = DashMap::new();
+
+    let bar = pbar(match n_cards {
+        5 => 25989600,
+        6 => 305377800,
+        7 => 2809475760,
+        _ => panic!(),
+    });
+    for preflop in deck.iter().combinations(2) {
+        let preflop: Vec<Card> = preflop.iter().map(|&&c| c).collect();
+        let mut rest_of_deck = deck.clone();
+        rest_of_deck.retain(|c| !preflop.contains(&c));
+
+        let boards: Vec<Vec<&Card>> = rest_of_deck.iter().combinations(n_cards - 2).collect();
+        boards.par_iter().for_each(|board| {
+            let board: Vec<Card> = board.iter().map(|&&c| c).collect();
+            let mut cards: Vec<Card> = Vec::with_capacity(preflop.len() + board.len());
+            cards.extend(&preflop);
+            cards.extend(&board);
+
+            let hand: u64 = cards2hand(&cards);
+            let ehs2 = equity_distribution_moment(hand, 2);
+            let iso = cards2hand(&isomorphic_hand(&cards, true));
+
+            match iso_ehs.get(&iso) {
+                Some(existing_ehs2) => {
+                    assert!((ehs2 - *existing_ehs2).abs() < 1e-6);
+                    // println!(
+                    //     "Hand {} has same ehs {} as existing hand.",
+                    //     hand2str(hand),
+                    //     ehs
+                    // );
+                }
+                None => {
+                    iso_ehs.insert(iso, ehs2);
+                }
+            };
+            bar.inc(1);
+        });
+    }
+    bar.finish_with_message("Done");
 }
 
 #[test]

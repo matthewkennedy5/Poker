@@ -6,12 +6,12 @@
 
 use crate::card_utils::*;
 use crate::config::CONFIG;
+use crate::rayon::iter::IntoParallelIterator;
 use dashmap::DashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use crate::rayon::iter::IntoParallelIterator;
 use std::sync::Mutex;
 use std::{
     collections::HashMap,
@@ -293,10 +293,10 @@ pub fn equity_distribution(hand: u64) -> Vec<f32> {
 }
 
 pub fn river_equity(hand: &[Card]) -> f64 {
-    let iso = isomorphic_hand(hand, true);
-    if let Some(equity) = RIVER_EQUITY_CACHE.get(&iso) {
-        return equity.clone();
-    }
+    // let iso = isomorphic_hand(hand, true);
+    // if let Some(equity) = RIVER_EQUITY_CACHE.get(&iso) {
+    //     return equity.clone();
+    // }
 
     let mut deck = deck();
     // Remove the already-dealt cards from the deck
@@ -322,7 +322,7 @@ pub fn river_equity(hand: &[Card]) -> f64 {
         }
     }
     let equity = n_wins / (n_runs as f64);
-    RIVER_EQUITY_CACHE.insert(iso, equity);
+    // RIVER_EQUITY_CACHE.insert(iso, equity);
     return equity;
 }
 
@@ -340,7 +340,7 @@ pub fn bucket_sizes() {
 pub fn print_abstraction() {
     let abs = Abstraction::new();
     // let street = "flop";
-    // let 
+    // let
     for bucket in 0..CONFIG.flop_buckets {
         println!("\nBucket {bucket}");
         for sample in 0..10 {
