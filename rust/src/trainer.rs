@@ -33,7 +33,13 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         serialize_nodes(&nodes);
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
 
-        let infoset = InfoSet::from_hand(&str2cards("7c2d"), &Vec::new(), &ActionHistory::new());
+        let infoset = InfoSet::from_hand(
+            &str2cards("6h6d"),
+            &str2cards("2s3dAc6c2h"),
+            &ActionHistory::from_strings(vec![
+                "Bet 300", "Call 300", "Call 0", "Call 0", "Call 0", "Call 0", "Call 0",
+            ]),
+        );
         println!("InfoSet: {infoset}");
         println!(
             "Actions: {:?}",
@@ -44,24 +50,22 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         // Check what percent of nodes have t = 0
         let mut zero = 0;
         let mut total = 0;
+        let mut total_t = 0;
         for reference in &nodes.dashmap {
             let history_nodes = reference.lock().unwrap();
             for n in history_nodes.iter() {
                 total += 1;
+                total_t += n.t;
                 if n.t == 0 {
                     zero += 1;
                 }
             }
         }
         println!("Fraction zeros: {}", zero as f64 / total as f64);
-
-        // let infoset = InfoSet::from_hand(&str2cards("AcAd"), &Vec::new(), &ActionHistory::new());
-        // println!("InfoSet: {infoset}");
-        // println!(
-        //     "Actions: {:?}",
-        //     infoset.next_actions(&CONFIG.bet_abstraction)
-        // );
-        // println!("Node: {:?}", nodes.get(&infoset));
+        println!(
+            "Average t across all infosets: {}",
+            total_t as f64 / total as f64
+        );
     }
     println!("{} nodes reached.", nodes.len());
 }
