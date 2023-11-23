@@ -31,7 +31,7 @@ dashmap = { version = "*", features = ["serde"] }
 debug = true
 
 [profile.dev]
-opt-level = 1
+opt-level = 3
 
 [[bench]]
 name = "benches"

@@ -13,15 +13,15 @@ bet_abstraction = [
 ]
 flop_buckets = 10000    # Max:   1342562
 turn_buckets = 10000    # Max:  14403610
-river_buckets = 10000  # Max: 125756657
+river_buckets = 10000   # Max: 125756657
 
 # Filenames
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 1_000_000_000
+train_iters = 10000000
 lbr_iters = 1_000_000
-eval_every = 10_000_000
+eval_every = 128
 warm_start = true
 
 # Realtime solving

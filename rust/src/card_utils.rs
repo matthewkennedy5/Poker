@@ -7,7 +7,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
     fs::File,
-    io::{BufRead, BufReader, BufWriter, Write},
+    io::{BufReader, BufWriter},
     path::Path,
 };
 
@@ -216,7 +216,6 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
         if a_len == b_len {
             // If 2 suits have the same number of cards (len), then sort them lexicographically based
             // on their ranks
-            // by_suits[*a].cmp(&by_suits[*b])
             let mut sorted_a = by_suits[*a].clone();
             sorted_a.sort_unstable();
             let mut sorted_b = by_suits[*b].clone();

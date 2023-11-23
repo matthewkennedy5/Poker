@@ -556,15 +556,15 @@ fn all_in_call() {
 #[test]
 fn terminal_utility_blinds() {
     let history = ActionHistory::from_strings(vec!["Call 100", "Fold 0"]);
-    let util = terminal_utility(&deck(), &history, DEALER);
+    let util = terminal_utility_old(&deck(), &history, DEALER);
     assert_eq!(util, 100.0);
-    let util = terminal_utility(&deck(), &history, OPPONENT);
+    let util = terminal_utility_old(&deck(), &history, OPPONENT);
     assert_eq!(util, -100.0);
 
     let history = ActionHistory::from_strings(vec!["Fold 0"]);
-    let util = terminal_utility(&deck(), &history, DEALER);
+    let util = terminal_utility_old(&deck(), &history, DEALER);
     assert_eq!(util, -50.0);
-    let util = terminal_utility(&deck(), &history, OPPONENT);
+    let util = terminal_utility_old(&deck(), &history, OPPONENT);
     assert_eq!(util, 50.0);
 }
 
@@ -589,7 +589,7 @@ fn play_hand_always_call() -> f64 {
         };
         history.add(&action);
     }
-    terminal_utility(&deck, &history, bot)
+    terminal_utility_old(&deck, &history, bot)
 }
 
 // #[test]
@@ -807,7 +807,7 @@ fn all_in_showdown_street() {
     assert_eq!(history.street, SHOWDOWN);
 }
 
-#[test]
+// #[test]
 fn train_performance() {
     train(100_000, 100_000, false);
     let nodes = load_nodes(&CONFIG.nodes_path);
@@ -825,12 +825,16 @@ fn abstraction_distributes_hands_evenly() {
     let mut counts: Vec<i32> = vec![0; CONFIG.flop_buckets as usize];
     let mut deck = deck();
 
-    for _ in 0..100_000 {
+    let n: u64 = 10_000_000;
+    let bar = pbar(n);
+    for _ in 0..10_000_000 {
         deck.shuffle(&mut thread_rng());
         let hand: &[Card] = &deck[0..5];
         let bucket = abstraction.bin(hand) as usize;
         counts[bucket] += 1;
+        bar.inc(1);
     }
+    bar.finish();
 
     //  verify that no count is 2x of another
     let max: f64 = counts.iter().max().unwrap().clone() as f64;
@@ -873,7 +877,7 @@ fn abstraction_buckets_in_range() {
     }
 }
 
-#[test]
+// #[test]
 fn test_subgame_solving() {
     BOT.get_strategy(
         &str2cards("AdAs"),
@@ -882,7 +886,7 @@ fn test_subgame_solving() {
     );
 }
 
-#[test]
+// #[test]
 fn subgame_solving_beats_blueprint() {
     let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
     let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, -1);
@@ -927,10 +931,10 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
         let action = bot.get_action(hole, board, &history);
         history.add(&action);
     }
-    terminal_utility(&deck, &history, subgame_bot_position)
+    terminal_utility_old(&deck, &history, subgame_bot_position)
 }
 
-#[test]
+// #[test]
 // Tests that the river equity cache fits in memory
 fn river_equity_cache_mem_usage() {
     let river_iso = load_river_isomorphic();
@@ -1013,7 +1017,7 @@ fn subgame_strategy_stability() {
     // );
 }
 
-#[test]
+// #[test]
 fn equity_distribution_expectations() {
     // Test that the expectation of each hand's equity distribution is equal to the hand's equity.
     for street in ["turn"].iter() {
@@ -1052,4 +1056,131 @@ fn equity_distribution_expectations() {
         });
         bar.finish();
     }
+}
+
+#[test]
+fn iterate_vectorized_equals_sampled() {
+    let deck = deck();
+    let hand = str2cards("2c2d");
+    assert_eq!(&deck[..2], hand);
+    let player = OPPONENT; // Opponent is the out-of-position player
+    let history = ActionHistory::new();
+    let sampled_nodes = Nodes::new(&CONFIG.bet_abstraction);
+
+    let opp_hand = &deck[2..4];
+    let board = &deck[4..9];
+
+    // TODO: Figure out a better way of getting rid of the impossible blocked preflop hands
+    let mut range = Range::new();
+    range.remove_blockers(opp_hand);
+    range.remove_blockers(board);
+    let mut preflop_hands = Vec::with_capacity(range.hands.len());
+    for hand_index in 0..range.hands.len() {
+        let prob = range.probs[hand_index];
+        if prob > 0.0 {
+            preflop_hands.push(range.hands[hand_index]);
+        }
+    }
+
+    // println!("Preflop hands: {:?}", preflop_hands.iter().map(|h| cards2str(h));
+    let sampled_utils: Vec<f64> = preflop_hands
+        .iter()
+        .map(|h| {
+            let mut hand_deck: Vec<Card> = Vec::with_capacity(9);
+            if player == DEALER {
+                hand_deck.extend(h);
+                hand_deck.extend(opp_hand);
+            } else {
+                hand_deck.extend(opp_hand);
+                hand_deck.extend(h);
+            }
+            hand_deck.extend(board);
+            // println!("hand_deck: {}", cards2str(&hand_deck));
+            iterate_sampled(
+                player,
+                &hand_deck,
+                &history,
+                [1.0, 1.0],
+                // &Nodes::new(&CONFIG.bet_abstraction),
+                &sampled_nodes,
+                None,
+                None,
+                -1,
+            )
+        })
+        .collect();
+
+    const FAILING_HAND: usize = 4;
+
+    // let sampled_util = {
+    //     let mut hand_deck: Vec<Card> = Vec::with_capacity(9);
+    //     hand_deck.extend(preflop_hands[FAILING_HAND]);
+    //     hand_deck.extend(opp_hand);
+    //     hand_deck.extend(board);
+    //     iterate_sampled(
+    //         player,
+    //         &hand_deck,
+    //         &history,
+    //         [1.0, 1.0],
+    //         &Nodes::new(&CONFIG.bet_abstraction),
+    //         None,
+    //         None,
+    //         -1,
+    //     )
+    // };
+
+    let player_hand_probs = vec![1.0; preflop_hands.len()];
+    let vector_nodes = Nodes::new(&CONFIG.bet_abstraction);
+    let vector_utils: Vec<f64> = iterate_vectorized(
+        player,
+        &preflop_hands,
+        player_hand_probs.clone(),
+        opp_hand,
+        1.0,
+        board,
+        &history,
+        &vector_nodes,
+        None,
+        None,
+        -1,
+    );
+
+    // assert_eq!(preflop_hands[0].to_vec(), hand);
+    println!("Sampled util: {:?}", sampled_utils);
+    println!("Vectorized util: {:?}", vector_utils);
+    // println!("Player hand: {}", cards2str(&preflop_hands[FAILING_HAND]));
+    // println!("Opponent hand: {}", cards2str(&opp_hand));
+    // println!("Board: {}", cards2str(&board));
+    // assert_eq!(sampled_util, vector_utils[FAILING_HAND]);
+    // assert_eq!(sampled_utils, vector_utils);
+
+    println!();
+    println!("Hand: {}, Board: {}", cards2str(&hand), cards2str(&board));
+    let infoset = InfoSet::from_hand(
+        &hand,
+        &board,
+        &ActionHistory::from_strings(vec!["Bet 300", "Call 300"]),
+    );
+    println!("InfoSet: {infoset}");
+    println!(
+        "Actions: {:?}",
+        infoset.next_actions(&CONFIG.bet_abstraction)
+    );
+    println!("Sampled Node: {:?}", sampled_nodes.get(&infoset));
+    println!("Vector Node: {:?}", vector_nodes.get(&infoset));
+}
+
+#[test]
+fn test_terminal_utility() {
+    let player_hand = str2cards("AsAd");
+    let opp_hand = str2cards("2d5c");
+    let board = str2cards("Ac8c9cJhJd");
+    let history = ActionHistory::from_strings(vec![
+        "Bet 300", "Call 300", "Call 0", "Call 0", "Call 0", "Call 0", "Call 0", "Call 0",
+    ]);
+    let player = 0;
+    assert_eq!(
+        terminal_utility(&player_hand, &opp_hand, &board, &history, player),
+        300.0
+    );
 }

@@ -1,13 +1,13 @@
-use crate::card_utils::*;
+use crate::bot::Bot;
 use crate::card_utils;
+use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::exploiter::*;
 use crate::nodes::*;
+use crate::ranges::Range;
 use crate::trainer_utils::*;
-use crate::bot::Bot;
 use rand::prelude::*;
 use rayon::prelude::*;
-use smallvec::SmallVec;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
@@ -24,46 +24,48 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
         let bar = card_utils::pbar(eval_every);
 
+        // Im trying without parallelization in order to see if thats causing the issue. but idk.
         (0..eval_every).into_par_iter().for_each(|_| {
-            cfr_iteration(
-                &deck,
-                &ActionHistory::new(),
-                &nodes,
-                -1,
-            );
+            cfr_iteration(&deck, &ActionHistory::new(), &nodes, -1);
             bar.inc(1);
         });
         bar.finish_with_message("Done");
         serialize_nodes(&nodes);
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
 
+        let infoset = InfoSet::from_hand(
+            &str2cards("6h6d"),
+            &str2cards("2s3dAc6c2h"),
+            &ActionHistory::from_strings(vec![
+                "Bet 300", "Call 300", "Call 0", "Call 0", "Call 0", "Call 0", "Call 0",
+            ]),
+        );
+        println!("InfoSet: {infoset}");
+        println!(
+            "Actions: {:?}",
+            infoset.next_actions(&CONFIG.bet_abstraction)
+        );
+        println!("Node: {:?}", nodes.get(&infoset));
+
         // Check what percent of nodes have t = 0
         let mut zero = 0;
         let mut total = 0;
+        let mut total_t = 0;
         for reference in &nodes.dashmap {
             let history_nodes = reference.lock().unwrap();
             for n in history_nodes.iter() {
                 total += 1;
+                total_t += n.t;
                 if n.t == 0 {
                     zero += 1;
                 }
             }
         }
         println!("Fraction zeros: {}", zero as f64 / total as f64);
-
-        // Check how the 28o preflop node looks
-        // let o28 = InfoSet::from_hand(
-        //     &card_utils::str2cards("2c8h"),
-        //     &Vec::new(),
-        //     &ActionHistory::new(),
-        // );
-        let infoset = InfoSet {
-            history: ActionHistory::from_strings(vec!["Bet 300", "Call 300", "Call 0", "Call 0"]),
-            card_bucket: 9807
-        };
-        println!("InfoSet: {infoset}");
-        println!("Actions: {:?}", infoset.next_actions(&CONFIG.bet_abstraction));
-        println!("Node: {:?}", nodes.get(&infoset));
+        println!(
+            "Average t across all infosets: {}",
+            total_t as f64 / total as f64
+        );
     }
     println!("{} nodes reached.", nodes.len());
 }
@@ -83,147 +85,167 @@ pub fn serialize_nodes(nodes: &Nodes) {
     println!("[INFO] Saved strategy.");
 }
 
-pub fn cfr_iteration(
-    deck: &[Card],
-    history: &ActionHistory,
-    nodes: &Nodes,
-    depth_limit: i32,
-) {
-    [DEALER, OPPONENT].iter().for_each(|&player| {
+pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, depth_limit: i32) {
+    [DEALER, OPPONENT].iter().for_each(|&traverser| {
         let mut deck = deck.to_vec();
         deck.shuffle(&mut rand::thread_rng());
+        let board = [deck[0], deck[1], deck[2], deck[3], deck[4]];
+        let mut range = Range::new();
+        range.remove_blockers(&board);
+        let mut preflop_hands = Vec::with_capacity(range.hands.len());
+        for hand_index in 0..range.hands.len() {
+            let prob = range.probs[hand_index];
+            if prob > 0.0 {
+                preflop_hands.push(range.hands[hand_index]);
+            }
+        }
+
+        let traverser_reach_probs = vec![1.0; preflop_hands.len()];
+        let opp_reach_probs = vec![1.0; preflop_hands.len()];
+
         iterate(
-            player,
-            &deck,
-            history,
-            [1.0, 1.0],
-            &nodes,
+            traverser,
+            preflop_hands,
+            board,
+            &ActionHistory::new(),
+            traverser_reach_probs,
+            opp_reach_probs,
+            nodes,
             None,
             None,
-            depth_limit,
+            -1,
         );
     });
 }
 
 pub fn iterate(
-    player: usize,
-    deck: &[Card],
+    traverser: usize,
+    preflop_hands: Vec<[Card; 2]>,
+    board: [Card; 5],
     history: &ActionHistory,
-    weights: [f64; 2],
+    traverser_reach_probs: Vec<f64>,
+    opp_reach_probs: Vec<f64>,
     nodes: &Nodes,
     depth_limit_bot: Option<&Bot>,
     bot_position: Option<usize>,
     remaining_depth: i32,
-) -> f64 {
+) -> Vec<f64> {
+    let N = preflop_hands.len();
     if history.hand_over() {
-        return terminal_utility(deck, history, player);
-    }
+        // let utils: Vec<f64> = preflop_hands
+        //     .iter()
+        //     .map(|h| {
+        //         let mut total_util = 0.0;
 
+        //         for i in 0..preflop_hands.len() {
+        //             let opp_hand = preflop_hands[i];
+        //             if h.contains(&opp_hand[0]) || h.contains(&opp_hand[1]) {
+        //                 continue;
+        //             }
+        //             let opp_prob = opp_reach_probs[i];
+        //             total_util +=
+        //                 opp_prob * terminal_utility(h, &opp_hand, &board, history, traverser);
+        //         }
+        //         total_util / preflop_hands.len() as f64
+        //     })
+        //     .collect();
+
+        let utils_vec =
+            terminal_utility_vectorized(preflop_hands, opp_reach_probs, &board, history, traverser);
+
+        // assert_eq!(utils_vec, utils);
+        return utils_vec;
+    }
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
     let history = history.clone();
-    let mut infoset = InfoSet::from_deck(deck, &history);
+    let infosets: Vec<InfoSet> = if history.player == traverser {
+        preflop_hands
+            .iter()
+            .map(|h| InfoSet::from_hand(h, &board, &history))
+            .collect()
+    } else {
+        preflop_hands
+            .iter()
+            .map(|h| InfoSet::from_hand(h, &board, &history))
+            .collect()
+    };
 
-    // Depth limited solving - just sample actions until the end of the game to estimate the utility
-    // of this information set
-    if remaining_depth == 0 {
-        if let Some(depth_limit_bot) = depth_limit_bot {
-            // TODO: Make sure history.player is the bot's opponent before going to the depth limit
-            // return depth_limit_utility(
-            //     player, 
-            //     deck,
-            //     &history,
-            //     weights, 
-            //     nodes,
-            //     depth_limit_bot,
-            //     // TODO REFACTOR: Make a wrapper function to avoid passing all these optionals all the time
-            // );
-            // println!("Estimating depth limit utility at infoset {infoset}");
-
-            // Take an average of 10 rollouts at the depth limit to estimate the utility
-            let n_rollouts = 1000;
-            let mut utilities: Vec<f64> = Vec::with_capacity(n_rollouts);
-            for i in 0..n_rollouts {
-                let mut depth_history = history.clone();
-                loop {
-                    // TODO: You can also traverse each possible action for each player and analytically
-                    // find the exact expected utility given their strategies. This might be faster 
-                    // if the strategies are usually not mixed and if they are folding a lot. 
-                    let hand = get_hand(deck, depth_history.player, depth_history.street);
-                    let hole = &hand[..2];
-                    let board = &hand[2..];
-                    let strategy = depth_limit_bot.get_strategy_action_translation(hole, board, &depth_history);
-                    // println!("Strategy: {:?}", strategy);
-                    let action = sample_action_from_strategy(&strategy);
-                    // println!("Hand: {} Board: {}", cards2str(hole), cards2str(board));
-                    // println!("Sampled action {action} from strategy {:?}", strategy);
-                    depth_history.add(&action);
-                    if depth_history.hand_over() {
-                        let utility = terminal_utility(deck, &depth_history, player);
-                        // println!("Depth limit node utility for traversing player {player}: {utility}");
-                        // return utility;
-                        // sum += utility;
-                        utilities.push(utility);
-                        break;
-                    }
-                }
-            };
-
-            let mean = statistical::mean(&utilities);
-            // let std = statistical::standard_deviation(&utilities, Some(mean));
-            // let confidence = 1.96 * std / (n_rollouts as f64).sqrt();
-            // println!("Utility at depth limit {}: {mean} +/- {confidence}", history);
-            return mean;
+    let strategies: Vec<SmallVecFloats> = infosets
+        .iter()
+        .map(|i| nodes.get_current_strategy(&i))
+        .collect();
+    let opponent = 1 - traverser;
+    if history.player == traverser {
+        for i in 0..N {
+            nodes.update_strategy_sum(&infosets[i], traverser_reach_probs[i] as f32);
         }
     }
 
-    let mut weights = weights;
-    let mut strategy = nodes.get_current_strategy(&infoset);
-    let opponent = 1 - player;
-    if history.player == player {
-        nodes.update_strategy_sum(&infoset, weights[player] as f32);
-    } 
-
-    let actions = infoset.next_actions(&nodes.bet_abstraction);
-    let mut node_utility = 0.0;
+    let actions = history.next_actions(&nodes.bet_abstraction);
+    let mut node_utility: Vec<f64> = vec![0.0; N];
     // Recurse to further nodes in the game tree. Find the utilities for each action.
-    let utilities: SmallVec<[f64; NUM_ACTIONS]> = (0..actions.len())
-        .map(|i| {
-            let prob = strategy[i] as f64;
+    let action_utilities: Vec<Vec<f64>> = (0..actions.len())
+        .map(|i| -> Vec<f64> {
+            // Maps traverser_preflop_hand to prob of taking this action
+            let probs: Vec<f32> = strategies.iter().map(|s| s[i]).collect();
 
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
 
-            let new_weights = match history.player {
-                0 => [weights[0] * prob, weights[1]],
-                1 => [weights[0], weights[1] * prob],
-                _ => panic!("Bad player value"),
-            };
+            let mut traverser_reach_probs = traverser_reach_probs.clone();
+            let mut opp_reach_probs = opp_reach_probs.clone();
 
-            if weights[0] < 1e-10 && weights[1] < 1e-10 {
-                return 0.0;
+            if history.player == traverser {
+                for i in 0..N {
+                    traverser_reach_probs[i] *= probs[i] as f64;
+                }
+            } else {
+                assert!(opp_reach_probs.len() == strategies.len());
+                for i in 0..opp_reach_probs.len() {
+                    opp_reach_probs[i] *= probs[i] as f64;
+                }
             }
 
-            let utility = iterate(
-                player,
-                deck,
+            if traverser_reach_probs.iter().all(|&x| x < 1e-10)
+                && opp_reach_probs.iter().all(|&x| x < 1e-10)
+            {
+                return vec![0.0; N];
+            }
+
+            let utility: Vec<f64> = iterate(
+                traverser,
+                preflop_hands.clone(),
+                board,
                 &next_history,
-                new_weights,
+                traverser_reach_probs,
+                opp_reach_probs,
                 nodes,
                 depth_limit_bot,
                 bot_position,
                 remaining_depth - 1,
             );
-            node_utility += prob * utility;
+
+            for n in 0..node_utility.len() {
+                let prob: f32 = if history.player == traverser {
+                    probs[n]
+                } else {
+                    1.0
+                };
+                node_utility[n] += prob as f64 * utility[n];
+            }
             utility
         })
         .collect();
 
     // Update regrets for the traversing player
-    if history.player == player {
-        for (index, utility) in utilities.iter().enumerate() {
-            let regret = utility - node_utility;
-            nodes.add_regret(&infoset, index, weights[opponent] * regret);
+    if history.player == traverser {
+        // Action utilities is shape [actions, traverser_hands]
+        for (action_idx, action_utility) in action_utilities.iter().enumerate() {
+            for (hand_idx, utility) in action_utility.iter().enumerate() {
+                let regret = utility - node_utility[hand_idx];
+                nodes.add_regret(&infosets[hand_idx], action_idx, regret);
+            }
         }
     }
     node_utility
@@ -231,68 +253,78 @@ pub fn iterate(
 
 // Implements Depth Limited Solving - at the depth limit, instead of choosing an action to play, the
 // opponent chooses a strategy to play until the end of the hand. This gives a good estimate of the
-// utility at the depth limit nodes because it allows the opponent to respond to the player's strategy. 
+// utility at the depth limit nodes because it allows the opponent to respond to the player's strategy.
 // https://arxiv.org/pdf/1805.08195.pdf
-fn depth_limit_utility(
-    player: usize,
-    deck: &[Card], 
-    history: &ActionHistory, 
-    weights: [f64; 2], 
-    nodes: &Nodes, 
-    depth_limit_bot: &Bot
-) -> f64 {
-    let opponent = 1 - player;
-    // The history.player is the bot's opponent
-    let bot_opponent = 1 - history.player;
-    debug_assert!(false);
-    let infoset = InfoSet::from_deck(deck, history);
-    let strategy = nodes.get_current_strategy(&infoset);
-    let mut strategy_biases: Vec<Option<Action>> = infoset.next_actions(&nodes.bet_abstraction)
-        .iter().map(|s| Some(s.clone())).collect();
-    strategy_biases.push(None);
-    let utilities: Vec<f64> = strategy_biases.iter().map(|bias| {
-        // Play until the end of the game with the opponent using their biased strategy, or the 
-        // blueprint strategy. The terminal utility will update the regret for the depth limit 
-        // opponent node. 
-        let mut history_past_depth = history.clone();
-        loop {
-            let hand = get_hand(deck, history_past_depth.player, history_past_depth.street);
-            let hole = &hand[..2];
-            let board = &hand[2..];
-            let mut node_strategy = depth_limit_bot.get_strategy_action_translation(hole, board, &history_past_depth);
-            // Bias the strategy by multiplying one of the actions by 10 and renormalizing. Otherwise
-            // just play according to the blueprint strategy at the current infoset, if it's the bot's
-            // turn, or if we're in the blueprint meta-strategy for the opponent. 
-            if history_past_depth.player == bot_opponent{
-                if let Some(b) = bias {
-                    for (node_action, prob) in node_strategy.clone() {
-                        if node_action.action == b.action {
-                            node_strategy.insert(node_action, prob * 10.0);
-                        }
-                    }
-                    node_strategy = normalize(&node_strategy);
-                }
-            }
+// fn depth_limit_utility(
+//     player: usize,
+//     deck: &[Card],
+//     history: &ActionHistory,
+//     weights: [f64; 2],
+//     nodes: &Nodes,
+//     depth_limit_bot: &Bot,
+// ) -> f64 {
+//     let opponent = 1 - player;
+//     // The history.player is the bot's opponent
+//     let bot_opponent = 1 - history.player;
+//     debug_assert!(false);
+//     let infoset = InfoSet::from_deck(deck, history);
+//     let strategy = nodes.get_current_strategy(&infoset);
+//     let mut strategy_biases: Vec<Option<Action>> = infoset
+//         .next_actions(&nodes.bet_abstraction)
+//         .iter()
+//         .map(|s| Some(s.clone()))
+//         .collect();
+//     strategy_biases.push(None);
+//     let utilities: Vec<f64> = strategy_biases
+//         .iter()
+//         .map(|bias| {
+//             // Play until the end of the game with the opponent using their biased strategy, or the
+//             // blueprint strategy. The terminal utility will update the regret for the depth limit
+//             // opponent node.
+//             let mut history_past_depth = history.clone();
+//             loop {
+//                 let hand = get_hand(deck, history_past_depth.player, history_past_depth.street);
+//                 let hole = &hand[..2];
+//                 let board = &hand[2..];
+//                 let mut node_strategy = depth_limit_bot.get_strategy_action_translation(
+//                     hole,
+//                     board,
+//                     &history_past_depth,
+//                 );
+//                 // Bias the strategy by multiplying one of the actions by 10 and renormalizing. Otherwise
+//                 // just play according to the blueprint strategy at the current infoset, if it's the bot's
+//                 // turn, or if we're in the blueprint meta-strategy for the opponent.
+//                 if history_past_depth.player == bot_opponent {
+//                     if let Some(b) = bias {
+//                         for (node_action, prob) in node_strategy.clone() {
+//                             if node_action.action == b.action {
+//                                 node_strategy.insert(node_action, prob * 10.0);
+//                             }
+//                         }
+//                         node_strategy = normalize(&node_strategy);
+//                     }
+//                 }
 
-            let action = sample_action_from_strategy(&node_strategy);
-            history_past_depth.add(&action);
-            if history_past_depth.hand_over() {
-                return terminal_utility(deck, &history_past_depth, player);
-            }
-        };
-    }).collect();
-    
-    let mut node_utility = 0.0;
-    for i in 0..strategy.len() {
-        node_utility += utilities[i] * strategy[i] as f64;
-    }
+//                 let action = sample_action_from_strategy(&node_strategy);
+//                 history_past_depth.add(&action);
+//                 if history_past_depth.hand_over() {
+//                     return terminal_utility(deck, &history_past_depth, player);
+//                 }
+//             }
+//         })
+//         .collect();
 
-    if history.player == player {
-        for (index, utility) in utilities.iter().enumerate() {
-            let regret = utility - node_utility;
-            nodes.add_regret(&infoset, index, weights[opponent] * regret);
-        }
-    }
+//     let mut node_utility = 0.0;
+//     for i in 0..strategy.len() {
+//         node_utility += utilities[i] * strategy[i] as f64;
+//     }
 
-    node_utility
-}
+//     if history.player == player {
+//         for (index, utility) in utilities.iter().enumerate() {
+//             let regret = utility - node_utility;
+//             nodes.add_regret(&infoset, index, weights[opponent] * regret);
+//         }
+//     }
+
+//     node_utility
+// }

@@ -1,7 +1,7 @@
 use crate::bot::Bot;
-use crate::trainer_utils::*;
-use crate::trainer::load_nodes;
 use crate::config::CONFIG;
+use crate::trainer::load_nodes;
+use crate::trainer_utils::*;
 use crate::{card_utils::*, OPPONENT};
 use actix_cors::Cors;
 use actix_files as fs;
@@ -9,12 +9,14 @@ use actix_web::{web, App, HttpServer, Responder};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-static BOT: Lazy<Bot> = Lazy::new(|| Bot::new(
-    load_nodes(&CONFIG.nodes_path),
-    CONFIG.subgame_solving,
-    false,
-    CONFIG.depth_limit
-));
+static BOT: Lazy<Bot> = Lazy::new(|| {
+    Bot::new(
+        load_nodes(&CONFIG.nodes_path),
+        CONFIG.subgame_solving,
+        false,
+        CONFIG.depth_limit,
+    )
+});
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct HandCompJSON {
@@ -100,7 +102,15 @@ async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responde
         cards.extend(parse_cards(&json.dealerCards));
         cards.extend(parse_cards(&json.opponentCards));
         cards.extend(parse_cards(&json.boardCards));
-        winnings = terminal_utility(&cards, &history, DEALER);
+
+        winnings = terminal_utility(
+            &parse_cards(&json.dealerCards),
+            &parse_cards(&json.opponentCards),
+            &parse_cards(&json.boardCards),
+            &history,
+            DEALER,
+        );
+        // winnings = terminal_utility(&cards, &history, DEALER);
     }
 
     let history_info = HistoryInfo {
@@ -113,13 +123,13 @@ async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responde
         stacks,
         winnings,
     };
-    
+
     serde_json::to_string(&history_info).unwrap()
 }
 
 fn parse_history(h: &[ActionJSON]) -> ActionHistory {
     let mut history = ActionHistory::new();
-    for action_json in h.clone() {
+    for action_json in h {
         let action = Action {
             action: match action_json.action.as_str() {
                 "Bet" => ActionType::Bet,
@@ -151,8 +161,7 @@ pub async fn start_server() -> std::io::Result<()> {
             .route("/api/bot", web::post().to(get_cpu_action))
             .route("/api/historyInfo", web::post().to(get_history_info))
             .service(fs::Files::new("/", "../gui/build").index_file("index.html"))
-            .wrap(Cors::permissive()
-        )
+            .wrap(Cors::permissive())
     })
     .bind("0.0.0.0:80")?
     .run()
