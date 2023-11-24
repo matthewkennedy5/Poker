@@ -35,8 +35,6 @@ impl Nodes {
         node
     }
 
-    // TODO: let's refactor a better solution to avoid needing to pass bet_abstraction all over the place
-
     pub fn add_regret(&self, infoset: &InfoSet, action_index: usize, regret: f64) {
         let history = infoset.history.clone();
         // TODO: There's a data race here on initialization, but it's not that important
@@ -47,7 +45,14 @@ impl Nodes {
         let mut node_vec = node_vec_lock.lock().unwrap();
         let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
         // debug_assert!(action_index < node.num_actions);
-        let accumulated_regret = node.regrets[action_index] + regret as f32;
+        let mut accumulated_regret = node.regrets[action_index] + regret as f32;
+        // DCFR
+        let t: f32 = node.t as f32;
+        if accumulated_regret > 0.0 {
+            accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
+        } else {
+            accumulated_regret *= 0.5;
+        }
         node.regrets[action_index] = accumulated_regret;
     }
 
@@ -66,10 +71,10 @@ impl Nodes {
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
         let current_strategy: SmallVecFloats = normalize_smallvec(&positive_regrets);
-        if prob > 0.0 {
+        if prob > 0.0 && node.t > 100 {
             for i in 0..current_strategy.len() {
                 // Add this action's probability to the cumulative strategy sum
-                node.strategy_sum[i] += current_strategy[i] * prob;
+                node.strategy_sum[i] += current_strategy[i] * prob * (node.t - 100) as f32;
             }
         }
         node.t += 1;
@@ -141,7 +146,7 @@ impl Nodes {
         );
         let node = match self.get(&infoset) {
             Some(n) => n.clone(),
-            None => Node::new(num_actions), 
+            None => Node::new(num_actions),
         };
         debug_assert!(
             node.num_actions == num_actions,

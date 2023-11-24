@@ -16,7 +16,7 @@ fn main() {
     // }
 
     // create_abstraction_clusters();
-    // train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
+    // print_abstraction();
 
-    print_abstraction();
+    train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
 }
