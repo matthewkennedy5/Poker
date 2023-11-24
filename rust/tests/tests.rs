@@ -716,53 +716,57 @@ fn isomorphic_hand_example() {
 }
 
 #[test]
-fn isomorphic_hand_ehs() {
+fn isomorphic_hand_ehs2() {
     // Make sure that every hand that maps to the same isomorphic_hand has the same E[HS] and E[HS^2].
 
+    // Note: make sure the river equity cache is turned off in card_utils::isomorphic_hand().
+
     let deck = deck();
-    let n_cards = 7;
 
-    let iso_ehs: DashMap<u64, f64> = DashMap::new();
+    for n_cards in [7, 6, 5].iter() {
+        println!("Testing that E[HS^2] is the same for isomorphic {n_cards} card hands");
+        let iso_ehs: DashMap<u64, f64> = DashMap::new();
 
-    let bar = pbar(match n_cards {
-        5 => 25989600,
-        6 => 305377800,
-        7 => 2809475760,
-        _ => panic!(),
-    });
-    for preflop in deck.iter().combinations(2) {
-        let preflop: Vec<Card> = preflop.iter().map(|&&c| c).collect();
-        let mut rest_of_deck = deck.clone();
-        rest_of_deck.retain(|c| !preflop.contains(&c));
-
-        let boards: Vec<Vec<&Card>> = rest_of_deck.iter().combinations(n_cards - 2).collect();
-        boards.par_iter().for_each(|board| {
-            let board: Vec<Card> = board.iter().map(|&&c| c).collect();
-            let mut cards: Vec<Card> = Vec::with_capacity(preflop.len() + board.len());
-            cards.extend(&preflop);
-            cards.extend(&board);
-
-            let hand: u64 = cards2hand(&cards);
-            let ehs2 = equity_distribution_moment(hand, 2);
-            let iso = cards2hand(&isomorphic_hand(&cards, true));
-
-            match iso_ehs.get(&iso) {
-                Some(existing_ehs2) => {
-                    assert!((ehs2 - *existing_ehs2).abs() < 1e-6);
-                    // println!(
-                    //     "Hand {} has same ehs {} as existing hand.",
-                    //     hand2str(hand),
-                    //     ehs
-                    // );
-                }
-                None => {
-                    iso_ehs.insert(iso, ehs2);
-                }
-            };
-            bar.inc(1);
+        let bar = pbar(match n_cards {
+            5 => 25989600,
+            6 => 305377800,
+            7 => 2809475760,
+            _ => panic!(),
         });
+        for preflop in deck.iter().combinations(2) {
+            let preflop: Vec<Card> = preflop.iter().map(|&&c| c).collect();
+            let mut rest_of_deck = deck.clone();
+            rest_of_deck.retain(|c| !preflop.contains(&c));
+
+            let boards: Vec<Vec<&Card>> = rest_of_deck.iter().combinations(n_cards - 2).collect();
+            boards.par_iter().for_each(|board| {
+                let board: Vec<Card> = board.iter().map(|&&c| c).collect();
+                let mut cards: Vec<Card> = Vec::with_capacity(preflop.len() + board.len());
+                cards.extend(&preflop);
+                cards.extend(&board);
+
+                let hand: u64 = cards2hand(&cards);
+                let ehs2 = equity_distribution_moment(hand, 2);
+                let iso = cards2hand(&isomorphic_hand(&cards, true));
+
+                match iso_ehs.get(&iso) {
+                    Some(existing_ehs2) => {
+                        assert!((ehs2 - *existing_ehs2).abs() < 1e-6);
+                        // println!(
+                        //     "Hand {} has same ehs {} as existing hand.",
+                        //     hand2str(hand),
+                        //     ehs
+                        // );
+                    }
+                    None => {
+                        iso_ehs.insert(iso, ehs2);
+                    }
+                };
+                bar.inc(1);
+            });
+        }
+        bar.finish_with_message("Done");
     }
-    bar.finish_with_message("Done");
 }
 
 #[test]
@@ -1056,118 +1060,6 @@ fn equity_distribution_expectations() {
         });
         bar.finish();
     }
-}
-
-#[test]
-fn iterate_vectorized_equals_sampled() {
-    let deck = deck();
-    let hand = str2cards("2c2d");
-    assert_eq!(&deck[..2], hand);
-    let player = OPPONENT; // Opponent is the out-of-position player
-    let history = ActionHistory::new();
-    let sampled_nodes = Nodes::new(&CONFIG.bet_abstraction);
-
-    let opp_hand = &deck[2..4];
-    let board = &deck[4..9];
-
-    // TODO: Figure out a better way of getting rid of the impossible blocked preflop hands
-    let mut range = Range::new();
-    range.remove_blockers(opp_hand);
-    range.remove_blockers(board);
-    let mut preflop_hands = Vec::with_capacity(range.hands.len());
-    for hand_index in 0..range.hands.len() {
-        let prob = range.probs[hand_index];
-        if prob > 0.0 {
-            preflop_hands.push(range.hands[hand_index]);
-        }
-    }
-
-    // println!("Preflop hands: {:?}", preflop_hands.iter().map(|h| cards2str(h));
-    let sampled_utils: Vec<f64> = preflop_hands
-        .iter()
-        .map(|h| {
-            let mut hand_deck: Vec<Card> = Vec::with_capacity(9);
-            if player == DEALER {
-                hand_deck.extend(h);
-                hand_deck.extend(opp_hand);
-            } else {
-                hand_deck.extend(opp_hand);
-                hand_deck.extend(h);
-            }
-            hand_deck.extend(board);
-            // println!("hand_deck: {}", cards2str(&hand_deck));
-            iterate_sampled(
-                player,
-                &hand_deck,
-                &history,
-                [1.0, 1.0],
-                // &Nodes::new(&CONFIG.bet_abstraction),
-                &sampled_nodes,
-                None,
-                None,
-                -1,
-            )
-        })
-        .collect();
-
-    const FAILING_HAND: usize = 4;
-
-    // let sampled_util = {
-    //     let mut hand_deck: Vec<Card> = Vec::with_capacity(9);
-    //     hand_deck.extend(preflop_hands[FAILING_HAND]);
-    //     hand_deck.extend(opp_hand);
-    //     hand_deck.extend(board);
-    //     iterate_sampled(
-    //         player,
-    //         &hand_deck,
-    //         &history,
-    //         [1.0, 1.0],
-    //         &Nodes::new(&CONFIG.bet_abstraction),
-    //         None,
-    //         None,
-    //         -1,
-    //     )
-    // };
-
-    let player_hand_probs = vec![1.0; preflop_hands.len()];
-    let vector_nodes = Nodes::new(&CONFIG.bet_abstraction);
-    let vector_utils: Vec<f64> = iterate_vectorized(
-        player,
-        &preflop_hands,
-        player_hand_probs.clone(),
-        opp_hand,
-        1.0,
-        board,
-        &history,
-        &vector_nodes,
-        None,
-        None,
-        -1,
-    );
-
-    // assert_eq!(preflop_hands[0].to_vec(), hand);
-    println!("Sampled util: {:?}", sampled_utils);
-    println!("Vectorized util: {:?}", vector_utils);
-    // println!("Player hand: {}", cards2str(&preflop_hands[FAILING_HAND]));
-    // println!("Opponent hand: {}", cards2str(&opp_hand));
-    // println!("Board: {}", cards2str(&board));
-    // assert_eq!(sampled_util, vector_utils[FAILING_HAND]);
-    // assert_eq!(sampled_utils, vector_utils);
-
-    println!();
-    println!("Hand: {}, Board: {}", cards2str(&hand), cards2str(&board));
-    let infoset = InfoSet::from_hand(
-        &hand,
-        &board,
-        &ActionHistory::from_strings(vec!["Bet 300", "Call 300"]),
-    );
-    println!("InfoSet: {infoset}");
-    println!(
-        "Actions: {:?}",
-        infoset.next_actions(&CONFIG.bet_abstraction)
-    );
-    println!("Sampled Node: {:?}", sampled_nodes.get(&infoset));
-    println!("Vector Node: {:?}", vector_nodes.get(&infoset));
 }
 
 #[test]

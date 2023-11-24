@@ -339,15 +339,13 @@ pub fn bucket_sizes() {
 
 pub fn print_abstraction() {
     let abs = Abstraction::new();
-    // let street = "flop";
-    // let
-    for bucket in 0..CONFIG.flop_buckets {
+    for bucket in 0..CONFIG.turn_buckets {
         println!("\nBucket {bucket}");
         for sample in 0..10 {
-            let mut hands: Vec<&u64> = abs.flop.keys().collect();
+            let mut hands: Vec<&u64> = abs.turn.keys().collect();
             hands.shuffle(&mut rand::thread_rng());
             for hand in hands {
-                let b = abs.flop.get(hand).unwrap().clone();
+                let b = abs.turn.get(hand).unwrap().clone();
                 if b == bucket {
                     println!("{}", hand2str(hand.clone()));
                     break;
@@ -425,8 +423,9 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
 
     let mut clusters: Vec<i32> = vec![0; distributions.len()];
 
-    let iters = 20;
+    let iters = 1_000;
     let bar = pbar(iters as u64);
+    let mut prev_distance_sum = 0.0;
     for iter in 0..iters {
         let distance_sum: Mutex<f64> = Mutex::new(0.0);
         clusters = distributions
@@ -448,7 +447,13 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
             })
             .collect();
 
-        println!("Iteration {iter}: {}", distance_sum.lock().unwrap());
+        let distance_sum_val: f64 = *distance_sum.lock().unwrap();
+        println!("Iteration {iter}: {}", distance_sum_val);
+        if distance_sum_val == prev_distance_sum {
+            println!("Converged.");
+            break;
+        }
+        prev_distance_sum = distance_sum_val;
 
         centers = (0..k)
             .map(|cluster| {

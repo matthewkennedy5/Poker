@@ -22,7 +22,7 @@ nodes_path = "products/nodes.bin"
 train_iters = 10000000
 lbr_iters = 1_000_000
 eval_every = 128
-warm_start = true
+warm_start = false
 
 # Realtime solving
 subgame_solving = false

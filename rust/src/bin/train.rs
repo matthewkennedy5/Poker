@@ -1,12 +1,7 @@
 use optimus::*;
 use std::path::Path;
 
-use std::path::Path;
-
 fn main() {
-    // create_abstraction_clusters();
-    // print_abstraction();
-
     // If the abstraction file doesn't exist, we want to first create the
     // abstraction before the Lazy cell is called, because the Lazy initializer
     // prevents parallelization
@@ -21,5 +16,7 @@ fn main() {
     // }
 
     // create_abstraction_clusters();
-    train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
+    // train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
+
+    print_abstraction();
 }
