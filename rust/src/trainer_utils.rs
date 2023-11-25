@@ -619,22 +619,32 @@ fn fast_fold_eval(
     if player == folder {
         winnings = -winnings;
     }
-    // Sum the opp_prob across all possible opp hands for each player hand, excluding blockers
-    let utils: Vec<f64> = preflop_hands
+
+    // 1. get sum of blocking opp probs for each card in the deck
+    let blocked_prob_sums: HashMap<Card, f64> = deck()
         .iter()
-        .map(|h| {
-            let mut total_prob = 0.0;
+        .map(|card| {
+            let mut sum = 0.0;
             for i in 0..preflop_hands.len() {
-                let h2 = preflop_hands[i];
-                if !h.contains(&h2[0]) && !h.contains(&h2[1]) {
-                    total_prob += opp_reach_probs[i];
+                if preflop_hands[i].contains(card) {
+                    sum += opp_reach_probs[i];
                 }
             }
-            total_prob * winnings / preflop_hands.len() as f64
+            (card.clone(), sum)
         })
         .collect();
 
-    return utils;
+    let opp_prob_sum: f64 = opp_reach_probs.iter().sum();
+    let utils: Vec<f64> = preflop_hands
+        .iter()
+        .map(|h| {
+            let total_prob = opp_prob_sum
+                - blocked_prob_sums.get(&h[0]).unwrap()
+                - blocked_prob_sums.get(&h[1]).unwrap();
+            total_prob * winnings / preflop_hands.len() as f64
+        })
+        .collect();
+    utils
 }
 
 fn get_hand_data(
@@ -749,19 +759,6 @@ pub fn terminal_utility_vectorized_fast(
         return fast_fold_eval(preflop_hands, opp_reach_probs, board, history, player);
     }
 
-    // let mut hand_data: Vec<HandData> = (0..preflop_hands.len())
-    //     .map(|i| {
-    //         let h = preflop_hands[i];
-    //         let river_hand = [h[0], h[1], board[0], board[1], board[2], board[3], board[4]];
-    //         let strength = FAST_HAND_TABLE.hand_strength(&river_hand);
-    //         HandData {
-    //             hand: h,
-    //             strength: strength,
-    //             prob: opp_reach_probs[i],
-    //         }
-    //     })
-    //     .collect();
-
     let mut hand_data = get_hand_data(&preflop_hands, &opp_reach_probs, board, history, player);
     let mut sort_indices: Vec<usize> = (0..hand_data.len()).collect();
     // Sort the indices based on the strength in hand_data. This can be used to recover the index
@@ -785,6 +782,7 @@ pub fn terminal_utility_vectorized_fast(
     )
 }
 
+// TODO REFACTOR: make this just terminal_utility_vectorized_fast
 pub fn terminal_utility_vectorized(
     preflop_hands: Vec<[Card; 2]>,
     opp_reach_probs: Vec<f64>,
