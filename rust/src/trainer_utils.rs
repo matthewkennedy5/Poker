@@ -553,51 +553,6 @@ pub fn terminal_utility_old(deck: &[Card], history: &ActionHistory, player: usiz
     )
 }
 
-fn terminal_utility_vectorized_slow(
-    preflop_hands: Vec<[Card; 2]>,
-    opp_reach_probs: Vec<f64>,
-    board: &[Card],
-    history: &ActionHistory,
-    player: usize,
-) -> Vec<f64> {
-    let opponent = 1 - player;
-    // If Fold, each traverser hand's utility is the same: sum(opp_reac_probs) * winnings
-    // if history.last_action().unwrap().action == ActionType::Fold {
-    //     // Someone folded -- assign the chips to the winner.
-    //     let winner = history.player;
-    //     let folder = 1 - winner;
-    //     let mut winnings: f64 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
-    //     if winner == opponent {
-    //         winnings = -winnings;
-    //     }
-
-    //     // Start here: account for blockers instead off summing all opp_reach_probs
-    //     let sum: f64 = opp_reach_probs.iter().sum();
-    //     let util = sum * winnings / preflop_hands.len() as f64;
-    //     return vec![util; preflop_hands.len()];
-    // }
-
-    // If Showdown, do the full loop. This can be sped up later.
-    let utils: Vec<f64> = preflop_hands
-        .iter()
-        .map(|h| {
-            let mut total_util = 0.0;
-
-            for i in 0..preflop_hands.len() {
-                let opp_hand = preflop_hands[i];
-                if h.contains(&opp_hand[0]) || h.contains(&opp_hand[1]) {
-                    continue;
-                }
-                let opp_prob = opp_reach_probs[i];
-                total_util += opp_prob * terminal_utility(h, &opp_hand, &board, history, player);
-            }
-            total_util / preflop_hands.len() as f64
-        })
-        .collect();
-
-    utils
-}
-
 #[derive(Debug, Clone)]
 struct HandData {
     hand: [Card; 2],
@@ -654,7 +609,7 @@ fn get_hand_data(
     history: &ActionHistory,
     player: usize,
 ) -> Vec<HandData> {
-    let mut hand_data: Vec<HandData> = (0..preflop_hands.len())
+    let hand_data: Vec<HandData> = (0..preflop_hands.len())
         .map(|i| {
             let h = preflop_hands[i];
             let river_hand = [h[0], h[1], board[0], board[1], board[2], board[3], board[4]];
@@ -669,7 +624,7 @@ fn get_hand_data(
     hand_data
 }
 
-fn adjust_probs(
+fn subtract_blocker_probs(
     prob_worse: f64,
     prob_better: f64,
     d: &HandData,
@@ -708,7 +663,7 @@ fn get_utils(
     let mut idx_equal = 0;
     let mut idx_better = 0;
     let mut utils: Vec<f64> = vec![0.0; preflop_hands.len()];
-    for (i, d) in hand_data.clone().iter().enumerate() {
+    for (i, d) in hand_data.iter().enumerate() {
         // Just moved to a better player hand - need to move some opponent hands from "equal" to
         // "worse", and from "better" to "equal".
 
@@ -735,7 +690,7 @@ fn get_utils(
         }
 
         let (prob_worse_adjusted, prob_better_adjusted) =
-            adjust_probs(prob_worse, prob_better, &d, &hand_data);
+            subtract_blocker_probs(prob_worse, prob_better, &d, &hand_data);
 
         let util = history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted)
             / preflop_hands.len() as f64;
@@ -790,26 +745,13 @@ pub fn terminal_utility_vectorized(
     history: &ActionHistory,
     player: usize,
 ) -> Vec<f64> {
-    let fast = terminal_utility_vectorized_fast(
+    terminal_utility_vectorized_fast(
         preflop_hands.clone(),
         opp_reach_probs.clone(),
         board,
         history,
         player,
-    );
-    debug_assert!({
-        let slow = terminal_utility_vectorized_slow(
-            preflop_hands,
-            opp_reach_probs,
-            board,
-            history,
-            player,
-        );
-        fast.iter()
-            .zip(slow.iter())
-            .all(|(&a, &b)| (a - b).abs() < 1e-6)
-    });
-    fast
+    )
 }
 
 // Assuming history represents a terminal state (someone folded, or it's a showdown),
