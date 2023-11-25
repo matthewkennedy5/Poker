@@ -33,13 +33,15 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         serialize_nodes(&nodes);
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
 
-        let infoset = InfoSet::from_hand(
-            &str2cards("6h6d"),
-            &str2cards("2s3dAc6c2h"),
-            &ActionHistory::from_strings(vec![
-                "Bet 300", "Call 300", "Call 0", "Call 0", "Call 0", "Call 0", "Call 0",
-            ]),
-        );
+        // let infoset = InfoSet::from_hand(
+        //     &str2cards("6h6d"),
+        //     &str2cards("2s3dAc6c2h"),
+        //     &ActionHistory::from_strings(vec![
+        //         "Bet 300", "Call 300", "Call 0", "Call 0", "Call 0", "Call 0", "Call 0",
+        //     ]),
+        // );
+
+        let infoset = InfoSet::from_hand(&str2cards("2c7h"), &Vec::new(), &ActionHistory::new());
         println!("InfoSet: {infoset}");
         println!(
             "Actions: {:?}",

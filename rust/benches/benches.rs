@@ -1,24 +1,19 @@
 use criterion::*;
 use optimus::*;
-use std::time::Duration;
 use rand::prelude::*;
+use std::time::Duration;
 
 // TODO: add a bench for the realtime solving time
 
 fn bench_cfr(c: &mut Criterion) {
     let nodes: Nodes = Nodes::new(&CONFIG.bet_abstraction);
     let mut group = c.benchmark_group("cfr");
-    group.warm_up_time(Duration::new(150, 0));
-    group.bench_function("cfr", |b| {
-        b.iter(|| {
-            cfr_iteration(
-                &deck(),
-                &ActionHistory::new(),
-                &nodes,
-                -1
-            )
+    // group.warm_up_time(Duration::new(150, 0));
+    group
+        .bench_function("cfr", |b| {
+            b.iter(|| cfr_iteration(&deck(), &ActionHistory::new(), &nodes, -1))
         })
-    });
+        .sample_size(10);
     group.finish();
 }
 
@@ -42,9 +37,7 @@ fn bench_win_probability_rollout(c: &mut Criterion) {
     let mut group = c.benchmark_group("win_probability_rollout");
     group.warm_up_time(Duration::new(90, 0));
     group.bench_function("win_probability_rollout", |b| {
-        b.iter(|| {
-            win_probability_rollout(&opp_range, &exploiter_hole, &board)
-        })
+        b.iter(|| win_probability_rollout(&opp_range, &exploiter_hole, &board))
     });
     group.finish();
 }
@@ -56,11 +49,7 @@ fn bench_play_hand(c: &mut Criterion) {
     };
     let mut group = c.benchmark_group("play_hand");
     group.warm_up_time(Duration::new(90, 0));
-    group.bench_function("play_hand", |b| {
-        b.iter(|| {
-            play_hand(&get_strategy)
-        })
-    });
+    group.bench_function("play_hand", |b| b.iter(|| play_hand(&get_strategy)));
     group.finish();
 }
 

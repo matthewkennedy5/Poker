@@ -71,10 +71,12 @@ impl Nodes {
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
         let current_strategy: SmallVecFloats = normalize_smallvec(&positive_regrets);
-        if prob > 0.0 && node.t > 100 {
+        let d = (node.t - 100) as f32;
+        if prob > 0.0 && d > 0.0 {
             for i in 0..current_strategy.len() {
                 // Add this action's probability to the cumulative strategy sum
-                node.strategy_sum[i] += current_strategy[i] * prob * (node.t - 100) as f32;
+                node.strategy_sum[i] += current_strategy[i] * prob;
+                node.strategy_sum[i] *= d / (d + 1.0);
             }
         }
         node.t += 1;

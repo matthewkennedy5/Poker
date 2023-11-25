@@ -11,10 +11,11 @@ pub static CONFIG: Lazy<Config> = Lazy::new(|| {
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    // Chip parameters
+    // Game parameters
     pub stack_size: u16,
     pub big_blind: u16,
     pub small_blind: u16,
+    pub last_street: String,
 
     // Abstraction
     pub bet_abstraction: Vec<Vec<f64>>,

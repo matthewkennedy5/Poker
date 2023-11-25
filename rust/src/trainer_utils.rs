@@ -114,7 +114,14 @@ impl ActionHistory {
             // All-in action has happened
             return true;
         }
-        if self.street > FLOP {
+
+        let last_street = match CONFIG.last_street.as_str() {
+            "flop" => FLOP,
+            "turn" => TURN,
+            "river" => RIVER,
+            _ => panic!(),
+        };
+        if self.street > last_street {
             // Change to FLOP for flop holdem, RIVER for texas holdem
             // Showdown
             return true;
