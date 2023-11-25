@@ -746,23 +746,22 @@ pub fn terminal_utility_vectorized(
         player,
     );
     // TODO Refactor: make this an automated test instead of assert
-    // let slow = terminal_utility_vectorized_slow(
-    //     preflop_hands.clone(),
-    //     opp_reach_probs.clone(),
-    //     board,
-    //     history,
-    //     player,
-    // );
-    // debug_assert!(
-    //     {
-    //         fast.iter()
-    //             .zip(slow.iter())
-    //             .all(|(&a, &b)| (a - b).abs() < 1e-6)
-    //     },
-    //     "{} {}",
-    //     fast[0],
-    //     slow[0]
-    // );
+    debug_assert!(
+        {
+            let slow = terminal_utility_vectorized_slow(
+                preflop_hands.clone(),
+                opp_reach_probs.clone(),
+                board,
+                history,
+                player,
+            );
+            fast.iter()
+                .zip(slow.iter())
+                .all(|(&a, &b)| (a - b).abs() < 1e-6)
+        },
+        "{}",
+        fast[0],
+    );
     fast
 }
 
