@@ -50,13 +50,13 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
 
         // Check what percent of nodes have t = 0
         let mut zero = 0;
-        let mut total = 0;
-        let mut total_t = 0;
+        let mut total: u64 = 0;
+        let mut total_t: u64 = 0;
         for reference in &nodes.dashmap {
             let history_nodes = reference.lock().unwrap();
             for n in history_nodes.iter() {
                 total += 1;
-                total_t += n.t;
+                total_t += n.t as u64;
                 if n.t == 0 {
                     zero += 1;
                 }

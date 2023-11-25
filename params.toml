@@ -2,7 +2,7 @@
 stack_size = 20000
 big_blind = 100
 small_blind = 50
-last_street = "flop"
+last_street = "river"
 
 # Bet abstractions, expressed as multiples of the pot size. -1 means "all-in".
 # This does not include the call and fold actions. 
@@ -20,10 +20,10 @@ river_buckets = 10_000   # Max: 125756657
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 9600
-lbr_iters = 200_000
-eval_every = 3200
-warm_start = false
+train_iters = 100_000
+lbr_iters = 2_000_000
+eval_every = 1_000
+warm_start = false 
 
 # Realtime solving
 subgame_solving = false
