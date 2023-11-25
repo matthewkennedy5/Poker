@@ -183,7 +183,7 @@ pub struct Node {
     pub regrets: [f32; NUM_ACTIONS],
     pub strategy_sum: [f32; NUM_ACTIONS],
     pub num_actions: usize,
-    pub t: u64,
+    pub t: i32,
 }
 
 impl Node {

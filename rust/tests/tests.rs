@@ -1076,3 +1076,5 @@ fn test_terminal_utility() {
         300.0
     );
 }
+
+// TODO: Add lots of tests for terminal_utility_vectorized
