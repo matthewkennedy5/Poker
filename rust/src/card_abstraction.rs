@@ -74,9 +74,7 @@ impl Abstraction {
             7 => self.river.get(&hand),
             _ => panic!("Bad number of cards"),
         };
-        bin_result
-            .expect(format!("Hand {} not found in abstraction", hand2str(hand)).as_str())
-            .clone()
+        bin_result.unwrap().clone()
     }
 }
 

@@ -8,6 +8,7 @@ use crate::ranges::Range;
 use crate::trainer_utils::*;
 use rand::prelude::*;
 use rayon::prelude::*;
+use smallvec::SmallVec;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
@@ -52,12 +53,13 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         let mut zero = 0;
         let mut total: u64 = 0;
         let mut total_t: u64 = 0;
-        for reference in &nodes.dashmap {
-            let history_nodes = reference.lock().unwrap();
+        for elem in &nodes.dashmap {
+            let history_nodes = elem.value();
             for n in history_nodes.iter() {
+                let t = n.lock().unwrap().t;
                 total += 1;
-                total_t += n.t as u64;
-                if n.t == 0 {
+                total_t += t as u64;
+                if t == 0 {
                     zero += 1;
                 }
             }
@@ -148,22 +150,27 @@ pub fn iterate(
     let infosets: Vec<Option<InfoSet>> = (0..N)
         .into_iter()
         .map(|i| {
-            if opp_reach_probs[i] < 1e-10 && traverser_reach_probs[i] < 1e-10 {
-                None
-            } else {
-                let infoset = InfoSet::from_hand(&preflop_hands[i], &board, &history);
-                Some(infoset)
-            }
+            // if opp_reach_probs[i] < 1e-10 && traverser_reach_probs[i] < 1e-10 {
+            //     None
+            // } else {
+            let infoset = InfoSet::from_hand(&preflop_hands[i], &board, &history);
+            Some(infoset)
+            // }
         })
         .collect();
 
-    let strategies: Vec<SmallVecFloats> = infosets
-        .iter()
-        .map(|i| match i {
-            Some(infoset) => nodes.get_current_strategy(&infoset),
-            None => smallvec![0.0; history.next_actions(&nodes.bet_abstraction).len()],
-        })
-        .collect();
+    // let strategies: Vec<SmallVecFloats> = infosets
+    //     .iter()
+    //     .map(|i| match i {
+    //         Some(infoset) => nodes.get_current_strategy(&infoset),
+    //         None => smallvec![0.0; history.next_actions(&nodes.bet_abstraction).len()],
+    //     })
+    //     .collect();
+
+    let unwrapped_infosets: Vec<InfoSet> = infosets.iter().map(|i| i.clone().unwrap()).collect();
+
+    let strategies: Vec<SmallVecFloats> =
+        nodes.get_current_strategy_vectorized(&unwrapped_infosets);
     let opponent = 1 - traverser;
     if history.player == traverser {
         for i in 0..N {

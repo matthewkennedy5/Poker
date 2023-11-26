@@ -204,9 +204,12 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
     let cards = sort_isomorphic(cards, streets);
 
     // by_suits creates a lookup of suit -> ranks with that suit in the hand
-    let mut by_suits: SmallVec<[SmallVec<[u8; 7]>; 4]> = smallvec![smallvec![0; 7]; 4];
+    let mut by_suits: [SmallVec<[u8; 7]>; 4] = [smallvec![], smallvec![], smallvec![], smallvec![]];
     for card in &cards {
         by_suits[card.suit as usize].push(card.rank);
+    }
+    for i in 0..by_suits.len() {
+        by_suits[i].sort_unstable();
     }
 
     let mut suit_indices: SmallVec<[usize; 4]> = (0..4).collect();
@@ -214,13 +217,7 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
         let a_len = by_suits[*a].len();
         let b_len = by_suits[*b].len();
         if a_len == b_len {
-            // If 2 suits have the same number of cards (len), then sort them lexicographically based
-            // on their ranks
-            let mut sorted_a = by_suits[*a].clone();
-            sorted_a.sort_unstable();
-            let mut sorted_b = by_suits[*b].clone();
-            sorted_b.sort_unstable();
-            sorted_a.cmp(&sorted_b)
+            by_suits[*a].cmp(&by_suits[*b])
         } else {
             b_len.cmp(&a_len)
         }

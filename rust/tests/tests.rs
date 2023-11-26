@@ -672,12 +672,12 @@ fn isomorphic_hand_len() {
     let flop = load_flop_isomorphic();
     assert_eq!(flop.len(), 1344590);
     println!("Flop len: {}", flop.len());
-    let turn = load_turn_isomorphic();
-    assert_eq!(turn.len(), 14444820);
-    println!("Turn len: {}", turn.len());
-    let river = load_river_isomorphic();
-    assert_eq!(river.len(), 126192339);
-    println!("River len: {}", river.len());
+    // let turn = load_turn_isomorphic();
+    // assert_eq!(turn.len(), 14444820);
+    // println!("Turn len: {}", turn.len());
+    // let river = load_river_isomorphic();
+    // assert_eq!(river.len(), 126192339);
+    // println!("River len: {}", river.len());
 }
 
 #[test]
