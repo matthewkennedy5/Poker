@@ -536,23 +536,6 @@ pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
     action
 }
 
-// deck is
-// dealer1 dealer2 opp1 opp2 board1 board2 board3...
-// bc of that, traverser_preflop_hand and opp_preflop_hand will be assigned correctly depending on who is the "player"
-// TODO REFACTOR: delete terminal_utility_old
-pub fn terminal_utility_old(deck: &[Card], history: &ActionHistory, player: usize) -> f64 {
-    let player_preflop_hand = get_hand(deck, player, PREFLOP);
-    let opp_preflop_hand = get_hand(deck, 1 - player, PREFLOP);
-    let board = &deck[4..9];
-    terminal_utility(
-        &player_preflop_hand,
-        &opp_preflop_hand,
-        board,
-        history,
-        player,
-    )
-}
-
 #[derive(Debug, Clone)]
 struct HandData {
     hand: [Card; 2],
