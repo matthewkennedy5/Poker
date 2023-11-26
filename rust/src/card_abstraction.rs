@@ -19,7 +19,7 @@ use std::{
     path::Path,
 };
 
-pub static RIVER_EQUITY_CACHE: Lazy<DashMap<SmallVecHand, f64>> = Lazy::new(|| DashMap::new());
+pub static RIVER_EQUITY_CACHE: Lazy<DashMap<SmallVecHand, f64>> = Lazy::new(DashMap::new);
 
 pub const FLOP_ABSTRACTION_PATH: &str = "products/flop_abstraction.bin";
 pub const TURN_ABSTRACTION_PATH: &str = "products/turn_abstraction.bin";
@@ -73,7 +73,7 @@ impl Abstraction {
             7 => self.river.get(&hand),
             _ => panic!("Bad number of cards"),
         };
-        bin_result.unwrap().clone()
+        *bin_result.unwrap()
     }
 }
 
@@ -277,7 +277,7 @@ pub fn equity_distribution(hand: u64) -> Vec<f32> {
             }
             n_runs += 1.0
         }
-        let equity = n_wins / (n_runs as f64);
+        let equity = n_wins / n_runs;
         let mut equity_bucket = (equity * BUCKETS as f64).floor() as usize;
         if equity_bucket == BUCKETS {
             equity_bucket = BUCKETS - 1;
@@ -320,7 +320,7 @@ pub fn river_equity(hand: &[Card]) -> f64 {
     }
     let equity = n_wins / (n_runs as f64);
     // RIVER_EQUITY_CACHE.insert(iso, equity);
-    return equity;
+    equity
 }
 
 pub fn bucket_sizes() {
@@ -461,7 +461,7 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
                     if clusters[i] == cluster {
                         num_points += 1;
                         for j in 0..sum.len() {
-                            sum[j] = sum[j] + distributions[i][j];
+                            sum[j] += distributions[i][j];
                         }
                     }
                 }

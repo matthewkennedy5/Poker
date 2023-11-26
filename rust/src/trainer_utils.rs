@@ -139,7 +139,7 @@ impl ActionHistory {
             self
         );
         let action = action.clone();
-        self.stacks[self.player as usize] -= action.amount;
+        self.stacks[self.player] -= action.amount;
         self.player = 1 - self.player;
         self.last_action = Some(action.clone());
         self.history.push(action);
@@ -259,8 +259,7 @@ impl ActionHistory {
         debug_assert!(
             {
                 // TODO: Might be better if these debug_asserts were standalone tests
-                let action_set: HashSet<Action> =
-                    candidate_actions.iter().map(|a| a.clone()).collect();
+                let action_set: HashSet<Action> = candidate_actions.iter().cloned().collect();
                 action_set.len() == candidate_actions.len()
             },
             "Duplicate next actions: {:?}",
@@ -283,7 +282,7 @@ impl ActionHistory {
         let prev_history = &self.history[..self.history.len() - 1];
         let mut history = ActionHistory::new();
         for action in prev_history {
-            history.add(&action);
+            history.add(action);
         }
 
         // Check that we recover the original history when we add back the last action
@@ -455,7 +454,7 @@ impl InfoSet {
     pub fn from_hand(hole: &[Card], board: &[Card], history: &ActionHistory) -> InfoSet {
         debug_assert!(!board.contains(&hole[0]) && !board.contains(&hole[1]));
         let board = &board[..board_length(history.street)];
-        let hand = [hole, board].concat();
+        let hand: SmallVecHand = hole.iter().chain(board.iter()).cloned().collect();
         InfoSet {
             history: history.clone(),
             card_bucket: ABSTRACTION.bin(&hand),
@@ -502,7 +501,7 @@ pub fn normalize_smallvec(v: &[f32]) -> SmallVecFloats {
         debug_assert!(*elem >= 0.0);
     }
     let sum: f32 = v.iter().sum();
-    debug_assert!(v.len() > 0);
+    debug_assert!(!v.is_empty());
     let norm: SmallVecFloats = v
         .iter()
         .map(|e| {
@@ -525,13 +524,10 @@ pub fn normalize_smallvec(v: &[f32]) -> SmallVecFloats {
 }
 
 pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
-    let actions: Vec<Action> = strategy.keys().map(|a| a.clone()).collect();
+    let actions: Vec<Action> = strategy.keys().cloned().collect();
     let action: Action = actions
         .choose_weighted(&mut thread_rng(), |a| strategy.get(a).unwrap())
-        .expect(&format!(
-            "Err sampling action from strategy: {:?}",
-            strategy
-        ))
+        .unwrap()
         .clone();
     action
 }
@@ -560,7 +556,7 @@ pub fn terminal_utility_vectorized_fast(
                     sum += opp_reach_probs[i];
                 }
             }
-            (card.clone(), sum)
+            (*card, sum)
         })
         .collect();
     if history.last_action().unwrap().action == ActionType::Fold {
@@ -593,7 +589,7 @@ pub fn terminal_utility_vectorized_fast(
             let strength = FAST_HAND_TABLE.hand_strength(&river_hand);
             HandData {
                 hand: h,
-                strength: strength,
+                strength,
                 prob: opp_reach_probs[i],
             }
         })
@@ -611,11 +607,11 @@ pub fn terminal_utility_vectorized_fast(
         .map(|card| {
             let mut blocking_indexes = Vec::with_capacity(deck.len());
             for i in 0..hand_data.len() {
-                if hand_data[i].hand.contains(&card) {
+                if hand_data[i].hand.contains(card) {
                     blocking_indexes.push(i);
                 }
             }
-            (card.clone(), blocking_indexes)
+            (*card, blocking_indexes)
         })
         .collect();
 
@@ -666,7 +662,7 @@ pub fn terminal_utility_vectorized_fast(
             .unwrap()
             .iter()
             .chain(blockers.get(&d.hand[1]).unwrap().iter())
-            .map(|&x| x)
+            .copied()
             .collect();
         for blocker in all_blockers {
             let d2 = &hand_data[blocker];
@@ -705,7 +701,7 @@ fn terminal_utility_vectorized_slow(
                     continue;
                 }
                 let opp_prob = opp_reach_probs[i];
-                total_util += opp_prob * terminal_utility(h, &opp_hand, &board, history, player);
+                total_util += opp_prob * terminal_utility(h, &opp_hand, board, history, player);
             }
             total_util / preflop_hands.len() as f64
         })

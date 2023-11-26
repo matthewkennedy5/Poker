@@ -128,7 +128,7 @@ impl Nodes {
     pub fn get_current_strategy_vectorized(&self, infosets: &[InfoSet]) -> Vec<SmallVecFloats> {
         let history: &ActionHistory = &infosets[0].history;
         if !self.dashmap.contains_key(history) {
-            self.initialize_node_vec(&history);
+            self.initialize_node_vec(history);
         }
         let node_vec_ref = self.dashmap.get(history).unwrap();
         let node_vec = node_vec_ref.value();
@@ -172,7 +172,6 @@ impl Nodes {
         } as usize;
         let new_node: Node = Node::new(history.next_actions(&self.bet_abstraction).len());
         let new_mutex_nodes: Vec<Mutex<Node>> = (0..n_buckets)
-            .into_iter()
             .map(|i| Mutex::new(new_node.clone()))
             .collect();
         self.dashmap.insert(history.clone(), new_mutex_nodes);
@@ -214,7 +213,7 @@ impl Nodes {
         // println!("Cumulative strategy: {:?}", cumulative_strategy);
         debug_assert!((sum - 1.0).abs() < 0.01);
         for (action, prob) in actions.iter().zip(node.cumulative_strategy().iter()) {
-            strategy.insert(action.clone(), prob.clone() as f64);
+            strategy.insert(action.clone(), *prob as f64);
         }
         let sum: f64 = strategy.values().sum();
         debug_assert!(
@@ -241,7 +240,7 @@ impl Node {
         Node {
             regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
-            num_actions: num_actions,
+            num_actions,
             t: 0,
         }
     }

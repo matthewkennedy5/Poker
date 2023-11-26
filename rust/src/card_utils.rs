@@ -121,6 +121,7 @@ pub fn deck() -> Vec<Card> {
     deck
 }
 
+// TODO REFACTOR: delete this and just use .copied() or .cloned()
 pub fn deepcopy(vec: &[&Card]) -> Vec<Card> {
     let vec = vec.to_owned();
     let mut result: Vec<Card> = Vec::new();
@@ -546,7 +547,7 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> Vec<u64> {
             isomorphic.insert(hand);
         }
     }
-    let isomorphic_vec: Vec<u64> = isomorphic.iter().map(|i| *i).collect();
+    let isomorphic_vec: Vec<u64> = isomorphic.iter().copied().collect();
     isomorphic_vec
 }
 
