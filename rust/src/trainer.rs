@@ -140,17 +140,10 @@ pub fn iterate(
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
     let history = history.clone();
-    let infosets: Vec<InfoSet> = if history.player == traverser {
-        preflop_hands
-            .iter()
-            .map(|h| InfoSet::from_hand(h, &board, &history))
-            .collect()
-    } else {
-        preflop_hands
-            .iter()
-            .map(|h| InfoSet::from_hand(h, &board, &history))
-            .collect()
-    };
+    let infosets: Vec<InfoSet> = preflop_hands
+        .iter()
+        .map(|h| InfoSet::from_hand(h, &board, &history))
+        .collect();
 
     let strategies: Vec<SmallVecFloats> = infosets
         .iter()
@@ -170,6 +163,23 @@ pub fn iterate(
         .map(|i| -> Vec<f64> {
             // Maps traverser_preflop_hand to prob of taking this action
             let probs: Vec<f32> = strategies.iter().map(|s| s[i]).collect();
+
+            // MCCFR - randomly prune opponent actions based on their probability
+            // if history.player == opponent {
+            //     let prob_sum: f32 = probs.iter().sum();
+            //     let avg_prob: f64 = prob_sum as f64 / probs.len() as f64;
+            //     let mut explore_prob = avg_prob * actions.len() as f64;
+            //     if explore_prob < 0.05 {
+            //         explore_prob = 0.05;
+            //     } else if explore_prob > 1.0 {
+            //         explore_prob = 1.0;
+            //     }
+            //     explore_prob = 1.0;     START HERE: Keep going on MCCFR? Or just wait for the blueprint to train.
+            //     if !rand::thread_rng().gen_bool(explore_prob) {
+            //         // Prune
+            //         return vec![0.0; N];
+            //     }
+            // }
 
             let mut next_history = history.clone();
             next_history.add(&actions[i]);

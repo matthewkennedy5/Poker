@@ -38,9 +38,9 @@ impl Nodes {
     pub fn add_regret(&self, infoset: &InfoSet, action_index: usize, regret: f64) {
         let history = infoset.history.clone();
         // TODO: There's a data race here on initialization, but it's not that important
-        if !self.dashmap.contains_key(&history) {
-            self.initialize_node_vec(&history);
-        }
+        // if !self.dashmap.contains_key(&history) {
+        //     self.initialize_node_vec(&history);
+        // }
         let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
         let mut node_vec = node_vec_lock.lock().unwrap();
         let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
@@ -58,9 +58,9 @@ impl Nodes {
 
     pub fn update_strategy_sum(&self, infoset: &InfoSet, prob: f32) {
         let history = infoset.history.clone();
-        if !self.dashmap.contains_key(&history) {
-            self.initialize_node_vec(&history);
-        }
+        // if !self.dashmap.contains_key(&history) {
+        //     self.initialize_node_vec(&history);
+        // }
         let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
         let mut node_vec = node_vec_lock.lock().unwrap();
         let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
@@ -84,9 +84,9 @@ impl Nodes {
 
     pub fn reset_strategy_sum(&self, infoset: &InfoSet) {
         let history = infoset.history.clone();
-        if !self.dashmap.contains_key(&history) {
-            self.initialize_node_vec(&history);
-        }
+        // if !self.dashmap.contains_key(&history) {
+        //     self.initialize_node_vec(&history);
+        // }
         let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
         let mut node_vec = node_vec_lock.lock().unwrap();
         let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
