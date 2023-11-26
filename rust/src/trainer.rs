@@ -8,7 +8,6 @@ use crate::ranges::Range;
 use crate::trainer_utils::*;
 use rand::prelude::*;
 use rayon::prelude::*;
-use smallvec::SmallVec;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 

@@ -6,7 +6,6 @@
 
 use crate::card_utils::*;
 use crate::config::CONFIG;
-use crate::rayon::iter::IntoParallelIterator;
 use dashmap::DashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;

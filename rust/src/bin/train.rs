@@ -1,6 +1,4 @@
 use optimus::*;
-use rand::prelude::*;
-use std::path::Path;
 
 fn main() {
     // If the abstraction file doesn't exist, we want to first create the
@@ -15,7 +13,6 @@ fn main() {
     // if !Path::new(RIVER_ABSTRACTION_PATH).exists() {
     //     make_abstraction(7, CONFIG.river_buckets);
     // }
-
     // create_abstraction_clusters();
     // print_abstraction();
 
