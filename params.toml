@@ -22,7 +22,7 @@ nodes_path = "products/nodes.bin"
 # Training
 train_iters = 100_000
 lbr_iters = 100_000
-eval_every = 128
+eval_every = 3200
 warm_start = false 
 
 # Realtime solving

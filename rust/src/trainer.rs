@@ -140,19 +140,36 @@ pub fn iterate(
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
     let history = history.clone();
-    let infosets: Vec<InfoSet> = preflop_hands
-        .iter()
-        .map(|h| InfoSet::from_hand(h, &board, &history))
+    // let infosets: Vec<InfoSet> = preflop_hands
+    //     .iter()
+    //     .map(|h| InfoSet::from_hand(h, &board, &history))
+    //     .collect();
+
+    let infosets: Vec<Option<InfoSet>> = (0..N)
+        .into_iter()
+        .map(|i| {
+            if opp_reach_probs[i] < 1e-10 && traverser_reach_probs[i] < 1e-10 {
+                None
+            } else {
+                let infoset = InfoSet::from_hand(&preflop_hands[i], &board, &history);
+                Some(infoset)
+            }
+        })
         .collect();
 
     let strategies: Vec<SmallVecFloats> = infosets
         .iter()
-        .map(|i| nodes.get_current_strategy(&i))
+        .map(|i| match i {
+            Some(infoset) => nodes.get_current_strategy(&infoset),
+            None => smallvec![0.0; history.next_actions(&nodes.bet_abstraction).len()],
+        })
         .collect();
     let opponent = 1 - traverser;
     if history.player == traverser {
         for i in 0..N {
-            nodes.update_strategy_sum(&infosets[i], traverser_reach_probs[i] as f32);
+            if let Some(infoset) = &infosets[i] {
+                nodes.update_strategy_sum(infoset, traverser_reach_probs[i] as f32);
+            }
         }
     }
 
@@ -235,7 +252,9 @@ pub fn iterate(
         for (action_idx, action_utility) in action_utilities.iter().enumerate() {
             for (hand_idx, utility) in action_utility.iter().enumerate() {
                 let regret = utility - node_utility[hand_idx];
-                nodes.add_regret(&infosets[hand_idx], action_idx, regret);
+                if let Some(infoset) = &infosets[hand_idx] {
+                    nodes.add_regret(infoset, action_idx, regret);
+                }
             }
         }
     }

@@ -10,6 +10,7 @@ pub const NUM_ACTIONS: usize = 4;
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Nodes {
     pub dashmap: DashMap<ActionHistory, Mutex<Vec<Node>>>,
+    // pub dashmap: DashMap<ActionHistory, Vec<Mutex<Node>>>
     pub bet_abstraction: Vec<Vec<f64>>,
 }
 
