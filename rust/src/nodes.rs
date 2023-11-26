@@ -40,7 +40,6 @@ impl Nodes {
         let node_vec = self.dashmap.get(&history).unwrap();
         let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
         let mut node = node_mutex.lock().unwrap();
-        // debug_assert!(action_index < node.num_actions);
         let mut accumulated_regret = node.regrets[action_index] + regret as f32;
         // DCFR
         let t: f32 = node.t as f32;
@@ -54,9 +53,6 @@ impl Nodes {
 
     pub fn update_strategy_sum(&self, infoset: &InfoSet, prob: f32) {
         let history = infoset.history.clone();
-        // if !self.dashmap.contains_key(&history) {
-        //     self.initialize_node_vec(&history);
-        // }
         let node_vec = self.dashmap.get(&history).unwrap();
         let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
         let mut node = node_mutex.lock().unwrap();
@@ -80,13 +76,6 @@ impl Nodes {
 
     pub fn reset_strategy_sum(&self, infoset: &InfoSet) {
         let history = infoset.history.clone();
-        // if !self.dashmap.contains_key(&history) {
-        //     self.initialize_node_vec(&history);
-        // }
-        // let node_vec_lock = self.dashmap.get_mut(&history).unwrap();
-        // let mut node_vec = node_vec_lock.lock().unwrap();
-        // let node = node_vec.get_mut(infoset.card_bucket as usize).unwrap();
-
         let node_vec = self.dashmap.get(&history).unwrap();
         let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
         let mut node = node_mutex.lock().unwrap();
