@@ -149,9 +149,7 @@ pub fn iterate(
     let strategies: Vec<SmallVecFloats> = nodes.get_current_strategy_vectorized(&infosets);
     let opponent = 1 - traverser;
     if history.player == traverser {
-        for i in 0..N {
-            nodes.update_strategy_sum(&infosets[i], traverser_reach_probs[i] as f32);
-        }
+        nodes.update_strategy_sum_vectorized(&infosets, &traverser_reach_probs);
     }
 
     let actions = history.next_actions(&nodes.bet_abstraction);

@@ -79,6 +79,31 @@ impl Nodes {
         node.regrets[action_index] = accumulated_regret;
     }
 
+    pub fn update_strategy_sum_vectorized(&self, infosets: &[InfoSet], probs: &[f64]) {
+        let history = infosets[0].history.clone();
+        let node_vec = self.dashmap.get(&history).unwrap();
+        for (infoset, &prob) in infosets.iter().zip(probs.iter()) {
+            let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
+            let mut node = node_mutex.lock().unwrap();
+            let positive_regrets: SmallVecFloats = node
+                .regrets
+                .iter()
+                .take(node.num_actions)
+                .map(|r| if *r >= 0.0 { *r } else { 0.0 })
+                .collect();
+            let current_strategy: SmallVecFloats = normalize_smallvec(&positive_regrets);
+            let d = (node.t - 100) as f32;
+            if prob > 0.0 && d > 0.0 {
+                for i in 0..current_strategy.len() {
+                    // Add this action's probability to the cumulative strategy sum
+                    node.strategy_sum[i] += current_strategy[i] * prob as f32;
+                    node.strategy_sum[i] *= d / (d + 1.0);
+                }
+            }
+            node.t += 1;
+        }
+    }
+
     pub fn update_strategy_sum(&self, infoset: &InfoSet, prob: f32) {
         let history = infoset.history.clone();
         let node_vec = self.dashmap.get(&history).unwrap();
