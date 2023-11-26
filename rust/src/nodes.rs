@@ -35,6 +35,34 @@ impl Nodes {
         Some(node_guard.clone())
     }
 
+    pub fn add_regret_vectorized(
+        &self,
+        infosets: &[InfoSet],
+        action_utility: &[f64],
+        node_utility: &[f64],
+        action_index: usize,
+    ) {
+        let history = infosets[0].history.clone();
+        let node_vec = self.dashmap.get(&history).unwrap();
+        for (hand_idx, utility) in action_utility.iter().enumerate() {
+            let regret = utility - node_utility[hand_idx];
+
+            let infoset = &infosets[hand_idx];
+            let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
+            let mut node = node_mutex.lock().unwrap();
+            let mut accumulated_regret = node.regrets[action_index] + regret as f32;
+
+            // DCFR
+            let t: f32 = node.t as f32;
+            if accumulated_regret > 0.0 {
+                accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
+            } else {
+                accumulated_regret *= 0.5;
+            }
+            node.regrets[action_index] = accumulated_regret;
+        }
+    }
+
     pub fn add_regret(&self, infoset: &InfoSet, action_index: usize, regret: f64) {
         let history = infoset.history.clone();
         let node_vec = self.dashmap.get(&history).unwrap();

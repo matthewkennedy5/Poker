@@ -231,10 +231,12 @@ pub fn iterate(
     if history.player == traverser {
         // Action utilities is shape [actions, traverser_hands]
         for (action_idx, action_utility) in action_utilities.iter().enumerate() {
-            for (hand_idx, utility) in action_utility.iter().enumerate() {
-                let regret = utility - node_utility[hand_idx];
-                nodes.add_regret(&infosets[hand_idx], action_idx, regret);
-            }
+            assert!(action_utility.len() == N);
+            nodes.add_regret_vectorized(&infosets, &action_utility, &node_utility, action_idx);
+            // for (hand_idx, utility) in action_utility.iter().enumerate() {
+            //     let regret = utility - node_utility[hand_idx];
+            //     nodes.add_regret(&infosets[hand_idx], action_idx, regret);
+            // }
         }
     }
     node_utility
