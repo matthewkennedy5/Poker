@@ -551,9 +551,9 @@ pub fn terminal_utility_vectorized_fast(
         .iter()
         .map(|card| {
             let mut sum = 0.0;
-            for i in 0..preflop_hands.len() {
-                if preflop_hands[i].contains(card) {
-                    sum += opp_reach_probs[i];
+            for (hand, prob) in preflop_hands.iter().zip(opp_reach_probs.iter()) {
+                if &hand[0] == card || &hand[1] == card {
+                    sum += prob
                 }
             }
             (*card, sum)
@@ -596,8 +596,8 @@ pub fn terminal_utility_vectorized_fast(
         .collect();
 
     let mut sort_indices: Vec<usize> = (0..hand_data.len()).collect();
-    // Sort the indices based on the strength in hand_data. This can be used to recover the index
-    // of the hand in the unsorted vector.
+    // Sort the indices based on the strength in hand_data, so we know the original index of each
+    // hand in the unsorted vector.
     sort_indices.sort_by_key(|&i| hand_data[i].strength);
     hand_data.sort_by(|a, b| a.strength.cmp(&b.strength));
 
@@ -666,10 +666,10 @@ pub fn terminal_utility_vectorized_fast(
             .collect();
         for blocker in all_blockers {
             let d2 = &hand_data[blocker];
-            if d2.strength > d.strength {
-                prob_better_adjusted -= d2.prob;
-            } else if d2.strength < d.strength {
-                prob_worse_adjusted -= d2.prob;
+            match d2.strength.cmp(&d.strength) {
+                std::cmp::Ordering::Greater => prob_better_adjusted -= d2.prob,
+                std::cmp::Ordering::Less => prob_worse_adjusted -= d2.prob,
+                std::cmp::Ordering::Equal => {} // Do nothing
             }
         }
         let util = history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted)
