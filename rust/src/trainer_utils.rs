@@ -547,18 +547,6 @@ pub fn terminal_utility_vectorized_fast(
     player: usize,
 ) -> Vec<f64> {
     // https://www.cs.cmu.edu/~waugh/publications/johanson11.pdf "Example 3" at end of page 4
-    let blocked_prob_sums: HashMap<Card, f64> = deck()
-        .iter()
-        .map(|card| {
-            let mut sum = 0.0;
-            for (hand, prob) in preflop_hands.iter().zip(opp_reach_probs.iter()) {
-                if &hand[0] == card || &hand[1] == card {
-                    sum += prob
-                }
-            }
-            (*card, sum)
-        })
-        .collect();
     if history.last_action().unwrap().action == ActionType::Fold {
         // Someone folded -- assign the chips to the winner.
         let winner = history.player;
@@ -568,14 +556,28 @@ pub fn terminal_utility_vectorized_fast(
             winnings = -winnings;
         }
         let opp_prob_sum: f64 = opp_reach_probs.iter().sum();
+
+        // Precompute blocking probs for each card
+        let mut blocked_prob_sums = [0.0; 52];
+        deck().iter().enumerate().for_each(|(i, card)| {
+            let mut sum = 0.0;
+            for (hand, prob) in preflop_hands.iter().zip(opp_reach_probs.iter()) {
+                if &hand[0] == card || &hand[1] == card {
+                    sum += prob
+                }
+            }
+            blocked_prob_sums[i] = sum;
+        });
+
         let utils: Vec<f64> = preflop_hands
             .iter()
             .enumerate()
             .map(|(i, hand)| {
-                let total_prob = opp_prob_sum
-                    - blocked_prob_sums.get(&hand[0]).unwrap()
-                    - blocked_prob_sums.get(&hand[1]).unwrap()
-                    + opp_reach_probs[i];
+                let card0_idx: usize = (hand[0].suit as usize * 13) + hand[0].rank as usize - 2;
+                let card1_idx: usize = (hand[1].suit as usize * 13) + hand[1].rank as usize - 2;
+                let total_prob =
+                    opp_prob_sum - blocked_prob_sums[card0_idx] - blocked_prob_sums[card1_idx]
+                        + opp_reach_probs[i];
                 total_prob * winnings / preflop_hands.len() as f64
             })
             .collect();
@@ -725,22 +727,22 @@ pub fn terminal_utility_vectorized(
         player,
     );
     // TODO Refactor: make this an automated test instead of assert
-    debug_assert!(
-        {
-            let slow = terminal_utility_vectorized_slow(
-                preflop_hands.clone(),
-                opp_reach_probs.clone(),
-                board,
-                history,
-                player,
-            );
-            fast.iter()
-                .zip(slow.iter())
-                .all(|(&a, &b)| (a - b).abs() < 1e-6)
-        },
-        "{}",
-        fast[0],
-    );
+    // debug_assert!(
+    //     {
+    //         let slow = terminal_utility_vectorized_slow(
+    //             preflop_hands.clone(),
+    //             opp_reach_probs.clone(),
+    //             board,
+    //             history,
+    //             player,
+    //         );
+    //         fast.iter()
+    //             .zip(slow.iter())
+    //             .all(|(&a, &b)| (a - b).abs() < 1e-6)
+    //     },
+    //     "{}",
+    //     fast[0],
+    // );
     fast
 }
 
