@@ -119,9 +119,6 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
             traverser_reach_probs,
             opp_reach_probs,
             nodes,
-            None,
-            None,
-            -1,
         );
     });
 }
@@ -134,9 +131,6 @@ pub fn iterate(
     traverser_reach_probs: Vec<f64>,
     opp_reach_probs: Vec<f64>,
     nodes: &Nodes,
-    depth_limit_bot: Option<&Bot>,
-    bot_position: Option<usize>,
-    remaining_depth: i32,
 ) -> Vec<f64> {
     let N = preflop_hands.len();
     if history.hand_over() {
@@ -218,9 +212,6 @@ pub fn iterate(
                 traverser_reach_probs,
                 opp_reach_probs,
                 nodes,
-                depth_limit_bot,
-                bot_position,
-                remaining_depth - 1,
             );
 
             for n in 0..node_utility.len() {

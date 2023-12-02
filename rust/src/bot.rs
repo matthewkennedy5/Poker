@@ -2,11 +2,11 @@ use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::nodes::*;
 use crate::ranges::*;
+use crate::trainer::*;
 use crate::trainer_utils::*;
 use moka::sync::Cache;
 use rand::seq::SliceRandom;
 use rayon::prelude::*;
-use smallvec::ToSmallVec;
 use smallvec::*;
 
 type PreflopCache = Cache<(i32, ActionHistory), Strategy>;
@@ -163,16 +163,7 @@ impl Bot {
                 current_deck.extend(rest_of_deck);
 
                 for player in [DEALER, OPPONENT].iter() {
-                    // iterate(
-                    //     player.clone(),
-                    //     &current_deck,
-                    //     history,
-                    //     [1.0, 1.0],
-                    //     &nodes,
-                    //     Some(&self),
-                    //     Some(history.player),
-                    //     self.depth_limit,
-                    // );
+                    // iterate(player.clone(), &current_deck, history, [1.0, 1.0], &nodes);
                 }
                 bar.inc(1);
             });
