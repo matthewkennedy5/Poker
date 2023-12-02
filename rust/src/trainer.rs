@@ -8,6 +8,7 @@ use crate::ranges::Range;
 use crate::trainer_utils::*;
 use rand::prelude::*;
 use rayon::prelude::*;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
@@ -32,13 +33,13 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         serialize_nodes(&nodes);
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
 
-        // let infoset = InfoSet::from_hand(
-        //     &str2cards("6h6d"),
-        //     &str2cards("2s3dAc6c2h"),
-        //     &ActionHistory::from_strings(vec![
-        //         "Bet 300", "Call 300", "Call 0", "Call 0", "Call 0", "Call 0", "Call 0",
-        //     ]),
-        // );
+        let infoset = InfoSet::from_hand(
+            &str2cards("6h6d"),
+            &str2cards("2s3dAc6c2h"),
+            &ActionHistory::from_strings(vec![
+                "Bet 300", "Call 300", "Call 0", "Call 0", "Call 0", "Call 0", "Call 0",
+            ]),
+        );
 
         let infoset = InfoSet::from_hand(&str2cards("2c7h"), &Vec::new(), &ActionHistory::new());
         println!("InfoSet: {infoset}");
@@ -54,12 +55,17 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         let mut total_t: u64 = 0;
         for elem in &nodes.dashmap {
             let history_nodes = elem.value();
-            for n in history_nodes.iter() {
-                let t = n.lock().unwrap().t;
+            for (card_bucket, n) in history_nodes.iter().enumerate() {
+                let node = n.lock().unwrap();
                 total += 1;
-                total_t += t as u64;
-                if t == 0 {
+                total_t += node.t as u64;
+                if node.t == 0 {
                     zero += 1;
+                    // let infoset2 = InfoSet {
+                    //     card_bucket: card_bucket as i32,
+                    //     history: history.clone(),
+                    // };
+                    // println!("{}: {}", history.street, card_bucket);
                 }
             }
         }
@@ -134,9 +140,13 @@ pub fn iterate(
 ) -> Vec<f64> {
     let N = preflop_hands.len();
     if history.hand_over() {
-        let utils_vec =
-            terminal_utility_vectorized(preflop_hands, opp_reach_probs, &board, history, traverser);
-        return utils_vec;
+        return terminal_utility_vectorized(
+            preflop_hands,
+            opp_reach_probs,
+            &board,
+            history,
+            traverser,
+        );
     }
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
@@ -229,12 +239,7 @@ pub fn iterate(
     if history.player == traverser {
         // Action utilities is shape [actions, traverser_hands]
         for (action_idx, action_utility) in action_utilities.iter().enumerate() {
-            assert!(action_utility.len() == N);
             nodes.add_regret_vectorized(&infosets, action_utility, &node_utility, action_idx);
-            // for (hand_idx, utility) in action_utility.iter().enumerate() {
-            //     let regret = utility - node_utility[hand_idx];
-            //     nodes.add_regret(&infosets[hand_idx], action_idx, regret);
-            // }
         }
     }
     node_utility

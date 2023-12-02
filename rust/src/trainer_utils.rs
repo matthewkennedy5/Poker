@@ -475,15 +475,26 @@ impl fmt::Display for InfoSet {
 
 // Returns a representative hand which is in the given abstraction bucket.
 fn hand_with_bucket(bucket: i32, street: usize) -> String {
-    let mut deck = deck();
-    let mut rng = thread_rng();
-    loop {
-        deck.shuffle(&mut rng);
-        let hand = get_hand(&deck, 0, street);
-        if ABSTRACTION.bin(&hand) == bucket {
-            return cards2str(&hand);
+    let iso = if street == FLOP {
+        load_flop_isomorphic()
+    } else if street == TURN {
+        load_turn_isomorphic()
+    } else if street == RIVER {
+        load_river_isomorphic()
+    } else if street == PREFLOP {
+        isomorphic_preflop_hands()
+            .iter()
+            .map(|cards: &Vec<Card>| cards2hand(&cards))
+            .collect()
+    } else {
+        panic!()
+    };
+    for hand in iso {
+        if ABSTRACTION.bin(&hand2cards(hand)) == bucket {
+            return hand2str(hand);
         }
     }
+    panic!("No hands with the given bucket: {bucket} on street {street}");
 }
 
 // Normalizes the values of a HashMap so that its elements sum to 1.

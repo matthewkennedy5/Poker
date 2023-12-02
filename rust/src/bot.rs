@@ -133,7 +133,7 @@ impl Bot {
         let mut prev_strategy: SmallVecFloats = smallvec![-1.0; NUM_ACTIONS];
         let bar = pbar(CONFIG.subgame_iters);
 
-        let epoch_size = 100_000;
+        let epoch_size = CONFIG.subgame_iters / 2;
         let num_epochs = CONFIG.subgame_iters / epoch_size;
 
         for _ in 0..num_epochs {
@@ -146,6 +146,7 @@ impl Bot {
                 // - Opponent hand sampled from our belief of their range
                 // - Current board cards
                 // - Then shuffle the rest of the deck for the remaining board cards
+
                 let opp_hand = opp_range.sample_hand();
                 let mut current_deck: Vec<Card> = Vec::with_capacity(52);
                 if history.player == DEALER {

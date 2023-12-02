@@ -59,6 +59,7 @@ impl Nodes {
             } else {
                 accumulated_regret *= 0.5;
             }
+
             node.regrets[action_index] = accumulated_regret;
         }
     }
@@ -101,6 +102,10 @@ impl Nodes {
                 }
             }
             node.t += 1;
+            // experiment: see what happens when we reset t.
+            // if node.t > 1000 {
+            //     node.t = 0
+            // }
         }
     }
 

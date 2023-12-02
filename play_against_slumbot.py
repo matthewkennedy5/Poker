@@ -447,29 +447,21 @@ def main():
     num_hands = args.num_hands
     SUBGAME_SOLVING = args.subgame_solving
 
-    num_procs = 1
-    hands_per_cpu = int(num_hands / num_procs)
-    input =[hands_per_cpu for p in range(num_procs)]
+    # num_procs = 100
+    # hands_per_cpu = int(num_hands / num_procs)
+    # input =[hands_per_cpu for p in range(num_procs)]
 
     scores = []
-    # with mp.Pool(num_procs) as pool:
-    #     for score_list in tqdm(pool.imap(play_hands, input), total=num_hands, smoothing=0):
-
     for n in trange(num_hands):
         score_list = play_hands(1)
         scores += score_list
-
         if len(scores) > 2:
             mean = np.mean(scores) / BIG_BLIND
             std = np.std(scores) / BIG_BLIND
             conf = 1.96 * std / np.sqrt(len(scores))
             print(f'Winnings: {mean} +/- {conf} BB/h')
+
     
     
 if __name__ == '__main__':
-    # os.chdir("rust")
-    # os.system("cargo build --bin server")
-    # os.system("target/debug/server &")
-    # os.chdir("..")
-    time.sleep(1)
     main()

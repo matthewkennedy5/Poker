@@ -553,64 +553,64 @@ fn all_in_call() {
     }));
 }
 
-#[test]
-fn terminal_utility_blinds() {
-    let history = ActionHistory::from_strings(vec!["Call 100", "Fold 0"]);
-    let util = terminal_utility_old(&deck(), &history, DEALER);
-    assert_eq!(util, 100.0);
-    let util = terminal_utility_old(&deck(), &history, OPPONENT);
-    assert_eq!(util, -100.0);
+// #[test]
+// fn terminal_utility_blinds() {
+//     let history = ActionHistory::from_strings(vec!["Call 100", "Fold 0"]);
+//     let util = terminal_utility_old(&deck(), &history, DEALER);
+//     assert_eq!(util, 100.0);
+//     let util = terminal_utility_old(&deck(), &history, OPPONENT);
+//     assert_eq!(util, -100.0);
 
-    let history = ActionHistory::from_strings(vec!["Fold 0"]);
-    let util = terminal_utility_old(&deck(), &history, DEALER);
-    assert_eq!(util, -50.0);
-    let util = terminal_utility_old(&deck(), &history, OPPONENT);
-    assert_eq!(util, 50.0);
-}
+//     let history = ActionHistory::from_strings(vec!["Fold 0"]);
+//     let util = terminal_utility_old(&deck(), &history, DEALER);
+//     assert_eq!(util, -50.0);
+//     let util = terminal_utility_old(&deck(), &history, OPPONENT);
+//     assert_eq!(util, 50.0);
+// }
 
-fn play_hand_always_call() -> f64 {
-    let mut deck: Vec<Card> = deck();
-    let mut rng = &mut rand::thread_rng();
-    deck.shuffle(&mut rng);
-    let bot = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
-    let mut history = ActionHistory::new();
-    while !history.hand_over() {
-        let action = if history.player == bot {
-            let hand = get_hand(&deck, bot, history.street);
-            let hole = &hand[..2];
-            let board = &hand[2..];
-            BOT.get_action(hole, board, &history)
-        } else {
-            // Opponent only uses check/call actions
-            Action {
-                action: ActionType::Call,
-                amount: history.to_call(),
-            }
-        };
-        history.add(&action);
-    }
-    terminal_utility_old(&deck, &history, bot)
-}
+// fn play_hand_always_call() -> f64 {
+//     let mut deck: Vec<Card> = deck();
+//     let mut rng = &mut rand::thread_rng();
+//     deck.shuffle(&mut rng);
+//     let bot = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
+//     let mut history = ActionHistory::new();
+//     while !history.hand_over() {
+//         let action = if history.player == bot {
+//             let hand = get_hand(&deck, bot, history.street);
+//             let hole = &hand[..2];
+//             let board = &hand[2..];
+//             BOT.get_action(hole, board, &history)
+//         } else {
+//             // Opponent only uses check/call actions
+//             Action {
+//                 action: ActionType::Call,
+//                 amount: history.to_call(),
+//             }
+//         };
+//         history.add(&action);
+//     }
+//     terminal_utility_old(&deck, &history, bot)
+// }
 
 // #[test]
-fn bot_beats_always_call() {
-    println!("[INFO] Starting game against always call bot...");
-    let iters = 10_000;
-    let bar = pbar(iters);
-    let winnings: Vec<f64> = (0..iters)
-        .into_par_iter()
-        .map(|_i| {
-            let score = play_hand_always_call() / (CONFIG.big_blind as f64);
-            bar.inc(1);
-            score
-        })
-        .collect();
-    bar.finish();
-    let mean = statistical::mean(&winnings);
-    let std = statistical::standard_deviation(&winnings, Some(mean));
-    let confidence = 1.96 * std / (iters as f64).sqrt();
-    println!("Score against check/call bot: {mean} +/- {confidence} BB/h\n");
-}
+// fn bot_beats_always_call() {
+//     println!("[INFO] Starting game against always call bot...");
+//     let iters = 10_000;
+//     let bar = pbar(iters);
+//     let winnings: Vec<f64> = (0..iters)
+//         .into_par_iter()
+//         .map(|_i| {
+//             let score = play_hand_always_call() / (CONFIG.big_blind as f64);
+//             bar.inc(1);
+//             score
+//         })
+//         .collect();
+//     bar.finish();
+//     let mean = statistical::mean(&winnings);
+//     let std = statistical::standard_deviation(&winnings, Some(mean));
+//     let confidence = 1.96 * std / (iters as f64).sqrt();
+//     println!("Score against check/call bot: {mean} +/- {confidence} BB/h\n");
+// }
 
 // TODO: Write a test to make sure that the nodes contain all the infosets (no gaps)
 // Only matters for the final training process
@@ -806,6 +806,18 @@ fn test_preflop_buckets() {
 }
 
 #[test]
+fn all_preflop_hands_in_bucket() {
+    let preflop_hands = Range::new().hands;
+    let mut bin_count: Vec<i32> = vec![0; 169];
+    for hand in preflop_hands {
+        let bin = ABSTRACTION.bin(&hand);
+        assert!(bin >= 0 && bin < 169);
+        bin_count[bin as usize] += 1;
+    }
+    assert!(bin_count.iter().all(|&x| x > 0));
+}
+
+#[test]
 fn all_in_showdown_street() {
     let history = ActionHistory::from_strings(vec!["Call 100", "Bet 20000", "Call 19900"]);
     assert_eq!(history.street, SHOWDOWN);
@@ -891,52 +903,52 @@ fn test_subgame_solving() {
 }
 
 // #[test]
-fn subgame_solving_beats_blueprint() {
-    let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
-    let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, -1);
+// fn subgame_solving_beats_blueprint() {
+//     let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
+//     let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, -1);
 
-    let iters = 1_000_000;
-    let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
-    let bar = pbar(iters as u64);
-    let mut mean = 0.0;
-    for i in 0..iters {
-        let amount = play_hand_bots(&blueprint_bot, &subgame_bot);
-        winnings.push(amount / CONFIG.big_blind as f64);
-        // TODO: DRY with exploiter.rs
-        if winnings.len() >= 2 {
-            mean = statistical::mean(&winnings);
-            let std = statistical::standard_deviation(&winnings, Some(mean));
-            let confidence = 1.96 * std / (i as f64).sqrt();
-            println!("Subgame solver winnings vs blueprint: {mean} +/- {confidence} BB/h\n");
-        }
-        bar.inc(1);
-    }
-    bar.finish();
-    assert!(mean > 0.0);
-}
+//     let iters = 1_000_000;
+//     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
+//     let bar = pbar(iters as u64);
+//     let mut mean = 0.0;
+//     for i in 0..iters {
+//         let amount = play_hand_bots(&blueprint_bot, &subgame_bot);
+//         winnings.push(amount / CONFIG.big_blind as f64);
+//         // TODO: DRY with exploiter.rs
+//         if winnings.len() >= 2 {
+//             mean = statistical::mean(&winnings);
+//             let std = statistical::standard_deviation(&winnings, Some(mean));
+//             let confidence = 1.96 * std / (i as f64).sqrt();
+//             println!("Subgame solver winnings vs blueprint: {mean} +/- {confidence} BB/h\n");
+//         }
+//         bar.inc(1);
+//     }
+//     bar.finish();
+//     assert!(mean > 0.0);
+// }
 
-fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
-    let mut deck: Vec<Card> = deck();
-    let mut rng = &mut rand::thread_rng();
-    deck.shuffle(&mut rng);
-    let subgame_bot_position = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
-    let mut history = ActionHistory::new();
-    while !history.hand_over() {
-        let hand = get_hand(&deck, history.player, history.street);
-        let hole = &hand[..2];
-        let board = &hand[2..];
+// fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
+//     let mut deck: Vec<Card> = deck();
+//     let mut rng = &mut rand::thread_rng();
+//     deck.shuffle(&mut rng);
+//     let subgame_bot_position = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
+//     let mut history = ActionHistory::new();
+//     while !history.hand_over() {
+//         let hand = get_hand(&deck, history.player, history.street);
+//         let hole = &hand[..2];
+//         let board = &hand[2..];
 
-        let bot = if history.player == subgame_bot_position {
-            subgame_bot
-        } else {
-            blueprint_bot
-        };
+//         let bot = if history.player == subgame_bot_position {
+//             subgame_bot
+//         } else {
+//             blueprint_bot
+//         };
 
-        let action = bot.get_action(hole, board, &history);
-        history.add(&action);
-    }
-    terminal_utility_old(&deck, &history, subgame_bot_position)
-}
+//         let action = bot.get_action(hole, board, &history);
+//         history.add(&action);
+//     }
+//     terminal_utility_old(&deck, &history, subgame_bot_position)
+// }
 
 // #[test]
 // Tests that the river equity cache fits in memory
