@@ -61,7 +61,7 @@ impl fmt::Display for Action {
 pub struct ActionHistory {
     history: SmallVec<[Action; 10]>,
     last_action: Option<Action>,
-    current_street_length: u8,
+    pub current_street_length: u8,
     stacks: [Amount; 2], // stacks doesn't take into account blinds, but stack_sizes() does
     pub street: usize,
     pub player: usize,
