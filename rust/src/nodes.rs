@@ -102,10 +102,6 @@ impl Nodes {
                 }
             }
             node.t += 1;
-            // experiment: see what happens when we reset t.
-            // if node.t > 1000 {
-            //     node.t = 0
-            // }
         }
     }
 

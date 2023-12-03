@@ -902,53 +902,62 @@ fn test_subgame_solving() {
     );
 }
 
-// #[test]
-// fn subgame_solving_beats_blueprint() {
-//     let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
-//     let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, -1);
+#[test]
+fn subgame_solving_beats_blueprint() {
+    let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
+    let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, false, -1);
 
-//     let iters = 1_000_000;
-//     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
-//     let bar = pbar(iters as u64);
-//     let mut mean = 0.0;
-//     for i in 0..iters {
-//         let amount = play_hand_bots(&blueprint_bot, &subgame_bot);
-//         winnings.push(amount / CONFIG.big_blind as f64);
-//         // TODO: DRY with exploiter.rs
-//         if winnings.len() >= 2 {
-//             mean = statistical::mean(&winnings);
-//             let std = statistical::standard_deviation(&winnings, Some(mean));
-//             let confidence = 1.96 * std / (i as f64).sqrt();
-//             println!("Subgame solver winnings vs blueprint: {mean} +/- {confidence} BB/h\n");
-//         }
-//         bar.inc(1);
-//     }
-//     bar.finish();
-//     assert!(mean > 0.0);
-// }
+    let iters = 1_000_000;
+    let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
+    let bar = pbar(iters as u64);
+    let mut mean = 0.0;
+    for i in 0..iters {
+        let amount = play_hand_bots(&blueprint_bot, &subgame_bot);
+        winnings.push(amount / CONFIG.big_blind as f64);
+        // TODO: DRY with exploiter.rs
+        if winnings.len() >= 2 {
+            mean = statistical::mean(&winnings);
+            let std = statistical::standard_deviation(&winnings, Some(mean));
+            let confidence = 1.96 * std / (i as f64).sqrt();
+            println!("Subgame solver winnings vs blueprint: {mean} +/- {confidence} BB/h\n");
+        }
+        bar.inc(1);
+    }
+    bar.finish();
+    assert!(mean > 0.0);
+}
 
-// fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
-//     let mut deck: Vec<Card> = deck();
-//     let mut rng = &mut rand::thread_rng();
-//     deck.shuffle(&mut rng);
-//     let subgame_bot_position = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
-//     let mut history = ActionHistory::new();
-//     while !history.hand_over() {
-//         let hand = get_hand(&deck, history.player, history.street);
-//         let hole = &hand[..2];
-//         let board = &hand[2..];
+fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
+    let mut deck: Vec<Card> = deck();
+    let mut rng = &mut rand::thread_rng();
+    deck.shuffle(&mut rng);
+    let subgame_bot_position = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
+    let mut history = ActionHistory::new();
+    while !history.hand_over() {
+        let hand = get_hand(&deck, history.player, history.street);
+        let hole = &hand[..2];
+        let board = &hand[2..];
 
-//         let bot = if history.player == subgame_bot_position {
-//             subgame_bot
-//         } else {
-//             blueprint_bot
-//         };
+        let bot = if history.player == subgame_bot_position {
+            subgame_bot
+        } else {
+            blueprint_bot
+        };
 
-//         let action = bot.get_action(hole, board, &history);
-//         history.add(&action);
-//     }
-//     terminal_utility_old(&deck, &history, subgame_bot_position)
-// }
+        let action = bot.get_action(hole, board, &history);
+        history.add(&action);
+    }
+    let player_preflop_hand = get_hand(&deck, subgame_bot_position, PREFLOP);
+    let opp_preflop_hand = get_hand(&deck, 1 - subgame_bot_position, PREFLOP);
+    let board = &deck[4..9];
+    terminal_utility(
+        &player_preflop_hand,
+        &opp_preflop_hand,
+        board,
+        &history,
+        subgame_bot_position,
+    )
+}
 
 // #[test]
 // Tests that the river equity cache fits in memory

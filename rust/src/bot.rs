@@ -101,6 +101,8 @@ impl Bot {
         history: &ActionHistory,
     ) -> Strategy {
         let board: SmallVecHand = board[..board_length(history.street)].to_smallvec();
+        let mut hole: [Card; 2] = [hole[0], hole[1]];
+        hole.sort();
 
         let subgame_root = history;
         let translated = subgame_root.translate(&CONFIG.bet_abstraction);
@@ -113,57 +115,80 @@ impl Bot {
             // and keep track of the range as you go.
         };
 
-        let opp_range = Range::get_opponent_range(hole, &board, &translated, get_strategy);
+        let opp_range = Range::get_opponent_range(&hole, &board, &translated, get_strategy);
+        // println!("Player hand: {}", cards2str(&hole));
+        // println!("History: {}", translated);
+        // println!("Board: {}", cards2str(&board));
+        // println!("Beliefs about opponent hands:");
+
+        // The blueprint currently has weird ideas about the opponent's range, but keep in mind
+        // it is necessarily correct when playing against the blueprint.
+        // let mut beliefs: Vec<([Card; 2], f64)> = opp_range
+        //     .get_map()
+        //     .iter()
+        //     .map(|(hand, prob)| ([hand[0], hand[1]], prob.clone()))
+        //     .collect();
+        // beliefs.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // for (hand, prob) in beliefs {
+        //     println!("{}: {}", cards2str(&hand), prob)
+        // }
         let opp_action = history.last_action().unwrap();
 
-        // Add the opponent's action to the bet abstraction
-        let mut new_abstraction = CONFIG.bet_abstraction.clone();
-        let pot_frac = (opp_action.amount as f64) / (subgame_root.pot() as f64);
-        if opp_action.action == ActionType::Bet
-            && !new_abstraction[subgame_root.street].contains(&pot_frac)
-        {
-            // If the opponent made an off-tree bet, add it to the bet abstraction
-            new_abstraction[subgame_root.street].push(pot_frac);
-        }
-
-        debug_assert!(new_abstraction == CONFIG.bet_abstraction); // TODO: Delete new_abstraction if this works
+        // TODO: Add the opponent's action to the bet abstraction
 
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
-        let infoset = InfoSet::from_hand(hole, &board, history);
-        let mut prev_strategy: SmallVecFloats = smallvec![-1.0; NUM_ACTIONS];
-        let bar = pbar(CONFIG.subgame_iters);
+        let infoset = InfoSet::from_hand(&hole, &board, history);
+        // TODO Refactor: rename this SmallVecFloats thing to like F32SmallVec or something
+        // let mut prev_strategy: SmallVecFloats =
+        //     smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
 
-        let epoch_size = CONFIG.subgame_iters / 2;
-        let num_epochs = CONFIG.subgame_iters / epoch_size;
-
-        for _ in 0..num_epochs {
-            // Clear the cumulative strategy at the begging of each epoch
-            nodes.reset_strategy_sum(&infoset);
-
-            (0..epoch_size).into_par_iter().for_each(|_| {
-                // Construct a plausible deck using:
-                // - Our hand (player's hand)
-                // - Opponent hand sampled from our belief of their range
-                // - Current board cards
-                // - Then shuffle the rest of the deck for the remaining board cards
-
-                let opp_hand = opp_range.sample_hand();
-                let mut current_deck: Vec<Card> = Vec::with_capacity(52);
-                if history.player == DEALER {
-                    current_deck.extend(hole);
-                    current_deck.extend(opp_hand);
-                } else {
-                    current_deck.extend(opp_hand);
-                    current_deck.extend(hole);
-                }
-                current_deck.extend(board.iter());
-                let mut rest_of_deck = deck();
-                rest_of_deck.retain(|c| !current_deck.contains(&c));
-                rest_of_deck.shuffle(&mut rand::thread_rng());
-                current_deck.extend(rest_of_deck);
-
+        let num_epochs = 10;
+        let epoch = CONFIG.subgame_iters / num_epochs;
+        for i in 0..num_epochs {
+            if i > 0 {
+                nodes.reset_strategy_sum(&infoset);
+            }
+            let bar = pbar(epoch);
+            (0..epoch).into_par_iter().for_each(|_| {
                 for player in [DEALER, OPPONENT].iter() {
-                    // iterate(player.clone(), &current_deck, history, [1.0, 1.0], &nodes);
+                    let mut deck = deck();
+                    deck.retain(|c| !hole.contains(c));
+                    deck.retain(|c| !board.contains(c));
+                    deck.shuffle(&mut rand::thread_rng());
+
+                    let mut board = board.clone();
+                    board.extend(deck.iter().take(5 - board.len()).cloned());
+                    let board = [board[0], board[1], board[2], board[3], board[4]];
+
+                    let mut range = Range::new();
+                    range.remove_blockers(&board);
+                    let mut preflop_hands = Vec::with_capacity(range.hands.len());
+                    // TODO Refactor: have a clean way to return a list of the non blocking hands. this
+                    // is duplicated in cfr_iteration as well.
+                    let mut traverser_reach_probs = Vec::with_capacity(range.hands.len());
+                    let mut opp_reach_probs = Vec::with_capacity(range.hands.len());
+                    for hand_index in 0..range.hands.len() {
+                        let prob = range.probs[hand_index];
+                        if prob > 0.0 {
+                            preflop_hands.push(range.hands[hand_index]);
+                            if range.hands[hand_index] == hole {
+                                traverser_reach_probs.push(1.0);
+                            } else {
+                                traverser_reach_probs.push(0.0);
+                            }
+                            opp_reach_probs.push(opp_range.probs[hand_index]);
+                        }
+                    }
+                    iterate(
+                        player.clone(),
+                        preflop_hands,
+                        board,
+                        &translated,
+                        traverser_reach_probs,
+                        opp_reach_probs,
+                        &nodes,
+                    );
                 }
                 bar.inc(1);
             });
@@ -173,32 +198,31 @@ impl Bot {
                 .get(&infoset)
                 .expect("Infoset not found in subgame nodes");
             let strategy = node.cumulative_strategy();
-            let diff: f32 = strategy
-                .iter()
-                .zip(prev_strategy.iter())
-                .map(|(&a, &b)| (a - b).abs())
-                .sum();
+            // let diff: f32 = strategy
+            //     .iter()
+            //     .zip(prev_strategy.iter())
+            //     .map(|(&a, &b)| (a - b).abs())
+            //     .sum();
             println!(
                 "Hand: {} Board: {} | History: {}",
-                cards2str(hole),
+                cards2str(&hole),
                 cards2str(&board),
                 history
             );
-            println!("Actions: {:?}", infoset.next_actions(&new_abstraction));
-            println!("Node: {:?}", node);
             println!(
-                "Strategy: {:?} Prev strategy: {:?}",
-                strategy, prev_strategy
+                "Actions: {:?}",
+                infoset.next_actions(&CONFIG.bet_abstraction)
             );
-            if self.early_stopping && diff < 0.01 {
-                println!("Stopping early because CFR strategy has converged.");
-                break;
-            }
-            prev_strategy = strategy.clone();
+            println!("Node: {:?}", node);
+            println!("Strategy: {:?}", strategy);
+            // if self.early_stopping && diff < 0.01 {
+            //     println!("Stopping early because CFR strategy has converged.");
+            //     break;
+            // }
+            bar.finish();
         }
-        bar.finish();
 
-        let strategy = nodes.get_strategy(hole, &board, history);
+        let strategy = nodes.get_strategy(&hole, &board, history);
         strategy
     }
 }
