@@ -905,7 +905,12 @@ fn test_subgame_solving() {
 #[test]
 fn subgame_solving_beats_blueprint() {
     let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
-    let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, false, -1);
+    let subgame_bot = Bot::new(
+        load_nodes(&CONFIG.nodes_path),
+        true,
+        false,
+        CONFIG.depth_limit,
+    );
 
     let iters = 1_000_000;
     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);

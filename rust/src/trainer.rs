@@ -119,6 +119,8 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
             traverser_reach_probs,
             opp_reach_probs,
             nodes,
+            -1,
+            None,
         );
     });
 }
@@ -131,6 +133,8 @@ pub fn iterate(
     traverser_reach_probs: Vec<f64>,
     opp_reach_probs: Vec<f64>,
     nodes: &Nodes,
+    depth_limit: i32,
+    depth_limit_bot: Option<&Bot>,
 ) -> Vec<f64> {
     let N = preflop_hands.len();
     if history.hand_over() {
@@ -142,6 +146,19 @@ pub fn iterate(
             traverser,
         );
     }
+
+    if depth_limit == 0 {
+        return depth_limit_utility(
+            traverser,
+            preflop_hands,
+            board,
+            history,
+            traverser_reach_probs,
+            opp_reach_probs,
+            depth_limit_bot.expect("Depth limit bot not provided for depth limit utility"),
+        );
+    }
+
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
     let history = history.clone();
@@ -163,24 +180,6 @@ pub fn iterate(
         .map(|i| -> Vec<f64> {
             // Maps traverser_preflop_hand to prob of taking this action
             let probs: Vec<f32> = strategies.iter().map(|s| s[i]).collect();
-
-            // MCCFR - randomly prune opponent actions based on their probability
-            // if history.player == opponent {
-            //     let prob_sum: f32 = probs.iter().sum();
-            //     let avg_prob: f64 = prob_sum as f64 / probs.len() as f64;
-            //     let mut explore_prob = avg_prob * actions.len() as f64;
-            //     if explore_prob < 0.05 {
-            //         explore_prob = 0.05;
-            //     } else if explore_prob > 1.0 {
-            //         explore_prob = 1.0;
-            //     }
-            //     explore_prob = 1.0;     START HERE: Keep going on MCCFR? Or just wait for the blueprint to train.
-            //     if !rand::thread_rng().gen_bool(explore_prob) {
-            //         // Prune
-            //         return vec![0.0; N];
-            //     }
-            // }
-
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
 
@@ -212,6 +211,8 @@ pub fn iterate(
                 traverser_reach_probs,
                 opp_reach_probs,
                 nodes,
+                depth_limit - 1,
+                depth_limit_bot,
             );
 
             for n in 0..node_utility.len() {
@@ -236,80 +237,116 @@ pub fn iterate(
     node_utility
 }
 
-// Implements Depth Limited Solving - at the depth limit, instead of choosing an action to play, the
-// opponent chooses a strategy to play until the end of the hand. This gives a good estimate of the
-// utility at the depth limit nodes because it allows the opponent to respond to the player's strategy.
+// For now, this samples rollouts at the depth limit to estimate the utility.
 // https://arxiv.org/pdf/1805.08195.pdf
-// fn depth_limit_utility(
-//     player: usize,
-//     deck: &[Card],
-//     history: &ActionHistory,
-//     weights: [f64; 2],
-//     nodes: &Nodes,
-//     depth_limit_bot: &Bot,
-// ) -> f64 {
-//     let opponent = 1 - player;
-//     // The history.player is the bot's opponent
-//     let bot_opponent = 1 - history.player;
-//     debug_assert!(false);
-//     let infoset = InfoSet::from_deck(deck, history);
-//     let strategy = nodes.get_current_strategy(&infoset);
-//     let mut strategy_biases: Vec<Option<Action>> = infoset
-//         .next_actions(&nodes.bet_abstraction)
-//         .iter()
-//         .map(|s| Some(s.clone()))
-//         .collect();
-//     strategy_biases.push(None);
-//     let utilities: Vec<f64> = strategy_biases
-//         .iter()
-//         .map(|bias| {
-//             // Play until the end of the game with the opponent using their biased strategy, or the
-//             // blueprint strategy. The terminal utility will update the regret for the depth limit
-//             // opponent node.
-//             let mut history_past_depth = history.clone();
-//             loop {
-//                 let hand = get_hand(deck, history_past_depth.player, history_past_depth.street);
-//                 let hole = &hand[..2];
-//                 let board = &hand[2..];
-//                 let mut node_strategy = depth_limit_bot.get_strategy_action_translation(
-//                     hole,
-//                     board,
-//                     &history_past_depth,
-//                 );
-//                 // Bias the strategy by multiplying one of the actions by 10 and renormalizing. Otherwise
-//                 // just play according to the blueprint strategy at the current infoset, if it's the bot's
-//                 // turn, or if we're in the blueprint meta-strategy for the opponent.
-//                 if history_past_depth.player == bot_opponent {
-//                     if let Some(b) = bias {
-//                         for (node_action, prob) in node_strategy.clone() {
-//                             if node_action.action == b.action {
-//                                 node_strategy.insert(node_action, prob * 10.0);
-//                             }
-//                         }
-//                         node_strategy = normalize(&node_strategy);
-//                     }
-//                 }
+fn depth_limit_utility(
+    traverser: usize,
+    preflop_hands: Vec<[Card; 2]>,
+    board: [Card; 5],
+    history: &ActionHistory,
+    traverser_reach_probs: Vec<f64>,
+    opp_reach_probs: Vec<f64>,
+    depth_limit_bot: &Bot,
+) -> Vec<f64> {
+    if history.hand_over() {
+        return terminal_utility_vectorized(
+            preflop_hands,
+            opp_reach_probs,
+            &board,
+            history,
+            traverser,
+        );
+    }
+    // Basically the same as iterate(), except:
+    // - get the strategies / prob updates from the depth_limit_bot
+    // - don't update any nodes
+    let strategies: Vec<Strategy> = preflop_hands
+        .iter()
+        .map(|preflop_hand| {
+            depth_limit_bot.get_strategy_action_translation(preflop_hand, &board, history)
+        })
+        .collect();
 
-//                 let action = sample_action_from_strategy(&node_strategy);
-//                 history_past_depth.add(&action);
-//                 if history_past_depth.hand_over() {
-//                     return terminal_utility(deck, &history_past_depth, player);
-//                 }
-//             }
-//         })
-//         .collect();
+    // Sample a random action depending on the total probability for each action
+    let N = preflop_hands.len();
+    let next_actions = history.next_actions(&CONFIG.bet_abstraction);
 
-//     let mut node_utility = 0.0;
-//     for i in 0..strategy.len() {
-//         node_utility += utilities[i] * strategy[i] as f64;
-//     }
+    let action_prob_sums: HashMap<Action, f64> = next_actions
+        .iter()
+        .map(|action| {
+            let mut prob_sum: f64 = 0.0;
+            for i in 0..N {
+                let action_prob = strategies[i].get(action).unwrap().clone();
+                let reach_prob = if history.player == traverser {
+                    traverser_reach_probs[i]
+                } else {
+                    opp_reach_probs[i]
+                };
+                prob_sum += action_prob * reach_prob
+            }
+            (action.clone(), prob_sum)
+        })
+        .collect();
 
-//     if history.player == player {
-//         for (index, utility) in utilities.iter().enumerate() {
-//             let regret = utility - node_utility;
-//             nodes.add_regret(&infoset, index, weights[opponent] * regret);
-//         }
-//     }
+    let sum: f64 = action_prob_sums.values().sum();
+    if sum <= 0.0 {
+        return vec![0.0; N];
+    }
 
-//     node_utility
-// }
+    let next_actions = vec![next_actions
+        .choose_weighted(&mut rand::thread_rng(), |a| {
+            action_prob_sums.get(a).unwrap()
+        })
+        .unwrap()];
+
+    let mut node_utility: Vec<f64> = vec![0.0; N];
+    for action in next_actions {
+        let probs: Vec<f64> = strategies
+            .iter()
+            .map(|strategy| strategy.get(&action).unwrap().clone())
+            .collect();
+
+        let mut next_history = history.clone();
+        next_history.add(&action);
+
+        let mut traverser_reach_probs = traverser_reach_probs.clone();
+        let mut opp_reach_probs = opp_reach_probs.clone();
+
+        if history.player == traverser {
+            for i in 0..N {
+                traverser_reach_probs[i] *= probs[i] as f64;
+            }
+        } else {
+            assert!(opp_reach_probs.len() == strategies.len());
+            for i in 0..opp_reach_probs.len() {
+                opp_reach_probs[i] *= probs[i] as f64;
+            }
+        }
+
+        if traverser_reach_probs.iter().all(|&x| x < 1e-10)
+            && opp_reach_probs.iter().all(|&x| x < 1e-10)
+        {
+            return vec![0.0; N];
+        }
+
+        let utility = depth_limit_utility(
+            traverser,
+            preflop_hands.clone(),
+            board,
+            &next_history,
+            traverser_reach_probs,
+            opp_reach_probs,
+            depth_limit_bot,
+        );
+
+        for n in 0..node_utility.len() {
+            let prob: f64 = if history.player == traverser {
+                probs[n]
+            } else {
+                1.0
+            };
+            node_utility[n] += prob * utility[n];
+        }
+    }
+    node_utility
+}

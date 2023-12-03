@@ -133,6 +133,7 @@ impl Bot {
         // for (hand, prob) in beliefs {
         //     println!("{}: {}", cards2str(&hand), prob)
         // }
+
         let opp_action = history.last_action().unwrap();
 
         // TODO: Add the opponent's action to the bet abstraction
@@ -140,8 +141,8 @@ impl Bot {
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(&hole, &board, history);
         // TODO Refactor: rename this SmallVecFloats thing to like F32SmallVec or something
-        // let mut prev_strategy: SmallVecFloats =
-        //     smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
+        let mut prev_strategy: SmallVecFloats =
+            smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
 
         let num_epochs = 10;
         let epoch = CONFIG.subgame_iters / num_epochs;
@@ -188,6 +189,8 @@ impl Bot {
                         traverser_reach_probs,
                         opp_reach_probs,
                         &nodes,
+                        self.depth_limit,
+                        Some(&self),
                     );
                 }
                 bar.inc(1);
@@ -198,11 +201,11 @@ impl Bot {
                 .get(&infoset)
                 .expect("Infoset not found in subgame nodes");
             let strategy = node.cumulative_strategy();
-            // let diff: f32 = strategy
-            //     .iter()
-            //     .zip(prev_strategy.iter())
-            //     .map(|(&a, &b)| (a - b).abs())
-            //     .sum();
+            let diff: f32 = strategy
+                .iter()
+                .zip(prev_strategy.iter())
+                .map(|(&a, &b)| (a - b).abs())
+                .sum();
             println!(
                 "Hand: {} Board: {} | History: {}",
                 cards2str(&hole),
@@ -215,10 +218,11 @@ impl Bot {
             );
             println!("Node: {:?}", node);
             println!("Strategy: {:?}", strategy);
-            // if self.early_stopping && diff < 0.01 {
-            //     println!("Stopping early because CFR strategy has converged.");
-            //     break;
-            // }
+            if self.early_stopping && diff < 0.01 {
+                println!("Stopping early because CFR strategy has converged.");
+                break;
+            }
+            prev_strategy = strategy;
             bar.finish();
         }
 

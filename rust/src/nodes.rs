@@ -220,10 +220,11 @@ impl Nodes {
             "No valid next actions for history {}",
             infoset.history
         );
-        let node = match self.get(&infoset) {
-            Some(n) => n.clone(),
-            None => Node::new(num_actions),
-        };
+        // let node = match self.get(&infoset) {
+        //     Some(n) => n.clone(),
+        //     None => Node::new(num_actions),
+        // };
+        let node = self.get(&infoset).expect("Node not found").clone(); // All nodes must be in infoset
         debug_assert!(
             node.num_actions == num_actions,
             "{} {}",
