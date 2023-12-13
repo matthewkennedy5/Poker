@@ -105,7 +105,7 @@ impl Bot {
         hole.sort();
 
         let subgame_root = history;
-        let translated = subgame_root.translate(&CONFIG.bet_abstraction);
+        let translated_history = subgame_root.translate(&CONFIG.bet_abstraction);
 
         // Get our beliefs of the opponent's range given their actions up to the subgame root.
         // Use action translation to map the actions so far to infosets in the blueprint strategy.
@@ -115,7 +115,7 @@ impl Bot {
             // and keep track of the range as you go.
         };
 
-        let opp_range = Range::get_opponent_range(&hole, &board, &translated, get_strategy);
+        let opp_range = Range::get_opponent_range(&hole, &board, &translated_history, get_strategy);
         // println!("Player hand: {}", cards2str(&hole));
         // println!("History: {}", translated);
         // println!("Board: {}", cards2str(&board));
@@ -139,7 +139,7 @@ impl Bot {
         // TODO: Add the opponent's action to the bet abstraction
 
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
-        let infoset = InfoSet::from_hand(&hole, &board, history);
+        let infoset = InfoSet::from_hand(&hole, &board, &translated_history);
         // TODO Refactor: rename this SmallVecFloats thing to like F32SmallVec or something
         let mut prev_strategy: SmallVecFloats =
             smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
@@ -185,7 +185,7 @@ impl Bot {
                         player.clone(),
                         preflop_hands,
                         board,
-                        &translated,
+                        &translated_history,
                         traverser_reach_probs,
                         opp_reach_probs,
                         &nodes,
@@ -197,9 +197,13 @@ impl Bot {
             });
 
             // Stop early if the cumulative strategy has not changed in 1000 iters
-            let node = nodes
-                .get(&infoset)
-                .expect("Infoset not found in subgame nodes");
+            let node = nodes.get(&infoset).expect(
+                format!(
+                    "Infoset {:?} not found in subgame nodes: {:?}",
+                    infoset, nodes
+                )
+                .as_str(),
+            );
             let strategy = node.cumulative_strategy();
             let diff: f32 = strategy
                 .iter()

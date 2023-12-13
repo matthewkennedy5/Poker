@@ -147,7 +147,7 @@ pub fn iterate(
         );
     }
 
-    if depth_limit >= 0 && history.current_street_length == 0 {
+    if depth_limit < CONFIG.depth_limit && history.current_street_length == 0 {
         // depth limited solving for future streets
         return depth_limit_utility(
             traverser,
