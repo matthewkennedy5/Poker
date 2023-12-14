@@ -38,7 +38,16 @@ impl Bot {
     }
 
     pub fn get_action(&self, hand: &[Card], board: &[Card], history: &ActionHistory) -> Action {
-        let strategy = self.get_strategy(hand, board, history);
+        let mut strategy = self.get_strategy(hand, board, history);
+
+        // Smoothing - if an action prob is below 3%, make it 0%. sample_action_from_strategy doesn't
+        // need a normalized strategy
+        for (action, prob) in strategy.clone() {
+            if prob < 0.05 {
+                strategy.insert(action, 0.0);
+            }
+        }
+
         let action = sample_action_from_strategy(&strategy);
         debug_assert!({
             let prob = strategy.get(&action).unwrap().clone();
@@ -144,14 +153,17 @@ impl Bot {
         let mut prev_strategy: SmallVecFloats =
             smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
 
-        let num_epochs = 10;
-        let epoch = CONFIG.subgame_iters / num_epochs;
+        let num_epochs = 100;
+        // let epoch = CONFIG.subgame_iters / num_epochs;
+        let epoch = 10_000;
+        // let it keep solving the subgame until it converges. but with an upper limit to avoid
+        // some kind of infinite loop situation.
         for i in 0..num_epochs {
             if i > 0 {
                 nodes.reset_strategy_sum(&infoset);
             }
             let bar = pbar(epoch);
-            (0..epoch).into_par_iter().for_each(|_| {
+            (0..epoch).into_iter().for_each(|_| {
                 for player in [DEALER, OPPONENT].iter() {
                     let mut deck = deck();
                     deck.retain(|c| !hole.contains(c));

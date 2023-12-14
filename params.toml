@@ -2,7 +2,7 @@
 stack_size = 20000
 big_blind = 100
 small_blind = 50
-last_street = "river"
+last_street = "flop"
 
 # Bet abstractions, expressed as multiples of the pot size. -1 means "all-in".
 # This does not include the call and fold actions. 
@@ -17,18 +17,18 @@ turn_buckets = 10_000    # Max:  14403610
 river_buckets = 10_000   # Max: 125756657
 
 # Filenames
-nodes_path = "products/nodes.bin"
+nodes_path = "products/flop_holdem_nodes.bin"
 
 # Training
 train_iters = 100_000
-lbr_iters = 1_000_000
+lbr_iters = 100_000
 eval_every = 3200
 warm_start = false 
 
 # Realtime solving
 subgame_solving = true
-subgame_iters = 10_000 
-depth_limit = 4   # -1 means always solve to the end of the game
+subgame_iters = 100_000 
+depth_limit = -1   # -1 means always solve to the end of the game
 
 # Preflop chart
 preflop_strategy_path = "products/preflop_strategy.json"

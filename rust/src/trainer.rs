@@ -25,7 +25,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
         let bar = card_utils::pbar(eval_every);
 
-        (0..eval_every).into_par_iter().for_each(|_| {
+        (0..eval_every).into_iter().for_each(|_| {
             cfr_iteration(&deck, &ActionHistory::new(), &nodes, -1);
             bar.inc(1);
         });
@@ -147,18 +147,19 @@ pub fn iterate(
         );
     }
 
-    if depth_limit < CONFIG.depth_limit && history.current_street_length == 0 {
-        // depth limited solving for future streets
-        return depth_limit_utility(
-            traverser,
-            preflop_hands,
-            board,
-            history,
-            traverser_reach_probs,
-            opp_reach_probs,
-            depth_limit_bot.expect("Depth limit bot not provided for depth limit utility"),
-        );
-    }
+    // Commenting out depth-limited solving because I want to test the full subgame solving on flop holdem
+    // if depth_limit < CONFIG.depth_limit && history.current_street_length == 0 {
+    //     // depth limited solving for future streets
+    //     return depth_limit_utility(
+    //         traverser,
+    //         preflop_hands,
+    //         board,
+    //         history,
+    //         traverser_reach_probs,
+    //         opp_reach_probs,
+    //         depth_limit_bot.expect("Depth limit bot not provided for depth limit utility"),
+    //     );
+    // }
 
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
