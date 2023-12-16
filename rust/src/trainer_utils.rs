@@ -619,6 +619,8 @@ pub fn terminal_utility_vectorized_fast(
     hand_data.sort_by(|a, b| a.strength.cmp(&b.strength));
 
     let deck = deck();
+    // blockers stores the Vec of hands that are blocked by each card. The hands are indexes in hand
+    // data, which is already sorted by strength from low to high.
     let mut blockers: HashMap<Card, Vec<usize>> = deck
         .iter()
         .map(|&card| (card, Vec::with_capacity(52)))
@@ -689,7 +691,7 @@ pub fn terminal_utility_vectorized_fast(
 
         all_blockers.sort_unstable();
 
-        for blocker in all_blockers {
+        for blocker in all_blockers.clone() {
             let d2 = &hand_data[blocker];
             // TODO: You can avoid this cmp if you presort the blockers
             match d2.strength.cmp(&d.strength) {
@@ -698,6 +700,54 @@ pub fn terminal_utility_vectorized_fast(
                 std::cmp::Ordering::Equal => {} // Do nothing
             }
         }
+
+        // Use standard binary search to find any matching index
+        let mut equal_or_greater_idx = all_blockers
+            .binary_search_by(|&index| hand_data[index].strength.cmp(&d.strength))
+            .unwrap_or_else(|x| x);
+
+        // Move back to find the first occurrence
+        while equal_or_greater_idx > 0
+            && hand_data[all_blockers[equal_or_greater_idx - 1]].strength == d.strength
+        {
+            equal_or_greater_idx -= 1;
+        }
+
+        let mut greater_idx = all_blockers
+            .binary_search_by(|&index| hand_data[index].strength.cmp(&(d.strength + 1)))
+            .unwrap_or_else(|x| x);
+
+        // Similar adjustment for greater_idx, if needed
+        while greater_idx > 0 && hand_data[all_blockers[greater_idx - 1]].strength == d.strength + 1
+        {
+            greater_idx -= 1;
+        }
+
+        // Summing up probabilities
+        let prob_less: f64 = all_blockers[..equal_or_greater_idx]
+            .iter()
+            .map(|&index| hand_data[index].prob) // this might be cache miss city - store separate vecs of probs for better cache locality?
+            .sum();
+        let prob_greater: f64 = all_blockers[greater_idx..]
+            .iter()
+            .map(|&index| hand_data[index].prob)
+            .sum();
+
+        assert!(
+            prob_worse - prob_less - prob_worse_adjusted < 1e-6,
+            "equal_or_greater_idx: {}",
+            equal_or_greater_idx
+        );
+        assert!(
+            prob_better - prob_greater - prob_better_adjusted < 1e-6,
+            "greater_idx: {}",
+            greater_idx
+        );
+
+        // Adjust probabilities
+        // prob_worse_adjusted -= prob_less;
+        // prob_better_adjusted -= prob_greater;
+
         let util = history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted)
             / preflop_hands.len() as f64;
 
@@ -751,22 +801,24 @@ pub fn terminal_utility_vectorized(
         player,
     );
     // TODO Refactor: make this an automated test instead of assert
-    // debug_assert!(
-    //     {
-    //         let slow = terminal_utility_vectorized_slow(
-    //             preflop_hands.clone(),
-    //             opp_reach_probs.clone(),
-    //             board,
-    //             history,
-    //             player,
-    //         );
-    //         fast.iter()
-    //             .zip(slow.iter())
-    //             .all(|(&a, &b)| (a - b).abs() < 1e-6)
-    //     },
-    //     "{}",
-    //     fast[0],
-    // );
+    debug_assert!({
+        let slow = terminal_utility_vectorized_slow(
+            preflop_hands.clone(),
+            opp_reach_probs.clone(),
+            board,
+            history,
+            player,
+        );
+        assert!(
+            fast.iter()
+                .zip(slow.iter())
+                .all(|(&a, &b)| (a - b).abs() < 1e-6),
+            "{} != {}",
+            fast[0],
+            slow[0]
+        );
+        true
+    });
     fast
 }
 

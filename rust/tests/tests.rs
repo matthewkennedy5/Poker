@@ -1105,4 +1105,7 @@ fn test_terminal_utility() {
     );
 }
 
-// TODO: Add lots of tests for terminal_utility_vectorized
+#[test]
+fn test_terminal_utility_vectorized() {
+    
+}
