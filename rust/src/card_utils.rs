@@ -166,19 +166,51 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
 // for example a 5-card flush of hearts is essentially the same as a 5-card
 // flush of diamonds. This function maps the set of all hands to the much
 // smaller set of distinct isomorphic hands.
-fn sort_isomorphic(cards: &[Card], streets: bool) -> SmallVecHand {
-    let mut sorted: SmallVecHand = SmallVec::with_capacity(7);
+// fn sort_isomorphic(cards: &[Card], streets: bool) -> SmallVecHand {
+//     let mut sorted: SmallVecHand = SmallVec::with_capacity(7);
+//     if streets && cards.len() > 2 {
+//         let mut preflop: SmallVecHand = cards[..2].to_smallvec();
+//         let mut board: SmallVecHand = cards[2..].to_smallvec();
+//         preflop.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
+//         board.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
+//         sorted.extend(preflop);
+//         sorted.extend(board);
+//     } else {
+//         sorted = cards.to_smallvec();
+//         sorted.sort_unstable_by_key(|c| (c.suit, c.rank));
+//     }
+//     sorted
+// }
+fn sort_isomorphic(cards: &mut [Card], streets: bool) -> SmallVecHand {
+    let mut sorted: SmallVecHand = SmallVec::with_capacity(cards.len());
+    sorted.extend_from_slice(cards);
+
     if streets && cards.len() > 2 {
-        let mut preflop: SmallVecHand = cards[..2].to_smallvec();
-        let mut board: SmallVecHand = cards[2..].to_smallvec();
-        preflop.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
-        board.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
-        sorted.extend(preflop);
-        sorted.extend(board);
+        let (preflop, board) = sorted.split_at_mut(2);
+
+        // For preflop (2 elements), a single comparison is enough
+        if preflop[0].suit > preflop[1].suit
+            || (preflop[0].suit == preflop[1].suit && preflop[0].rank > preflop[1].rank)
+        {
+            preflop.swap(0, 1);
+        }
+
+        // Insertion sort for the board (up to 5 elements)
+        for i in 1..board.len() {
+            let mut j = i;
+            while j > 0
+                && (board[j - 1].suit > board[j].suit
+                    || (board[j - 1].suit == board[j].suit && board[j - 1].rank > board[j].rank))
+            {
+                board.swap(j, j - 1);
+                j -= 1;
+            }
+        }
     } else {
-        sorted = cards.to_smallvec();
+        // For the general case, continue using sort_unstable_by_key
         sorted.sort_unstable_by_key(|c| (c.suit, c.rank));
     }
+
     sorted
 }
 
@@ -202,7 +234,8 @@ fn sort_isomorphic(cards: &[Card], streets: bool) -> SmallVecHand {
 // If streets == true, it separately considers the preflop and postflop (private vs public info).
 //
 pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
-    let cards = sort_isomorphic(cards, streets);
+    let mut cards_mut: SmallVecHand = cards.to_smallvec();
+    let cards = sort_isomorphic(&mut cards_mut, streets);
 
     // by_suits creates a lookup of suit -> ranks with that suit in the hand
     let mut by_suits: [SmallVec<[u8; 7]>; 4] = [smallvec![], smallvec![], smallvec![], smallvec![]];
@@ -210,7 +243,9 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
         by_suits[card.suit as usize].push(card.rank);
     }
     for i in 0..by_suits.len() {
-        by_suits[i].sort_unstable();
+        if by_suits[i].len() > 1 {
+            by_suits[i].sort_unstable();
+        }
     }
 
     let mut suit_indices: SmallVec<[usize; 4]> = (0..4).collect();
@@ -237,8 +272,53 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
         })
         .collect();
 
-    isomorphic = sort_isomorphic(&isomorphic, streets);
+    isomorphic = sort_isomorphic(&mut isomorphic, streets);
     isomorphic
+}
+
+pub fn iso_street_bitmap_and_cards(cards: &[Card]) -> SmallVecHand {
+    let mut suits: [SmallVec<[(u8, bool); 7]>; 4] = [
+        SmallVec::with_capacity(7),
+        SmallVec::with_capacity(7),
+        SmallVec::with_capacity(7),
+        SmallVec::with_capacity(7),
+    ];
+    for (i, card) in cards.iter().enumerate() {
+        suits[card.suit as usize].push((card.rank, i < 2))
+    }
+    for r in suits.iter_mut() {
+        if r.len() > 1 {
+            r.sort_unstable_by_key(|r| r.0)
+        }
+    }
+    suits.sort_unstable_by(|a, b| {
+        if a.len() == b.len() {
+            a.cmp(&b)
+        } else {
+            b.len().cmp(&a.len())
+        }
+    });
+    let mut v: SmallVecHand = smallvec![Card { suit: 0, rank: 2 }; cards.len()];
+    let mut hi = 0;
+    let mut i = 2;
+    for (suit, ranks) in suits.into_iter().enumerate() {
+        for (rank, is_hole) in ranks.into_iter() {
+            if is_hole {
+                v[hi] = Card {
+                    rank: rank,
+                    suit: suit as u8,
+                };
+                hi += 1;
+            } else {
+                v[i] = Card {
+                    rank: rank,
+                    suit: suit as u8,
+                };
+                i += 1;
+            }
+        }
+    }
+    v.to_smallvec()
 }
 
 pub struct FastHandTable {

@@ -16,13 +16,11 @@ fn bench_cfr(c: &mut Criterion) {
 
 fn bench_isomorphic_hand(c: &mut Criterion) {
     let mut deck = deck();
+    deck.shuffle(&mut rand::thread_rng());
+    let cards = &deck[..7];
     c.bench_function("isomorphic", |b| {
-        b.iter(|| {
-            deck.shuffle(&mut rand::thread_rng());
-            let cards = &deck[..7];
-            isomorphic_hand(&cards, true)
-        })
-    });
+        b.iter(|| iso_street_bitmap_and_cards(&cards))
+    }); //isomorphic_hand(&cards, true)));
 }
 
 fn bench_win_probability_rollout(c: &mut Criterion) {
