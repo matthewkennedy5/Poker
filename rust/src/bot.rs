@@ -159,11 +159,11 @@ impl Bot {
         // let it keep solving the subgame until it converges. but with an upper limit to avoid
         // some kind of infinite loop situation.
         for i in 0..num_epochs {
-            if i > 0 {
+            if i == 1 {
                 nodes.reset_strategy_sum(&infoset);
             }
             let bar = pbar(epoch);
-            (0..epoch).into_par_iter().for_each(|_| {
+            (0..epoch).into_iter().for_each(|_| {
                 for player in [DEALER, OPPONENT].iter() {
                     let mut deck = deck();
                     deck.retain(|c| !hole.contains(c));
