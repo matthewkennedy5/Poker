@@ -159,13 +159,6 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
     bar
 }
 
-// Translates the given cards into their equivalent isomorphic representation.
-// When dealing with poker hands that come up in the game, there is some
-// information that doesn't matter. For example, we don't care about the order
-// of the flop cards or the hole cards. There is also suit isomorphism, where
-// for example a 5-card flush of hearts is essentially the same as a 5-card
-// flush of diamonds. This function maps the set of all hands to the much
-// smaller set of distinct isomorphic hands.
 // fn sort_isomorphic(cards: &[Card], streets: bool) -> SmallVecHand {
 //     let mut sorted: SmallVecHand = SmallVec::with_capacity(7);
 //     if streets && cards.len() > 2 {
@@ -286,6 +279,10 @@ pub fn isomorphic_hand_streets(cards: &[Card]) -> SmallVecHand {
     for (i, card) in cards.iter().enumerate() {
         suits[card.suit as usize].push((card.rank, i < 2))
     }
+
+    // Remaining slowness is that the sort_unstable_by() and sort_unstable_by_key() seems absurdly slow
+    // for small vecs. can use insertion sort or something.
+
     for r in suits.iter_mut() {
         if r.len() > 1 {
             r.sort_unstable_by_key(|r| r.0)
@@ -615,7 +612,7 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> Vec<u64> {
             rest_of_deck.retain(|c| !preflop.contains(&c));
             for board in rest_of_deck.iter().combinations(n_cards - 2) {
                 let cards = [deepcopy(&preflop), deepcopy(&board)].concat();
-                let hand = cards2hand(&isomorphic_hand_streets(&cards));
+                let hand = cards2hand(&isomorphic_hand(&cards, true));
                 isomorphic.insert(hand);
             }
         }

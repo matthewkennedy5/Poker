@@ -18,8 +18,10 @@ fn bench_isomorphic_hand(c: &mut Criterion) {
     let mut deck = deck();
     deck.shuffle(&mut rand::thread_rng());
     let cards = &deck[..7];
-    c.bench_function("isomorphic", |b| b.iter(|| isomorphic_hand_streets(&cards)));
-    //isomorphic_hand(&cards, true)));
+    c.bench_function("isomorphic", |b| {
+        b.iter(|| //isomorphic_hand_streets(&cards)));
+    isomorphic_hand(&cards, true))
+    });
 }
 
 fn bench_win_probability_rollout(c: &mut Criterion) {
