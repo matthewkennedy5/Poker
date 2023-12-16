@@ -65,7 +65,7 @@ impl Abstraction {
 
     // Lookup methods: Translate the card to its isomorphic version and return
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        let isomorphic = isomorphic_hand(cards, true);
+        let isomorphic = isomorphic_hand_streets(cards);
         let hand = cards2hand(&isomorphic);
         let bin_result = match cards.len() {
             5 => self.flop.get(&hand),
@@ -155,7 +155,7 @@ pub fn get_hand_counts(n_cards: usize) -> HashMap<u64, i32> {
         rest_of_deck.retain(|c| !preflop.contains(&c));
         for board in rest_of_deck.iter().combinations(n_cards - 2) {
             let cards = [deepcopy(&preflop), deepcopy(&board)].concat();
-            let hand = cards2hand(&isomorphic_hand(&cards, true));
+            let hand = cards2hand(&isomorphic_hand_streets(&cards));
             let current_count: i32 = match hand_counts.get(&hand) {
                 Some(count) => count.clone(),
                 None => 0,
@@ -290,10 +290,10 @@ pub fn equity_distribution(hand: u64) -> Vec<f32> {
 }
 
 pub fn river_equity(hand: &[Card]) -> f64 {
-    // let iso = isomorphic_hand(hand, true);
-    // if let Some(equity) = RIVER_EQUITY_CACHE.get(&iso) {
-    //     return equity.clone();
-    // }
+    let iso = isomorphic_hand_streets(hand);
+    if let Some(equity) = RIVER_EQUITY_CACHE.get(&iso) {
+        return equity.clone();
+    }
 
     let mut deck = deck();
     // Remove the already-dealt cards from the deck
@@ -319,7 +319,7 @@ pub fn river_equity(hand: &[Card]) -> f64 {
         }
     }
     let equity = n_wins / (n_runs as f64);
-    // RIVER_EQUITY_CACHE.insert(iso, equity);
+    RIVER_EQUITY_CACHE.insert(iso, equity);
     equity
 }
 

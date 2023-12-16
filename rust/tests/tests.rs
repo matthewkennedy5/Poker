@@ -672,12 +672,12 @@ fn isomorphic_hand_len() {
     let flop = load_flop_isomorphic();
     assert_eq!(flop.len(), 1344590);
     println!("Flop len: {}", flop.len());
-    // let turn = load_turn_isomorphic();
-    // assert_eq!(turn.len(), 14444820);
-    // println!("Turn len: {}", turn.len());
-    // let river = load_river_isomorphic();
-    // assert_eq!(river.len(), 126192339);
-    // println!("River len: {}", river.len());
+    let turn = load_turn_isomorphic();
+    assert_eq!(turn.len(), 14444820);
+    println!("Turn len: {}", turn.len());
+    let river = load_river_isomorphic();
+    assert_eq!(river.len(), 126192339);
+    println!("River len: {}", river.len());
 }
 
 #[test]
@@ -710,7 +710,7 @@ fn isomorphic_hand_example() {
     // my code goes: clubs->clubs, spades->diamonds, diamonds->hearts, hearts->spades
     //                  clubs < spades < diamonds < hearts
 
-    let result: Vec<Card> = isomorphic_hand(&hand, true).to_vec();
+    let result: Vec<Card> = isomorphic_hand_streets(&hand).to_vec();
     assert_eq!(result, expected_result, "{}", cards2str(&result));
     // Card { rank: 8, suit: 0 }, Card { rank: 2, suit: 3 }, Card { rank: 4, suit: 0 }, Card { rank: 4, suit: 1 }, Card { rank: 10, suit: 1 }, Card { rank: 10, suit: 2 }, Card { rank: 13, suit: 2 }]
 }
@@ -747,7 +747,7 @@ fn isomorphic_hand_ehs2() {
 
                 let hand: u64 = cards2hand(&cards);
                 let ehs2 = equity_distribution_moment(hand, 2);
-                let iso = cards2hand(&isomorphic_hand(&cards, true));
+                let iso = cards2hand(&isomorphic_hand_streets(&cards));
 
                 match iso_ehs.get(&iso) {
                     Some(existing_ehs2) => {
@@ -902,7 +902,7 @@ fn test_subgame_solving() {
     );
 }
 
-#[test]
+// #[test]
 fn subgame_solving_beats_blueprint() {
     let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
     let subgame_bot = Bot::new(

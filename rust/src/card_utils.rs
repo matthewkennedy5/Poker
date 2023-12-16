@@ -276,7 +276,7 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
     isomorphic
 }
 
-pub fn iso_street_bitmap_and_cards(cards: &[Card]) -> SmallVecHand {
+pub fn isomorphic_hand_streets(cards: &[Card]) -> SmallVecHand {
     let mut suits: [SmallVec<[(u8, bool); 7]>; 4] = [
         SmallVec::with_capacity(7),
         SmallVec::with_capacity(7),
@@ -615,17 +615,18 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> Vec<u64> {
             rest_of_deck.retain(|c| !preflop.contains(&c));
             for board in rest_of_deck.iter().combinations(n_cards - 2) {
                 let cards = [deepcopy(&preflop), deepcopy(&board)].concat();
-                let hand = cards2hand(&isomorphic_hand(&cards, true));
+                let hand = cards2hand(&isomorphic_hand_streets(&cards));
                 isomorphic.insert(hand);
             }
         }
     } else {
-        let hands = deck.iter().combinations(n_cards);
-        for hand in hands {
-            let cards = deepcopy(&hand);
-            let hand = cards2hand(&isomorphic_hand(&cards, false));
-            isomorphic.insert(hand);
-        }
+        panic!();
+        // let hands = deck.iter().combinations(n_cards);
+        // for hand in hands {
+        //     let cards = deepcopy(&hand);
+        //     let hand = cards2hand(&isomorphic_hand(&cards, false));
+        //     isomorphic.insert(hand);
+        // }
     }
     let isomorphic_vec: Vec<u64> = isomorphic.iter().copied().collect();
     isomorphic_vec
