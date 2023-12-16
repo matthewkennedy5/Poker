@@ -98,7 +98,7 @@ impl Nodes {
                 for i in 0..current_strategy.len() {
                     // Add this action's probability to the cumulative strategy sum
                     node.strategy_sum[i] += current_strategy[i] * prob as f32;
-                    node.strategy_sum[i] *= d / (d + 1.0);
+                    node.strategy_sum[i] *= d / (d + 1.0) * 0.9999;
                 }
             }
             node.t += 1;

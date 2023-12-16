@@ -6,7 +6,10 @@ use optimus::*;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::*;
-use std::{collections::{HashMap, HashSet}, fs::canonicalize};
+use std::{
+    collections::{HashMap, HashSet},
+    fs::canonicalize,
+};
 
 static BOT: Lazy<Bot> = Lazy::new(|| {
     Bot::new(
@@ -710,7 +713,7 @@ fn isomorphic_hand_example() {
     // my code goes: clubs->clubs, spades->diamonds, diamonds->hearts, hearts->spades
     //                  clubs < spades < diamonds < hearts
 
-    let result: Vec<Card> = isomorphic_hand_streets(&hand).to_vec();
+    let result: Vec<Card> = isomorphic_hand(&hand).to_vec();
     assert_eq!(result, expected_result, "{}", cards2str(&result));
     // Card { rank: 8, suit: 0 }, Card { rank: 2, suit: 3 }, Card { rank: 4, suit: 0 }, Card { rank: 4, suit: 1 }, Card { rank: 10, suit: 1 }, Card { rank: 10, suit: 2 }, Card { rank: 13, suit: 2 }]
 }
@@ -902,7 +905,7 @@ fn test_subgame_solving() {
     );
 }
 
-// #[test]
+#[test]
 fn subgame_solving_beats_blueprint() {
     let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
     let subgame_bot = Bot::new(
@@ -936,34 +939,36 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
     let mut deck: Vec<Card> = deck();
     let mut rng = &mut rand::thread_rng();
     deck.shuffle(&mut rng);
-    TODO: play both positions for a duplicated hand, rather than a random new hand each time. this
-        can reduce variance somewhat. 
-    let subgame_bot_position = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
-    let mut history = ActionHistory::new();
-    while !history.hand_over() {
-        let hand = get_hand(&deck, history.player, history.street);
-        let hole = &hand[..2];
-        let board = &hand[2..];
+    let mut result = 0.0; // from 2 hands (duplicated)
+    for subgame_bot_position in [DEALER, OPPONENT].iter() {
+        let subgame_bot_position = subgame_bot_position.clone();
+        let mut history = ActionHistory::new();
+        while !history.hand_over() {
+            let hand = get_hand(&deck, history.player, history.street);
+            let hole = &hand[..2];
+            let board = &hand[2..];
 
-        let bot = if history.player == subgame_bot_position {
-            subgame_bot
-        } else {
-            blueprint_bot
-        };
+            let bot = if history.player == subgame_bot_position {
+                subgame_bot
+            } else {
+                blueprint_bot
+            };
 
-        let action = bot.get_action(hole, board, &history);
-        history.add(&action);
+            let action = bot.get_action(hole, board, &history);
+            history.add(&action);
+        }
+        let player_preflop_hand = get_hand(&deck, subgame_bot_position, PREFLOP);
+        let opp_preflop_hand = get_hand(&deck, 1 - subgame_bot_position, PREFLOP);
+        let board = &deck[4..9];
+        result += terminal_utility(
+            &player_preflop_hand,
+            &opp_preflop_hand,
+            board,
+            &history,
+            subgame_bot_position,
+        )
     }
-    let player_preflop_hand = get_hand(&deck, subgame_bot_position, PREFLOP);
-    let opp_preflop_hand = get_hand(&deck, 1 - subgame_bot_position, PREFLOP);
-    let board = &deck[4..9];
-    terminal_utility(
-        &player_preflop_hand,
-        &opp_preflop_hand,
-        board,
-        &history,
-        subgame_bot_position,
-    )
+    result
 }
 
 // #[test]
@@ -1106,6 +1111,4 @@ fn test_terminal_utility() {
 }
 
 #[test]
-fn test_terminal_utility_vectorized() {
-    
-}
+fn test_terminal_utility_vectorized() {}
