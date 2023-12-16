@@ -677,32 +677,48 @@ pub fn terminal_utility_vectorized_fast(
         let mut prob_worse_adjusted = prob_worse;
         let mut prob_better_adjusted = prob_better;
 
-        // let mut all_blockers: SmallVec<[Card; 104]> = SmallVec::with_capacity(104);
-        // all_blockers.extend(blockers.get(&d.hand[0]).unwrap());
-        // all_blockers.extend(blockers.get(&d.hand[1]).unwrap());
-        // TODO: Merge sort
-        let mut all_blockers: Vec<usize> = blockers
-            .get(&d.hand[0])
-            .unwrap()
-            .iter()
-            .chain(blockers.get(&d.hand[1]).unwrap().iter())
-            .cloned()
-            .collect();
+        const MAX_SIZE: usize = 105;
+        let mut all_blockers: [usize; MAX_SIZE] = [0; MAX_SIZE];
 
-        all_blockers.sort_unstable();
+        // Retrieve the sorted lists from blockers
+        let blockers1 = blockers.get(&d.hand[0]).unwrap();
+        let blockers2 = blockers.get(&d.hand[1]).unwrap();
 
-        for blocker in all_blockers.clone() {
-            let d2 = &hand_data[blocker];
-            // TODO: You can avoid this cmp if you presort the blockers
-            match d2.strength.cmp(&d.strength) {
-                std::cmp::Ordering::Greater => prob_better_adjusted -= d2.prob,
-                std::cmp::Ordering::Less => prob_worse_adjusted -= d2.prob,
-                std::cmp::Ordering::Equal => {} // Do nothing
+        // Perform a one-pass merge
+        let mut i = 0;
+        let mut j = 0;
+        let mut k = 0;
+        while i < blockers1.len() && j < blockers2.len() {
+            if blockers1[i] <= blockers2[j] {
+                all_blockers[k] = blockers1[i];
+                i += 1;
+            } else {
+                all_blockers[k] = blockers2[j];
+                j += 1;
             }
+            k += 1;
+        }
+        // If there are remaining elements in blockers1
+        while i < blockers1.len() {
+            all_blockers[k] = blockers1[i];
+            i += 1;
+            k += 1;
         }
 
+        // If there are remaining elements in blockers2
+        while j < blockers2.len() {
+            all_blockers[k] = blockers2[j];
+            j += 1;
+            k += 1;
+        }
+
+        // Now all_blockers contains the merged sorted elements
+        // k is the actual number of elements in all_blockers
+
+        // You can use &all_blockers[0..k] for further processing
+
         // Use standard binary search to find any matching index
-        let mut equal_or_greater_idx = all_blockers
+        let mut equal_or_greater_idx = all_blockers[0..k]
             .binary_search_by(|&index| hand_data[index].strength.cmp(&d.strength))
             .unwrap_or_else(|x| x);
 
@@ -713,7 +729,7 @@ pub fn terminal_utility_vectorized_fast(
             equal_or_greater_idx -= 1;
         }
 
-        let mut greater_idx = all_blockers
+        let mut greater_idx = all_blockers[0..k]
             .binary_search_by(|&index| hand_data[index].strength.cmp(&(d.strength + 1)))
             .unwrap_or_else(|x| x);
 
@@ -728,25 +744,14 @@ pub fn terminal_utility_vectorized_fast(
             .iter()
             .map(|&index| hand_data[index].prob) // this might be cache miss city - store separate vecs of probs for better cache locality?
             .sum();
-        let prob_greater: f64 = all_blockers[greater_idx..]
+        let prob_greater: f64 = all_blockers[greater_idx..k]
             .iter()
             .map(|&index| hand_data[index].prob)
             .sum();
 
-        assert!(
-            prob_worse - prob_less - prob_worse_adjusted < 1e-6,
-            "equal_or_greater_idx: {}",
-            equal_or_greater_idx
-        );
-        assert!(
-            prob_better - prob_greater - prob_better_adjusted < 1e-6,
-            "greater_idx: {}",
-            greater_idx
-        );
-
         // Adjust probabilities
-        // prob_worse_adjusted -= prob_less;
-        // prob_better_adjusted -= prob_greater;
+        prob_worse_adjusted -= prob_less;
+        prob_better_adjusted -= prob_greater;
 
         let util = history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted)
             / preflop_hands.len() as f64;
