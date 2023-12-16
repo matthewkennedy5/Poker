@@ -6,6 +6,7 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use rand::{prelude::SliceRandom, thread_rng};
 use smallvec::SmallVec;
+use statistical::univariate::standard_error_kurtosis;
 use std::{
     cmp::Eq,
     collections::{HashMap, HashSet},
@@ -607,8 +608,8 @@ pub fn terminal_utility_vectorized_fast(
 
     // Sort the indices based on the strength in hand_data, so we know the original index of each
     // hand in the unsorted vector.
-    // let mut sort_indices: Vec<usize> = (0..hand_data.len()).collect();
-    // sort_indices.sort_by_key(|&i| hand_data[i].strength);
+    let mut sort_indices: Vec<usize> = (0..hand_data.len()).collect();
+    sort_indices.sort_unstable_by_key(|&i| hand_data[i].strength);
 
     let original_hand_indices: HashMap<[Card; 2], usize> = hand_data
         .iter()
@@ -616,7 +617,10 @@ pub fn terminal_utility_vectorized_fast(
         .map(|(i, hand_data)| (hand_data.hand, i))
         .collect();
 
-    hand_data.sort_by(|a, b| a.strength.cmp(&b.strength));
+    let strengths: Vec<i32> = hand_data.iter().map(|h| h.strength).collect();
+    let opp_probs: Vec<f64> = hand_data.iter().map(|h| h.prob).collect();
+
+    hand_data.sort_unstable_by(|a, b| a.strength.cmp(&b.strength));
 
     let deck = deck();
     // blockers stores the Vec of hands that are blocked by each card. The hands are indexes in hand
@@ -647,15 +651,20 @@ pub fn terminal_utility_vectorized_fast(
     let mut idx_equal = 0;
     let mut idx_better = 0;
     let mut utils: Vec<f64> = vec![0.0; preflop_hands.len()];
-    for d in &hand_data {
+    for d_index in sort_indices {
         // Just moved to a better player hand - need to move some opponent hands from "equal" to
         // "worse", and from "better" to "equal".
 
         // First, move the idx_equal up until its on a strength greater or equal to the current strength.
         // Add probs to prob_worse and subtract probs from prob_equal as you go. Because when you move
         // to a better hand, hands will move from being equal to being worse.
+
+        let d_strength = strengths[d_index];
+        let d_prob = opp_probs[d_index];
+        let d_hand = preflop_hands[d_index];
+
         loop {
-            if hand_data[idx_equal].strength >= d.strength {
+            if hand_data[idx_equal].strength >= d_strength {
                 break;
             }
             prob_equal -= hand_data[idx_equal].prob;
@@ -665,7 +674,7 @@ pub fn terminal_utility_vectorized_fast(
 
         // Same thing but moving up idx_better, adding to prob_equal and subtracting from prob_better.
         loop {
-            if idx_better >= hand_data.len() || hand_data[idx_better].strength > d.strength {
+            if idx_better >= hand_data.len() || hand_data[idx_better].strength > d_strength {
                 break;
             }
             prob_better -= hand_data[idx_better].prob;
@@ -681,8 +690,8 @@ pub fn terminal_utility_vectorized_fast(
         let mut all_blockers: [usize; MAX_SIZE] = [0; MAX_SIZE];
 
         // Retrieve the sorted lists from blockers
-        let blockers1 = blockers.get(&d.hand[0]).unwrap();
-        let blockers2 = blockers.get(&d.hand[1]).unwrap();
+        let blockers1 = blockers.get(&d_hand[0]).unwrap();
+        let blockers2 = blockers.get(&d_hand[1]).unwrap();
 
         // Perform a one-pass merge
         let mut i = 0;
@@ -719,22 +728,22 @@ pub fn terminal_utility_vectorized_fast(
 
         // Use standard binary search to find any matching index
         let mut equal_or_greater_idx = all_blockers[0..k]
-            .binary_search_by(|&index| hand_data[index].strength.cmp(&d.strength))
+            .binary_search_by(|&index| hand_data[index].strength.cmp(&d_strength))
             .unwrap_or_else(|x| x);
 
         // Move back to find the first occurrence
         while equal_or_greater_idx > 0
-            && hand_data[all_blockers[equal_or_greater_idx - 1]].strength == d.strength
+            && hand_data[all_blockers[equal_or_greater_idx - 1]].strength == d_strength
         {
             equal_or_greater_idx -= 1;
         }
 
         let mut greater_idx = all_blockers[0..k]
-            .binary_search_by(|&index| hand_data[index].strength.cmp(&(d.strength + 1)))
+            .binary_search_by(|&index| hand_data[index].strength.cmp(&(d_strength + 1)))
             .unwrap_or_else(|x| x);
 
         // Similar adjustment for greater_idx, if needed
-        while greater_idx > 0 && hand_data[all_blockers[greater_idx - 1]].strength == d.strength + 1
+        while greater_idx > 0 && hand_data[all_blockers[greater_idx - 1]].strength == d_strength + 1
         {
             greater_idx -= 1;
         }
@@ -756,7 +765,7 @@ pub fn terminal_utility_vectorized_fast(
         let util = history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted)
             / preflop_hands.len() as f64;
 
-        let index: usize = original_hand_indices.get(&d.hand).unwrap().clone();
+        let index: usize = original_hand_indices.get(&d_hand).unwrap().clone();
         utils[index] = util;
     }
     utils
