@@ -606,6 +606,14 @@ pub fn terminal_utility_vectorized_fast(
         })
         .collect();
 
+    let strengths: Vec<i32> = preflop_hands
+        .iter()
+        .map(|h| {
+            let river_hand = [h[0], h[1], board[0], board[1], board[2], board[3], board[4]];
+            FAST_HAND_TABLE.hand_strength(&river_hand)
+        })
+        .collect();
+
     // Sort the indices based on the strength in hand_data, so we know the original index of each
     // hand in the unsorted vector.
     let mut sort_indices: Vec<usize> = (0..hand_data.len()).collect();
@@ -616,9 +624,6 @@ pub fn terminal_utility_vectorized_fast(
         .enumerate()
         .map(|(i, hand_data)| (hand_data.hand, i))
         .collect();
-
-    let strengths: Vec<i32> = hand_data.iter().map(|h| h.strength).collect();
-    let opp_probs: Vec<f64> = hand_data.iter().map(|h| h.prob).collect();
 
     hand_data.sort_unstable_by(|a, b| a.strength.cmp(&b.strength));
 
@@ -660,7 +665,7 @@ pub fn terminal_utility_vectorized_fast(
         // to a better hand, hands will move from being equal to being worse.
 
         let d_strength = strengths[d_index];
-        let d_prob = opp_probs[d_index];
+        let d_prob = opp_reach_probs[d_index];
         let d_hand = preflop_hands[d_index];
 
         loop {
