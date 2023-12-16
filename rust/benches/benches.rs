@@ -6,7 +6,7 @@ use std::time::Duration;
 fn bench_cfr(c: &mut Criterion) {
     let nodes: Nodes = Nodes::new(&CONFIG.bet_abstraction);
     let mut group = c.benchmark_group("cfr");
-    group.warm_up_time(Duration::new(30, 0));
+    group.warm_up_time(Duration::new(60, 0));
     // group.sample_size(10);
     group.bench_function("cfr", |b| {
         b.iter(|| cfr_iteration(&deck(), &ActionHistory::new(), &nodes, -1))
@@ -19,8 +19,7 @@ fn bench_isomorphic_hand(c: &mut Criterion) {
     deck.shuffle(&mut rand::thread_rng());
     let cards = &deck[..7];
     c.bench_function("isomorphic", |b| {
-        b.iter(|| //isomorphic_hand_streets(&cards)));
-    isomorphic_hand(&cards, true))
+        b.iter(|| isomorphic_hand(&cards));
     });
 }
 

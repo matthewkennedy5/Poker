@@ -569,26 +569,34 @@ pub fn terminal_utility_vectorized_fast(
         let opp_prob_sum: f64 = opp_reach_probs.iter().sum();
 
         // Precompute blocking probs for each card
-        let mut blocked_prob_sums = [0.0; 52];
-        deck().iter().enumerate().for_each(|(i, card)| {
-            let mut sum = 0.0;
-            for (hand, prob) in preflop_hands.iter().zip(opp_reach_probs.iter()) {
-                if &hand[0] == card || &hand[1] == card {
-                    sum += prob
-                }
-            }
-            blocked_prob_sums[i] = sum;
-        });
+        let mut blocked_prob_sums: HashMap<Card, f64> = HashMap::with_capacity(52);
+
+        // Calculate the sum of probabilities for each card in preflop hands
+        for (hand, &prob) in preflop_hands.iter().zip(opp_reach_probs.iter()) {
+            *blocked_prob_sums.entry(hand[0]).or_insert(0.0) += prob;
+            *blocked_prob_sums.entry(hand[1]).or_insert(0.0) += prob;
+        }
+
+        // deck().iter().enumerate().for_each(|(i, card)| {
+        //     let mut sum = 0.0;
+        //     for (hand, prob) in preflop_hands.iter().zip(opp_reach_probs.iter()) {
+        //         if &hand[0] == card || &hand[1] == card {
+        //             sum += prob
+        //         }
+        //     }
+        //     blocked_prob_sums[i] = sum;
+        // });
 
         let utils: Vec<f64> = preflop_hands
             .iter()
             .enumerate()
             .map(|(i, hand)| {
-                let card0_idx: usize = (hand[0].suit as usize * 13) + hand[0].rank as usize - 2;
-                let card1_idx: usize = (hand[1].suit as usize * 13) + hand[1].rank as usize - 2;
-                let total_prob =
-                    opp_prob_sum - blocked_prob_sums[card0_idx] - blocked_prob_sums[card1_idx]
-                        + opp_reach_probs[i];
+                // let card0_idx: usize = (hand[0].suit as usize * 13) + hand[0].rank as usize - 2;
+                // let card1_idx: usize = (hand[1].suit as usize * 13) + hand[1].rank as usize - 2;
+                let total_prob = opp_prob_sum
+                    - blocked_prob_sums.get(&hand[0]).unwrap()
+                    - blocked_prob_sums.get(&hand[1]).unwrap()
+                    + opp_reach_probs[i];
                 total_prob * winnings / preflop_hands.len() as f64
             })
             .collect();
@@ -608,25 +616,46 @@ pub fn terminal_utility_vectorized_fast(
         })
         .collect();
 
-    let mut sort_indices: Vec<usize> = (0..hand_data.len()).collect();
     // Sort the indices based on the strength in hand_data, so we know the original index of each
     // hand in the unsorted vector.
-    sort_indices.sort_by_key(|&i| hand_data[i].strength);
+    // let mut sort_indices: Vec<usize> = (0..hand_data.len()).collect();
+    // sort_indices.sort_by_key(|&i| hand_data[i].strength);
+
+    let original_hand_indices: HashMap<[Card; 2], usize> = hand_data
+        .iter()
+        .enumerate()
+        .map(|(i, hand_data)| (hand_data.hand, i))
+        .collect();
+
     hand_data.sort_by(|a, b| a.strength.cmp(&b.strength));
 
     let deck = deck();
-    let blockers: HashMap<Card, Vec<usize>> = deck
+    // let mut blockers: HashMap<Card, Vec<usize>> = HashMap::with_capacity(52);
+    // let blockers: HashMap<Card, Vec<usize>> = deck
+    //     .iter()
+    //     .map(|card| {
+    //         let mut blocking_indexes = Vec::with_capacity(deck.len());
+    //         for i in 0..hand_data.len() {
+    //             if hand_data[i].hand.contains(card) {
+    //                 blocking_indexes.push(i);
+    //             }
+    //         }
+    //         (*card, blocking_indexes)
+    //     })
+    //     .collect();
+
+    let mut blockers: HashMap<Card, Vec<usize>> = deck
         .iter()
-        .map(|card| {
-            let mut blocking_indexes = Vec::with_capacity(deck.len());
-            for i in 0..hand_data.len() {
-                if hand_data[i].hand.contains(card) {
-                    blocking_indexes.push(i);
-                }
-            }
-            (*card, blocking_indexes)
-        })
+        .map(|&card| (card, Vec::with_capacity(52)))
         .collect();
+
+    for (i, hand_info) in hand_data.iter().enumerate() {
+        for card in &hand_info.hand {
+            if let Some(blocking_indexes) = blockers.get_mut(card) {
+                blocking_indexes.push(i);
+            }
+        }
+    }
 
     // Ok so the basic idea here is:
     //  - sort the hands by strength
@@ -641,7 +670,7 @@ pub fn terminal_utility_vectorized_fast(
     let mut idx_equal = 0;
     let mut idx_better = 0;
     let mut utils: Vec<f64> = vec![0.0; preflop_hands.len()];
-    for (i, d) in hand_data.iter().enumerate() {
+    for d in &hand_data {
         // Just moved to a better player hand - need to move some opponent hands from "equal" to
         // "worse", and from "better" to "equal".
 
@@ -670,15 +699,14 @@ pub fn terminal_utility_vectorized_fast(
         // Adjust for blockers
         let mut prob_worse_adjusted = prob_worse;
         let mut prob_better_adjusted = prob_better;
-        let all_blockers: Vec<usize> = blockers
+        let all_blockers = blockers
             .get(&d.hand[0])
             .unwrap()
             .iter()
-            .chain(blockers.get(&d.hand[1]).unwrap().iter())
-            .copied()
-            .collect();
+            .chain(blockers.get(&d.hand[1]).unwrap().iter());
         for blocker in all_blockers {
-            let d2 = &hand_data[blocker];
+            let d2 = &hand_data[*blocker];
+            // TODO: You can avoid this cmp if you presort the blockers
             match d2.strength.cmp(&d.strength) {
                 std::cmp::Ordering::Greater => prob_better_adjusted -= d2.prob,
                 std::cmp::Ordering::Less => prob_worse_adjusted -= d2.prob,
@@ -688,7 +716,7 @@ pub fn terminal_utility_vectorized_fast(
         let util = history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted)
             / preflop_hands.len() as f64;
 
-        let index = sort_indices[i];
+        let index: usize = original_hand_indices.get(&d.hand).unwrap().clone();
         utils[index] = util;
     }
     utils

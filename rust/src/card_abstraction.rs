@@ -4,13 +4,14 @@
 // abstraction id number, so we can treat similar hands as the same to reduce
 // the number of possibilities in the game.
 
-use crate::card_utils::*;
 use crate::config::CONFIG;
+use crate::{card_utils::*, ABSTRACTION};
 use dashmap::DashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use smallvec::ToSmallVec;
 use std::sync::Mutex;
 use std::{
     collections::HashMap,
@@ -21,7 +22,7 @@ use std::{
 
 pub static RIVER_EQUITY_CACHE: Lazy<DashMap<SmallVecHand, f64>> = Lazy::new(DashMap::new);
 
-pub const FLOP_ABSTRACTION_PATH: &str = "products/flop_abstraction.bin";
+pub const FLOP_ABSTRACTION_PATH: &str = "products/flop_abstraction_large.bin";
 pub const TURN_ABSTRACTION_PATH: &str = "products/turn_abstraction.bin";
 pub const RIVER_ABSTRACTION_PATH: &str = "products/river_abstraction.bin";
 
@@ -63,10 +64,14 @@ impl Abstraction {
         bin
     }
 
-    // Lookup methods: Translate the card to its isomorphic version and return
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        let isomorphic = isomorphic_hand(cards, true);
-        let hand = cards2hand(&isomorphic);
+        // let isomorphic = isomorphic_hand(cards);
+
+        // flop holdem only hack
+        let mut cards = [cards[0], cards[1], cards[2], cards[3], cards[4]];
+        cards[0..2].sort_unstable();
+        cards[2..5].sort_unstable();
+        let hand = cards2hand(&cards);
         let bin_result = match cards.len() {
             5 => self.flop.get(&hand),
             6 => self.turn.get(&hand),
@@ -155,7 +160,7 @@ pub fn get_hand_counts(n_cards: usize) -> HashMap<u64, i32> {
         rest_of_deck.retain(|c| !preflop.contains(&c));
         for board in rest_of_deck.iter().combinations(n_cards - 2) {
             let cards = [deepcopy(&preflop), deepcopy(&board)].concat();
-            let hand = cards2hand(&isomorphic_hand(&cards, true));
+            let hand = cards2hand(&isomorphic_hand(&cards));
             let current_count: i32 = match hand_counts.get(&hand) {
                 Some(count) => count.clone(),
                 None => 0,
@@ -290,7 +295,7 @@ pub fn equity_distribution(hand: u64) -> Vec<f32> {
 }
 
 pub fn river_equity(hand: &[Card]) -> f64 {
-    let iso = isomorphic_hand(hand, true);
+    let iso = isomorphic_hand(hand);
     if let Some(equity) = RIVER_EQUITY_CACHE.get(&iso) {
         return equity.clone();
     }
@@ -372,6 +377,32 @@ pub fn create_abstraction_clusters() {
         .map(|(&hand, &bucket)| (hand, bucket))
         .collect();
     serialize(abstraction, "products/turn_abstraction.bin");
+}
+
+pub fn expand_abstraction_keys() {
+    let deck = deck();
+    let n_cards = 5;
+    let mut table: HashMap<u64, i32> = HashMap::new();
+    println!("Saving massive table of all flop hands -> flop buckets...");
+    let bar = pbar(25989600);
+    for preflop in deck.iter().combinations(2) {
+        let mut sorted_preflop: SmallVecHand = preflop.iter().cloned().cloned().collect();
+        sorted_preflop.sort_unstable();
+        let mut rest_of_deck = deck.clone();
+        rest_of_deck.retain(|c| !preflop.contains(&c));
+        for board in rest_of_deck.iter().combinations(n_cards - 2) {
+            let mut sorted_board: SmallVecHand = board.iter().cloned().cloned().collect();
+            sorted_board.sort_unstable();
+
+            let mut cards = sorted_preflop.clone();
+            cards.extend(sorted_board);
+
+            let bin = ABSTRACTION.bin(&cards);
+            table.insert(cards2hand(&cards), bin);
+            bar.inc(1);
+        }
+    }
+    serialize(table, "products/flop_abstraction_large.bin");
 }
 
 pub fn get_equity_distributions(street: &str) -> Vec<Vec<f32>> {

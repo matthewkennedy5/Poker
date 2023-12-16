@@ -159,51 +159,19 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
     bar
 }
 
-// fn sort_isomorphic(cards: &[Card], streets: bool) -> SmallVecHand {
-//     let mut sorted: SmallVecHand = SmallVec::with_capacity(7);
-//     if streets && cards.len() > 2 {
-//         let mut preflop: SmallVecHand = cards[..2].to_smallvec();
-//         let mut board: SmallVecHand = cards[2..].to_smallvec();
-//         preflop.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
-//         board.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
-//         sorted.extend(preflop);
-//         sorted.extend(board);
-//     } else {
-//         sorted = cards.to_smallvec();
-//         sorted.sort_unstable_by_key(|c| (c.suit, c.rank));
-//     }
-//     sorted
-// }
-fn sort_isomorphic(cards: &mut [Card], streets: bool) -> SmallVecHand {
-    let mut sorted: SmallVecHand = SmallVec::with_capacity(cards.len());
-    sorted.extend_from_slice(cards);
-
-    if streets && cards.len() > 2 {
-        let (preflop, board) = sorted.split_at_mut(2);
-
-        // For preflop (2 elements), a single comparison is enough
-        if preflop[0].suit > preflop[1].suit
-            || (preflop[0].suit == preflop[1].suit && preflop[0].rank > preflop[1].rank)
-        {
-            preflop.swap(0, 1);
-        }
-
-        // Insertion sort for the board (up to 5 elements)
-        for i in 1..board.len() {
-            let mut j = i;
-            while j > 0
-                && (board[j - 1].suit > board[j].suit
-                    || (board[j - 1].suit == board[j].suit && board[j - 1].rank > board[j].rank))
-            {
-                board.swap(j, j - 1);
-                j -= 1;
-            }
-        }
+fn sort_isomorphic(cards: &[Card]) -> SmallVecHand {
+    let mut sorted: SmallVecHand = SmallVec::with_capacity(7);
+    if cards.len() > 2 {
+        let mut preflop: SmallVecHand = cards[..2].to_smallvec();
+        let mut board: SmallVecHand = cards[2..].to_smallvec();
+        preflop.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
+        board.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
+        sorted.extend(preflop);
+        sorted.extend(board);
     } else {
-        // For the general case, continue using sort_unstable_by_key
+        sorted = cards.to_smallvec();
         sorted.sort_unstable_by_key(|c| (c.suit, c.rank));
     }
-
     sorted
 }
 
@@ -226,9 +194,9 @@ fn sort_isomorphic(cards: &mut [Card], streets: bool) -> SmallVecHand {
 //
 // If streets == true, it separately considers the preflop and postflop (private vs public info).
 //
-pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
+pub fn isomorphic_hand(cards: &[Card]) -> SmallVecHand {
     let mut cards_mut: SmallVecHand = cards.to_smallvec();
-    let cards = sort_isomorphic(&mut cards_mut, streets);
+    let cards = sort_isomorphic(&mut cards_mut);
 
     // by_suits creates a lookup of suit -> ranks with that suit in the hand
     let mut by_suits: [SmallVec<[u8; 7]>; 4] = [smallvec![], smallvec![], smallvec![], smallvec![]];
@@ -265,57 +233,8 @@ pub fn isomorphic_hand(cards: &[Card], streets: bool) -> SmallVecHand {
         })
         .collect();
 
-    isomorphic = sort_isomorphic(&mut isomorphic, streets);
+    isomorphic = sort_isomorphic(&mut isomorphic);
     isomorphic
-}
-
-pub fn isomorphic_hand_streets(cards: &[Card]) -> SmallVecHand {
-    let mut suits: [SmallVec<[(u8, bool); 7]>; 4] = [
-        SmallVec::with_capacity(7),
-        SmallVec::with_capacity(7),
-        SmallVec::with_capacity(7),
-        SmallVec::with_capacity(7),
-    ];
-    for (i, card) in cards.iter().enumerate() {
-        suits[card.suit as usize].push((card.rank, i < 2))
-    }
-
-    // Remaining slowness is that the sort_unstable_by() and sort_unstable_by_key() seems absurdly slow
-    // for small vecs. can use insertion sort or something.
-
-    for r in suits.iter_mut() {
-        if r.len() > 1 {
-            r.sort_unstable_by_key(|r| r.0)
-        }
-    }
-    suits.sort_unstable_by(|a, b| {
-        if a.len() == b.len() {
-            a.cmp(&b)
-        } else {
-            b.len().cmp(&a.len())
-        }
-    });
-    let mut v: SmallVecHand = smallvec![Card { suit: 0, rank: 2 }; cards.len()];
-    let mut hi = 0;
-    let mut i = 2;
-    for (suit, ranks) in suits.into_iter().enumerate() {
-        for (rank, is_hole) in ranks.into_iter() {
-            if is_hole {
-                v[hi] = Card {
-                    rank: rank,
-                    suit: suit as u8,
-                };
-                hi += 1;
-            } else {
-                v[i] = Card {
-                    rank: rank,
-                    suit: suit as u8,
-                };
-                i += 1;
-            }
-        }
-    }
-    v.to_smallvec()
 }
 
 pub struct FastHandTable {
@@ -596,6 +515,7 @@ pub fn isomorphic_preflop_hands() -> HashSet<Vec<Card>> {
 }
 
 pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> Vec<u64> {
+    assert!(preserve_streets);
     match n_cards {
         5 => println!("[INFO] Finding all isomorphic flop hands."),
         6 => println!("[INFO] Finding all isomorphic turn hands."),
@@ -606,24 +526,14 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> Vec<u64> {
     let mut isomorphic: HashSet<u64> = HashSet::new();
     let deck = deck();
 
-    if preserve_streets {
-        for preflop in deck.iter().combinations(2) {
-            let mut rest_of_deck = deck.clone();
-            rest_of_deck.retain(|c| !preflop.contains(&c));
-            for board in rest_of_deck.iter().combinations(n_cards - 2) {
-                let cards = [deepcopy(&preflop), deepcopy(&board)].concat();
-                let hand = cards2hand(&isomorphic_hand(&cards, true));
-                isomorphic.insert(hand);
-            }
+    for preflop in deck.iter().combinations(2) {
+        let mut rest_of_deck = deck.clone();
+        rest_of_deck.retain(|c| !preflop.contains(&c));
+        for board in rest_of_deck.iter().combinations(n_cards - 2) {
+            let cards = [deepcopy(&preflop), deepcopy(&board)].concat();
+            let hand = cards2hand(&isomorphic_hand(&cards));
+            isomorphic.insert(hand);
         }
-    } else {
-        panic!();
-        // let hands = deck.iter().combinations(n_cards);
-        // for hand in hands {
-        //     let cards = deepcopy(&hand);
-        //     let hand = cards2hand(&isomorphic_hand(&cards, false));
-        //     isomorphic.insert(hand);
-        // }
     }
     let isomorphic_vec: Vec<u64> = isomorphic.iter().copied().collect();
     isomorphic_vec
