@@ -606,18 +606,18 @@ pub fn terminal_utility_vectorized_fast(
         })
         .collect();
 
-    let strengths: Vec<i32> = preflop_hands
-        .iter()
-        .map(|h| {
-            let river_hand = [h[0], h[1], board[0], board[1], board[2], board[3], board[4]];
-            FAST_HAND_TABLE.hand_strength(&river_hand)
-        })
-        .collect();
+    // let strengths: Vec<i32> = preflop_hands
+    //     .iter()
+    //     .map(|h| {
+    //         let river_hand = [h[0], h[1], board[0], board[1], board[2], board[3], board[4]];
+    //         FAST_HAND_TABLE.hand_strength(&river_hand)
+    //     })
+    //     .collect();
 
     // Sort the indices based on the strength in hand_data, so we know the original index of each
     // hand in the unsorted vector.
-    let mut sort_indices: Vec<usize> = (0..hand_data.len()).collect();
-    sort_indices.sort_unstable_by_key(|&i| hand_data[i].strength);
+    // let mut sort_indices: Vec<usize> = (0..hand_data.len()).collect();
+    // sort_indices.sort_unstable_by_key(|&i| hand_data[i].strength);
 
     let original_hand_indices: HashMap<[Card; 2], usize> = hand_data
         .iter()
@@ -656,7 +656,7 @@ pub fn terminal_utility_vectorized_fast(
     let mut idx_equal = 0;
     let mut idx_better = 0;
     let mut utils: Vec<f64> = vec![0.0; preflop_hands.len()];
-    for d_index in sort_indices {
+    for d in &hand_data {
         // Just moved to a better player hand - need to move some opponent hands from "equal" to
         // "worse", and from "better" to "equal".
 
@@ -664,9 +664,9 @@ pub fn terminal_utility_vectorized_fast(
         // Add probs to prob_worse and subtract probs from prob_equal as you go. Because when you move
         // to a better hand, hands will move from being equal to being worse.
 
-        let d_strength = strengths[d_index];
-        let d_prob = opp_reach_probs[d_index];
-        let d_hand = preflop_hands[d_index];
+        let d_strength = d.strength;
+        let d_prob = d.prob;
+        let d_hand = d.hand;
 
         loop {
             if hand_data[idx_equal].strength >= d_strength {
