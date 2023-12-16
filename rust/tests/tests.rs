@@ -6,7 +6,7 @@ use optimus::*;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::*;
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, fs::canonicalize};
 
 static BOT: Lazy<Bot> = Lazy::new(|| {
     Bot::new(
@@ -747,7 +747,7 @@ fn isomorphic_hand_ehs2() {
 
                 let hand: u64 = cards2hand(&cards);
                 let ehs2 = equity_distribution_moment(hand, 2);
-                let iso = cards2hand(&isomorphic_hand_streets(&cards));
+                let iso = cards2hand(&isomorphic_hand(&cards));
 
                 match iso_ehs.get(&iso) {
                     Some(existing_ehs2) => {
@@ -936,6 +936,8 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
     let mut deck: Vec<Card> = deck();
     let mut rng = &mut rand::thread_rng();
     deck.shuffle(&mut rng);
+    TODO: play both positions for a duplicated hand, rather than a random new hand each time. this
+        can reduce variance somewhat. 
     let subgame_bot_position = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
     let mut history = ActionHistory::new();
     while !history.hand_over() {

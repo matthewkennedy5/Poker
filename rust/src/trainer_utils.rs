@@ -2,6 +2,7 @@ use crate::card_abstraction::Abstraction;
 use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::nodes::*;
+use itertools::Itertools;
 use once_cell::sync::Lazy;
 use rand::{prelude::SliceRandom, thread_rng};
 use smallvec::SmallVec;
@@ -577,22 +578,10 @@ pub fn terminal_utility_vectorized_fast(
             *blocked_prob_sums.entry(hand[1]).or_insert(0.0) += prob;
         }
 
-        // deck().iter().enumerate().for_each(|(i, card)| {
-        //     let mut sum = 0.0;
-        //     for (hand, prob) in preflop_hands.iter().zip(opp_reach_probs.iter()) {
-        //         if &hand[0] == card || &hand[1] == card {
-        //             sum += prob
-        //         }
-        //     }
-        //     blocked_prob_sums[i] = sum;
-        // });
-
         let utils: Vec<f64> = preflop_hands
             .iter()
             .enumerate()
             .map(|(i, hand)| {
-                // let card0_idx: usize = (hand[0].suit as usize * 13) + hand[0].rank as usize - 2;
-                // let card1_idx: usize = (hand[1].suit as usize * 13) + hand[1].rank as usize - 2;
                 let total_prob = opp_prob_sum
                     - blocked_prob_sums.get(&hand[0]).unwrap()
                     - blocked_prob_sums.get(&hand[1]).unwrap()
@@ -630,20 +619,6 @@ pub fn terminal_utility_vectorized_fast(
     hand_data.sort_by(|a, b| a.strength.cmp(&b.strength));
 
     let deck = deck();
-    // let mut blockers: HashMap<Card, Vec<usize>> = HashMap::with_capacity(52);
-    // let blockers: HashMap<Card, Vec<usize>> = deck
-    //     .iter()
-    //     .map(|card| {
-    //         let mut blocking_indexes = Vec::with_capacity(deck.len());
-    //         for i in 0..hand_data.len() {
-    //             if hand_data[i].hand.contains(card) {
-    //                 blocking_indexes.push(i);
-    //             }
-    //         }
-    //         (*card, blocking_indexes)
-    //     })
-    //     .collect();
-
     let mut blockers: HashMap<Card, Vec<usize>> = deck
         .iter()
         .map(|&card| (card, Vec::with_capacity(52)))
@@ -699,13 +674,23 @@ pub fn terminal_utility_vectorized_fast(
         // Adjust for blockers
         let mut prob_worse_adjusted = prob_worse;
         let mut prob_better_adjusted = prob_better;
-        let all_blockers = blockers
+
+        // let mut all_blockers: SmallVec<[Card; 104]> = SmallVec::with_capacity(104);
+        // all_blockers.extend(blockers.get(&d.hand[0]).unwrap());
+        // all_blockers.extend(blockers.get(&d.hand[1]).unwrap());
+        // TODO: Merge sort
+        let mut all_blockers: Vec<usize> = blockers
             .get(&d.hand[0])
             .unwrap()
             .iter()
-            .chain(blockers.get(&d.hand[1]).unwrap().iter());
+            .chain(blockers.get(&d.hand[1]).unwrap().iter())
+            .cloned()
+            .collect();
+
+        all_blockers.sort_unstable();
+
         for blocker in all_blockers {
-            let d2 = &hand_data[*blocker];
+            let d2 = &hand_data[blocker];
             // TODO: You can avoid this cmp if you presort the blockers
             match d2.strength.cmp(&d.strength) {
                 std::cmp::Ordering::Greater => prob_better_adjusted -= d2.prob,
