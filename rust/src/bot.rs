@@ -153,15 +153,15 @@ impl Bot {
         let mut prev_strategy: SmallVecFloats =
             smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
 
-        let num_epochs = 100;
+        let num_epochs = 2;
         // let epoch = CONFIG.subgame_iters / num_epochs;
-        let epoch = 10_000;
+        let epoch = 50_000;
         // let it keep solving the subgame until it converges. but with an upper limit to avoid
         // some kind of infinite loop situation.
         for i in 0..num_epochs {
-            // if i == 1 {
-            //     nodes.reset_strategy_sum(&infoset);
-            // }
+            if i == 1 {
+                nodes.reset_strategy_sum(&infoset);
+            }
             let bar = pbar(epoch);
             (0..epoch).into_par_iter().for_each(|_| {
                 for player in [DEALER, OPPONENT].iter() {

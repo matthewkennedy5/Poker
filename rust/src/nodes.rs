@@ -57,28 +57,28 @@ impl Nodes {
             if accumulated_regret > 0.0 {
                 accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
             } else {
-                accumulated_regret *= t.powf(0.5) / (t.powf(0.5) + 1.0);
+                accumulated_regret *= t.powf(1.0) / (t.powf(1.0) + 1.0);
             }
 
             node.regrets[action_index] = accumulated_regret;
         }
     }
 
-    pub fn add_regret(&self, infoset: &InfoSet, action_index: usize, regret: f64) {
-        let history = infoset.history.clone();
-        let node_vec = self.dashmap.get(&history).unwrap();
-        let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
-        let mut node = node_mutex.lock().unwrap();
-        let mut accumulated_regret = node.regrets[action_index] + regret as f32;
-        // DCFR
-        let t: f32 = node.t as f32;
-        if accumulated_regret > 0.0 {
-            accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
-        } else {
-            accumulated_regret *= 0.5;
-        }
-        node.regrets[action_index] = accumulated_regret;
-    }
+    // pub fn add_regret(&self, infoset: &InfoSet, action_index: usize, regret: f64) {
+    //     let history = infoset.history.clone();
+    //     let node_vec = self.dashmap.get(&history).unwrap();
+    //     let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
+    //     let mut node = node_mutex.lock().unwrap();
+    //     let mut accumulated_regret = node.regrets[action_index] + regret as f32;
+    //     // DCFR
+    //     let t: f32 = node.t as f32;
+    //     if accumulated_regret > 0.0 {
+    //         accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
+    //     } else {
+    //         accumulated_regret *= 0.5;
+    //     }
+    //     node.regrets[action_index] = accumulated_regret;
+    // }
 
     pub fn update_strategy_sum_vectorized(&self, infosets: &[InfoSet], probs: &[f64]) {
         let history = infosets[0].history.clone();
@@ -98,7 +98,7 @@ impl Nodes {
                 for i in 0..current_strategy.len() {
                     // Add this action's probability to the cumulative strategy sum
                     node.strategy_sum[i] += current_strategy[i] * prob as f32;
-                    node.strategy_sum[i] *= d / (d + 1.0) * 0.9999;
+                    node.strategy_sum[i] *= d / (d + 1.0);
                 }
             }
             node.t += 1;
