@@ -157,7 +157,7 @@ impl Bot {
         let mut prev_strategy: SmallVecFloats =
             smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
 
-        let num_epochs = 100;
+        let num_epochs = 2;
         let epoch = 10_000;
         // let epoch = CONFIG.subgame_iters / num_epochs;
         for i in 0..num_epochs {
@@ -175,11 +175,6 @@ impl Bot {
                     let mut board = board.clone();
                     board.extend(deck.iter().take(5 - board.len()).cloned());
                     let board = [board[0], board[1], board[2], board[3], board[4]];
-
-                    // TODO REfactor: range is just used to get the non-blocked player hands,
-
-                    // START HERE: I think something is wrong in how you're setting up the ranges for
-                    // subgame solving.
 
                     let mut range = Range::new();
                     range.remove_blockers(&board);
