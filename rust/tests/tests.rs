@@ -911,7 +911,7 @@ fn subgame_solving_beats_blueprint() {
     let subgame_bot = Bot::new(
         load_nodes(&CONFIG.nodes_path),
         true,
-        true,
+        false,
         CONFIG.depth_limit,
     );
 

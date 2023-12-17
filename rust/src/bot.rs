@@ -87,6 +87,7 @@ impl Bot {
         // Only look at board cards for this street
         let board = &board[..board_length(history.street)];
         let translated = history.translate(&CONFIG.bet_abstraction);
+        assert!(&translated == history);
         let node_strategy = self.blueprint.get_strategy(hole, board, &translated);
         let adjusted_strategy: Strategy = node_strategy
             .iter()
@@ -114,7 +115,10 @@ impl Bot {
         hole.sort();
 
         let subgame_root = history;
-        let translated_history = subgame_root.translate(&CONFIG.bet_abstraction);
+        // let translated_history = subgame_root.translate(&CONFIG.bet_abstraction);
+        let translated_history = subgame_root.clone();
+
+        assert!(subgame_root == &translated_history);
 
         // Get our beliefs of the opponent's range given their actions up to the subgame root.
         // Use action translation to map the actions so far to infosets in the blueprint strategy.
@@ -143,7 +147,7 @@ impl Bot {
         //     println!("{}: {}", cards2str(&hand), prob)
         // }
 
-        let opp_action = history.last_action().unwrap();
+        // let opp_action = history.last_action().unwrap();
 
         // TODO: Add the opponent's action to the bet abstraction
 
@@ -154,10 +158,7 @@ impl Bot {
             smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
 
         let num_epochs = 2;
-        // let epoch = CONFIG.subgame_iters / num_epochs;
-        let epoch = 50_000;
-        // let it keep solving the subgame until it converges. but with an upper limit to avoid
-        // some kind of infinite loop situation.
+        let epoch = CONFIG.subgame_iters / num_epochs;
         for i in 0..num_epochs {
             if i == 1 {
                 nodes.reset_strategy_sum(&infoset);
@@ -173,6 +174,11 @@ impl Bot {
                     let mut board = board.clone();
                     board.extend(deck.iter().take(5 - board.len()).cloned());
                     let board = [board[0], board[1], board[2], board[3], board[4]];
+
+                    // TODO REfactor: range is just used to get the non-blocked player hands,
+
+                    // START HERE: I think something is wrong in how you're setting up the ranges for
+                    // subgame solving.
 
                     let mut range = Range::new();
                     range.remove_blockers(&board);
@@ -193,6 +199,17 @@ impl Bot {
                             opp_reach_probs.push(opp_range.probs[hand_index]);
                         }
                     }
+
+                    // renormalize opp_reach_probs? not sure
+                    for elem in 0..opp_reach_probs.len() {
+                        opp_reach_probs[elem] *= preflop_hands.len() as f64;
+                    }
+
+                    assert!(range.hands == opp_range.hands);
+                    assert!({
+                        let sum: f64 = traverser_reach_probs.iter().sum();
+                        (sum - 1.0).abs() < 1e-6
+                    });
                     iterate(
                         player.clone(),
                         preflop_hands,
@@ -202,7 +219,7 @@ impl Bot {
                         opp_reach_probs,
                         &nodes,
                         self.depth_limit,
-                        Some(&self),
+                        None, // Some(&self),    # TODO refactor: are you still using depth_limit_bot
                     );
                 }
                 bar.inc(1);

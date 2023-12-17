@@ -35,13 +35,14 @@ impl Range {
     }
 
     pub fn remove_blockers(&mut self, blockers: &[Card]) {
+        // this could be O(n) instead of O(n^2)
         for i in 0..self.hands.len() {
             let hand = self.hands[i];
             if blockers.contains(&hand[0]) || blockers.contains(&hand[1]) {
                 self.probs[i] = 0.0;
             }
         }
-        self.normalize_range(); // TODO: Another optimization is that you only need to normalize in getters
+        self.normalize_range();
     }
 
     // Performs a Bayesian update of our beliefs about the opponent's range
