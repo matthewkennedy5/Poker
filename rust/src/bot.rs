@@ -157,15 +157,16 @@ impl Bot {
         let mut prev_strategy: SmallVecFloats =
             smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
 
-        let num_epochs = 2;
-        let epoch = CONFIG.subgame_iters / num_epochs;
+        let num_epochs = 100;
+        let epoch = 10_000;
+        // let epoch = CONFIG.subgame_iters / num_epochs;
         for i in 0..num_epochs {
             if i == 1 {
                 nodes.reset_strategy_sum(&infoset);
             }
             let bar = pbar(epoch);
             (0..epoch).into_par_iter().for_each(|_| {
-                for player in [DEALER, OPPONENT].iter() {
+                for traverser in [DEALER, OPPONENT].iter() {
                     let mut deck = deck();
                     deck.retain(|c| !hole.contains(c));
                     deck.retain(|c| !board.contains(c));
@@ -201,17 +202,20 @@ impl Bot {
                     }
 
                     // renormalize opp_reach_probs? not sure
-                    for elem in 0..opp_reach_probs.len() {
-                        opp_reach_probs[elem] *= preflop_hands.len() as f64;
+                    // for elem in 0..opp_reach_probs.len() {
+                    //     opp_reach_probs[elem] *= preflop_hands.len() as f64;
+                    // }
+
+                    // i messed up the code at first -- the one-hot vector should go to the "player",
+                    // not necessarily the "traverser" since that alternates in CFR.
+                    if history.player == 1 - traverser {
+                        let swap = traverser_reach_probs.clone();
+                        traverser_reach_probs = opp_reach_probs;
+                        opp_reach_probs = swap;
                     }
 
-                    assert!(range.hands == opp_range.hands);
-                    assert!({
-                        let sum: f64 = traverser_reach_probs.iter().sum();
-                        (sum - 1.0).abs() < 1e-6
-                    });
                     iterate(
-                        player.clone(),
+                        traverser.clone(),
                         preflop_hands,
                         board,
                         &translated_history,
@@ -245,12 +249,14 @@ impl Bot {
                 cards2str(&board),
                 history
             );
-            println!(
-                "Actions: {:?}",
-                infoset.next_actions(&CONFIG.bet_abstraction)
-            );
-            println!("Node: {:?}", node);
-            println!("Strategy: {:?}", strategy);
+            println!("Strategy:");
+            for (action, prob) in infoset
+                .next_actions(&CONFIG.bet_abstraction)
+                .iter()
+                .zip(strategy.iter())
+            {
+                println!("{action}: {prob}");
+            }
             if self.early_stopping && diff < 0.01 {
                 println!("Stopping early because CFR strategy has converged.");
                 break;

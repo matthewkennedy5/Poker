@@ -935,6 +935,20 @@ fn subgame_solving_beats_blueprint() {
     assert!(mean > 0.0);
 }
 
+#[test]
+fn test_subgame_situation() {
+    // Hand: 4s5d Board:  | History: bet 300,
+    // should fold it
+
+    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, false, 100);
+    let action = bot.get_action(
+        &str2cards("4s5d"),
+        &vec![],
+        &ActionHistory::from_strings(vec!["Bet 300"]),
+    );
+    assert_eq!(action, FOLD);
+}
+
 fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
     let mut deck: Vec<Card> = deck();
     let mut rng = &mut rand::thread_rng();
@@ -948,12 +962,23 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
             let hole = &hand[..2];
             let board = &hand[2..];
 
+            let subgame_strategy = subgame_bot.get_strategy(hole, board, &history);
+            let blueprint_strategy = blueprint_bot.get_strategy(hole, board, &history);
+            for (action, subgame_prob) in subgame_strategy.clone() {
+                let blueprint_prob = blueprint_strategy.get(&action).unwrap();
+                if (blueprint_prob - subgame_prob).abs() > 0.1 {
+                    println!(
+                        "Subgame strategy {:#?} differs from blueprint strategy: {:#?}",
+                        subgame_strategy, blueprint_strategy
+                    );
+                }
+            }
+
             let bot = if history.player == subgame_bot_position {
                 subgame_bot
             } else {
                 blueprint_bot
             };
-
             let action = bot.get_action(hole, board, &history);
             history.add(&action);
         }
