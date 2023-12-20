@@ -743,7 +743,7 @@ pub fn terminal_utility_vectorized_fast(
         // Summing up probabilities
         let prob_less: f64 = all_blockers[..equal_or_greater_idx]
             .iter()
-            .map(|&index| hand_data[index].prob) // this might be cache miss city - store separate vecs of probs for better cache locality?
+            .map(|&index| hand_data[index].prob)
             .sum();
         let prob_greater: f64 = all_blockers[greater_idx..k]
             .iter()

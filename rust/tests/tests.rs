@@ -953,48 +953,45 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
     let mut deck: Vec<Card> = deck();
     let mut rng = &mut rand::thread_rng();
     deck.shuffle(&mut rng);
-    let mut result = 0.0; // from 2 hands (duplicated)
-    for subgame_bot_position in [DEALER, OPPONENT].iter() {
-        let subgame_bot_position = subgame_bot_position.clone();
-        let mut history = ActionHistory::new();
-        while !history.hand_over() {
-            let hand = get_hand(&deck, history.player, history.street);
-            let hole = &hand[..2];
-            let board = &hand[2..];
+    let subgame_bot_position = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
+    let mut history = ActionHistory::new();
+    // TODO: DRY with exploiter.rs, and duplicate the hands.
+    while !history.hand_over() {
+        let hand = get_hand(&deck, history.player, history.street);
+        let hole = &hand[..2];
+        let board = &hand[2..];
 
-            // Print all the strategies to compare differences
-            // let subgame_strategy = subgame_bot.get_strategy(hole, board, &history);
-            // let blueprint_strategy = blueprint_bot.get_strategy(hole, board, &history);
-            // for (action, subgame_prob) in subgame_strategy.clone() {
-            //     let blueprint_prob = blueprint_strategy.get(&action).unwrap();
-            //     if (blueprint_prob - subgame_prob).abs() > 0.1 {
-            //         println!(
-            //             "Subgame strategy {:#?} differs from blueprint strategy: {:#?}",
-            //             subgame_strategy, blueprint_strategy
-            //         );
-            //     }
-            // }
+        // Print all the strategies to compare differences
+        // let subgame_strategy = subgame_bot.get_strategy(hole, board, &history);
+        // let blueprint_strategy = blueprint_bot.get_strategy(hole, board, &history);
+        // for (action, subgame_prob) in subgame_strategy.clone() {
+        //     let blueprint_prob = blueprint_strategy.get(&action).unwrap();
+        //     if (blueprint_prob - subgame_prob).abs() > 0.1 {
+        //         println!(
+        //             "Subgame strategy {:#?} differs from blueprint strategy: {:#?}",
+        //             subgame_strategy, blueprint_strategy
+        //         );
+        //     }
+        // }
 
-            let bot = if history.player == subgame_bot_position {
-                subgame_bot
-            } else {
-                blueprint_bot
-            };
-            let action = bot.get_action(hole, board, &history);
-            history.add(&action);
-        }
-        let player_preflop_hand = get_hand(&deck, subgame_bot_position, PREFLOP);
-        let opp_preflop_hand = get_hand(&deck, 1 - subgame_bot_position, PREFLOP);
-        let board = &deck[4..9];
-        result += terminal_utility(
-            &player_preflop_hand,
-            &opp_preflop_hand,
-            board,
-            &history,
-            subgame_bot_position,
-        )
+        let bot = if history.player == subgame_bot_position {
+            subgame_bot
+        } else {
+            blueprint_bot
+        };
+        let action = bot.get_action(hole, board, &history);
+        history.add(&action);
     }
-    result / 2.0
+    let player_preflop_hand = get_hand(&deck, subgame_bot_position, PREFLOP);
+    let opp_preflop_hand = get_hand(&deck, 1 - subgame_bot_position, PREFLOP);
+    let board = &deck[4..9];
+    terminal_utility(
+        &player_preflop_hand,
+        &opp_preflop_hand,
+        board,
+        &history,
+        subgame_bot_position,
+    )
 }
 
 // #[test]

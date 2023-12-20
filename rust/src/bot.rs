@@ -128,6 +128,8 @@ impl Bot {
             // and keep track of the range as you go.
         };
 
+        let player_range =
+            Range::get_opponent_range(&Vec::new(), &board, &translated_history, get_strategy);
         let opp_range = Range::get_opponent_range(&hole, &board, &translated_history, get_strategy);
         // println!("Player hand: {}", cards2str(&hole));
         // println!("History: {}", translated);
@@ -158,8 +160,7 @@ impl Bot {
             smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
 
         let num_epochs = 2;
-        let epoch = 10_000;
-        // let epoch = CONFIG.subgame_iters / num_epochs;
+        let epoch = CONFIG.subgame_iters / num_epochs;
         for i in 0..num_epochs {
             if i == 1 {
                 nodes.reset_strategy_sum(&infoset);
@@ -181,17 +182,14 @@ impl Bot {
                     let mut preflop_hands = Vec::with_capacity(range.hands.len());
                     // TODO Refactor: have a clean way to return a list of the non blocking hands. this
                     // is duplicated in cfr_iteration as well.
+
                     let mut traverser_reach_probs = Vec::with_capacity(range.hands.len());
                     let mut opp_reach_probs = Vec::with_capacity(range.hands.len());
                     for hand_index in 0..range.hands.len() {
                         let prob = range.probs[hand_index];
                         if prob > 0.0 {
                             preflop_hands.push(range.hands[hand_index]);
-                            if range.hands[hand_index] == hole {
-                                traverser_reach_probs.push(1.0);
-                            } else {
-                                traverser_reach_probs.push(0.0);
-                            }
+                            traverser_reach_probs.push(player_range.probs[hand_index]);
                             opp_reach_probs.push(opp_range.probs[hand_index]);
                         }
                     }
@@ -201,13 +199,15 @@ impl Bot {
                     //     opp_reach_probs[elem] *= preflop_hands.len() as f64;
                     // }
 
-                    // i messed up the code at first -- the one-hot vector should go to the "player",
-                    // not necessarily the "traverser" since that alternates in CFR.
                     if history.player == 1 - traverser {
                         let swap = traverser_reach_probs.clone();
                         traverser_reach_probs = opp_reach_probs;
                         opp_reach_probs = swap;
                     }
+
+                    // START HERE: is there a way if you can test if the opp_reach_probs are the correct
+                    // probabilities of the opp having that hand? for example, the opp can never actually
+                    // have a 0 prob hand.
 
                     iterate(
                         traverser.clone(),

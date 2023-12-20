@@ -21,7 +21,7 @@ nodes_path = "products/flop_holdem_nodes.bin"
 
 # Training
 train_iters = 100_000
-lbr_iters = 1_000
+lbr_iters = 100_000
 eval_every = 3200
 warm_start = false 
 
