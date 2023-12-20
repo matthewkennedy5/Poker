@@ -23,20 +23,6 @@ fn bench_isomorphic_hand(c: &mut Criterion) {
     });
 }
 
-fn bench_win_probability_rollout(c: &mut Criterion) {
-    let mut opp_range = Range::new();
-    let exploiter_hole = str2cards("8dTd");
-    let board = str2cards("Ad7c8c");
-    opp_range.remove_blockers(&exploiter_hole);
-    opp_range.remove_blockers(&board);
-    let mut group = c.benchmark_group("win_probability_rollout");
-    group.warm_up_time(Duration::new(90, 0));
-    group.bench_function("win_probability_rollout", |b| {
-        b.iter(|| win_probability_rollout(&opp_range, &exploiter_hole, &board))
-    });
-    group.finish();
-}
-
 fn bench_play_hand(c: &mut Criterion) {
     let blueprint = load_nodes(&CONFIG.nodes_path);
     let get_strategy = |hole: &[Card], board: &[Card], history: &ActionHistory| {
@@ -52,15 +38,7 @@ fn bench_terminal_utility_vectorized(c: &mut Criterion) {
     let mut deck = deck();
     deck.shuffle(&mut rand::thread_rng());
     let board = [deck[0], deck[1], deck[2], deck[3], deck[4]];
-    let mut range = Range::new();
-    range.remove_blockers(&board);
-    let mut preflop_hands = Vec::with_capacity(range.hands.len());
-    for hand_index in 0..range.hands.len() {
-        let prob = range.probs[hand_index];
-        if prob > 0.0 {
-            preflop_hands.push(range.hands[hand_index]);
-        }
-    }
+    let mut preflop_hands = non_blocking_preflop_hands(&board);
     let opp_reach_probs = vec![1.0; preflop_hands.len()];
     let history_fold =
         ActionHistory::from_strings(vec!["Bet 300", "Call 300", "Bet 300", "Fold 0"]);

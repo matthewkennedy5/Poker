@@ -95,29 +95,21 @@ pub fn serialize_nodes(nodes: &Nodes) {
 
 pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, depth_limit: i32) {
     [DEALER, OPPONENT].iter().for_each(|&traverser| {
-        let mut deck = deck.to_vec();
-        deck.shuffle(&mut rand::thread_rng());
-        let board = [deck[0], deck[1], deck[2], deck[3], deck[4]];
-        let mut range = Range::new();
-        range.remove_blockers(&board);
-        let mut preflop_hands = Vec::with_capacity(range.hands.len());
-        for hand_index in 0..range.hands.len() {
-            let prob = range.probs[hand_index];
-            if prob > 0.0 {
-                preflop_hands.push(range.hands[hand_index]);
-            }
-        }
-
-        let traverser_reach_probs = vec![1.0; preflop_hands.len()];
-        let opp_reach_probs = vec![1.0; preflop_hands.len()];
+        let board: Vec<Card> = deck
+            .choose_multiple(&mut rand::thread_rng(), 5)
+            .cloned()
+            .collect();
+        let board: [Card; 5] = board.try_into().unwrap();
+        let preflop_hands = non_blocking_preflop_hands(&board);
+        let N = preflop_hands.len();
 
         iterate(
             traverser,
             preflop_hands,
             board,
             &ActionHistory::new(),
-            traverser_reach_probs,
-            opp_reach_probs,
+            vec![1.0; N],
+            vec![1.0; N],
             nodes,
             -1,
             None,

@@ -1,8 +1,6 @@
 use crate::card_utils::*;
-use crate::trainer_utils::*;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
-use std::collections::HashMap;
 
 // If a hand's probability is below PROB_CUTOFF in the range, just skip it since it has a negligible
 // contribution to the range.
@@ -18,7 +16,7 @@ pub struct Range {
 
 impl Range {
     pub fn new() -> Range {
-        let mut hands: Vec<[Card; 2]> = Vec::new();
+        let mut hands: Vec<[Card; 2]> = Vec::with_capacity(1326);
         let deck = deck();
         for i in 0..deck.len() {
             for j in i + 1..deck.len() {
@@ -65,51 +63,11 @@ impl Range {
         self.normalize_range();
     }
 
-    pub fn get_map(&self) -> HashMap<Vec<Card>, f64> {
-        self.hands
-            .iter()
-            .zip(self.probs.iter())
-            .map(|(hand, prob)| (hand.to_vec(), prob.clone()))
-            .collect()
-    }
-
     pub fn sample_hand(&self) -> Vec<Card> {
         let dist = WeightedIndex::new(&self.probs).unwrap();
         let index = dist.sample(&mut rand::thread_rng());
         let hand = self.hands[index];
         hand.to_vec()
-    }
-
-    // In this function, it's our turn and we're trying to figure out the range of the opponent
-    // (who just made the last action).
-    pub fn get_opponent_range<F>(
-        hole: &[Card],
-        board: &[Card],
-        history: &ActionHistory,
-        get_strategy: F,
-    ) -> Range
-    where
-        F: Fn(&[Card], &[Card], &ActionHistory) -> Strategy,
-    {
-        debug_assert!(board.len() == board_length(history.street));
-        let mut opp_range = Range::new();
-        let mut history_iter = ActionHistory::new();
-        let opponent = 1 - history.player;
-        opp_range.remove_blockers(board);
-        opp_range.remove_blockers(hole);
-        for action in history.get_actions() {
-            if history_iter.player == opponent {
-                // Update the opponent's range based on their action
-                let likelihoods = |hole: &[Card]| {
-                    let strat = get_strategy(hole, board, &history_iter);
-                    let action = sample_action_from_strategy(&strat);
-                    strat.get(&action).unwrap().clone()
-                };
-                opp_range.update(likelihoods);
-            }
-            history_iter.add(&action);
-        }
-        opp_range
     }
 
     pub fn normalize_range(&mut self) {

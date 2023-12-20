@@ -67,7 +67,7 @@ impl Bot {
             match self.preflop_cache.get(&key) {
                 Some(strategy) => strategy,
                 None => {
-                    let strategy = self.unsafe_nested_subgame_solving(hole, board, history);
+                    let strategy = self.solve_subgame_unsafe(hole, board, history);
                     if history.street == PREFLOP {
                         self.preflop_cache.insert(key, strategy.clone());
                     }
@@ -104,60 +104,25 @@ impl Bot {
         adjusted_strategy
     }
 
-    fn unsafe_nested_subgame_solving(
+    fn solve_subgame_unsafe(
         &self,
         hole: &[Card],
         board: &[Card],
         history: &ActionHistory,
     ) -> Strategy {
         let board: SmallVecHand = board[..board_length(history.street)].to_smallvec();
-        let mut hole: [Card; 2] = [hole[0], hole[1]];
-        hole.sort();
-
-        let subgame_root = history;
-        // let translated_history = subgame_root.translate(&CONFIG.bet_abstraction);
-        let translated_history = subgame_root.clone();
-
-        assert!(subgame_root == &translated_history);
+        let hole: [Card; 2] = [hole[0], hole[1]];
 
         // Get our beliefs of the opponent's range given their actions up to the subgame root.
         // Use action translation to map the actions so far to infosets in the blueprint strategy.
         let get_strategy = |hole: &[Card], board: &[Card], history: &ActionHistory| {
             self.get_strategy_action_translation(hole, board, history)
-            // TODO: The other move here is to get the opponent range via past unsafe subgame solving,
-            // and keep track of the range as you go.
         };
 
-        let player_range =
-            Range::get_opponent_range(&Vec::new(), &board, &translated_history, get_strategy);
-        let opp_range = Range::get_opponent_range(&hole, &board, &translated_history, get_strategy);
-        // println!("Player hand: {}", cards2str(&hole));
-        // println!("History: {}", translated);
-        // println!("Board: {}", cards2str(&board));
-        // println!("Beliefs about opponent hands:");
-
-        // The blueprint currently has weird ideas about the opponent's range, but keep in mind
-        // it is necessarily correct when playing against the blueprint.
-        // let mut beliefs: Vec<([Card; 2], f64)> = opp_range
-        //     .get_map()
-        //     .iter()
-        //     .map(|(hand, prob)| ([hand[0], hand[1]], prob.clone()))
-        //     .collect();
-        // beliefs.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-
-        // for (hand, prob) in beliefs {
-        //     println!("{}: {}", cards2str(&hand), prob)
-        // }
-
-        // let opp_action = history.last_action().unwrap();
-
-        // TODO: Add the opponent's action to the bet abstraction
-
+        let player_range = Range::get_opponent_range(&Vec::new(), &board, &history, get_strategy);
+        let opp_range = Range::get_opponent_range(&hole, &board, &history, get_strategy);
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
-        let infoset = InfoSet::from_hand(&hole, &board, &translated_history);
-        // TODO Refactor: rename this SmallVecFloats thing to like F32SmallVec or something
-        let mut prev_strategy: SmallVecFloats =
-            smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
+        let infoset = InfoSet::from_hand(&hole, &board, &history);
 
         let num_epochs = 2;
         let epoch = CONFIG.subgame_iters / num_epochs;
@@ -177,27 +142,9 @@ impl Bot {
                     board.extend(deck.iter().take(5 - board.len()).cloned());
                     let board = [board[0], board[1], board[2], board[3], board[4]];
 
-                    let mut range = Range::new();
-                    range.remove_blockers(&board);
-                    let mut preflop_hands = Vec::with_capacity(range.hands.len());
-                    // TODO Refactor: have a clean way to return a list of the non blocking hands. this
-                    // is duplicated in cfr_iteration as well.
-
-                    let mut traverser_reach_probs = Vec::with_capacity(range.hands.len());
-                    let mut opp_reach_probs = Vec::with_capacity(range.hands.len());
-                    for hand_index in 0..range.hands.len() {
-                        let prob = range.probs[hand_index];
-                        if prob > 0.0 {
-                            preflop_hands.push(range.hands[hand_index]);
-                            traverser_reach_probs.push(player_range.probs[hand_index]);
-                            opp_reach_probs.push(opp_range.probs[hand_index]);
-                        }
-                    }
-
-                    // renormalize opp_reach_probs? not sure
-                    // for elem in 0..opp_reach_probs.len() {
-                    //     opp_reach_probs[elem] *= preflop_hands.len() as f64;
-                    // }
+                    let preflop_hands = non_blocking_preflop_hands(&board);
+                    let mut player_reach_probs = preflop_hands.iter().map(|h| )
+                    let mut opponent_reach_probs = Vec::with_capacity(range.hands.len());
 
                     if history.player == 1 - traverser {
                         let swap = traverser_reach_probs.clone();
@@ -205,20 +152,19 @@ impl Bot {
                         opp_reach_probs = swap;
                     }
 
-                    // START HERE: is there a way if you can test if the opp_reach_probs are the correct
-                    // probabilities of the opp having that hand? for example, the opp can never actually
-                    // have a 0 prob hand.
+
+                    let preflop_hands = non_blocking_preflop_hands(blockers)
 
                     iterate(
                         traverser.clone(),
                         preflop_hands,
                         board,
-                        &translated_history,
+                        &history,
                         traverser_reach_probs,
                         opp_reach_probs,
                         &nodes,
                         self.depth_limit,
-                        None, // Some(&self),    # TODO refactor: are you still using depth_limit_bot
+                        None,
                     );
                 }
                 bar.inc(1);
@@ -233,11 +179,6 @@ impl Bot {
                 .as_str(),
             );
             let strategy = node.cumulative_strategy();
-            let diff: f32 = strategy
-                .iter()
-                .zip(prev_strategy.iter())
-                .map(|(&a, &b)| (a - b).abs())
-                .sum();
             println!(
                 "Hand: {} Board: {} | History: {}",
                 cards2str(&hole),
@@ -252,11 +193,6 @@ impl Bot {
             {
                 println!("{action}: {prob}");
             }
-            if self.early_stopping && diff < 0.01 {
-                println!("Stopping early because CFR strategy has converged.");
-                break;
-            }
-            prev_strategy = strategy;
             bar.finish();
         }
 

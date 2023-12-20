@@ -552,3 +552,17 @@ pub fn serialize(hand_data: HashMap<u64, i32>, path: &str) {
     let buffer = BufWriter::new(file);
     bincode::serialize_into(buffer, &hand_data).unwrap();
 }
+
+pub fn non_blocking_preflop_hands(blockers: &[Card]) -> Vec<[Card; 2]> {
+    let mut hands: Vec<[Card; 2]> = Vec::with_capacity(1326);
+    let deck = deck();
+    for i in 0..deck.len() {
+        for j in i + 1..deck.len() {
+            if !blockers.contains(&deck[i]) && !blockers.contains(&deck[j]) {
+                let hand = [deck[i], deck[j]];
+                hands.push(hand);
+            }
+        }
+    }
+    hands
+}
