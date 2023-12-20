@@ -113,20 +113,12 @@ impl Bot {
         let board: SmallVecHand = board[..board_length(history.street)].to_smallvec();
         let hole: [Card; 2] = [hole[0], hole[1]];
 
-        // Get our beliefs of the opponent's range given their actions up to the subgame root.
-        // Use action translation to map the actions so far to infosets in the blueprint strategy.
-        let get_strategy = |hole: &[Card], board: &[Card], history: &ActionHistory| {
-            self.get_strategy_action_translation(hole, board, history)
-        };
-
-        let player_range = Range::get_opponent_range(&Vec::new(), &board, &history, get_strategy);
-        let opp_range = Range::get_opponent_range(&hole, &board, &history, get_strategy);
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(&hole, &board, &history);
 
-        let num_epochs = 2;
-        let epoch = CONFIG.subgame_iters / num_epochs;
-        for i in 0..num_epochs {
+        const NUM_EPOCHS: u64 = 2;
+        let epoch = CONFIG.subgame_iters / NUM_EPOCHS;
+        for i in 0..NUM_EPOCHS {
             if i == 1 {
                 nodes.reset_strategy_sum(&infoset);
             }
@@ -143,17 +135,27 @@ impl Bot {
                     let board = [board[0], board[1], board[2], board[3], board[4]];
 
                     let preflop_hands = non_blocking_preflop_hands(&board);
-                    let mut player_reach_probs = preflop_hands.iter().map(|h| )
-                    let mut opponent_reach_probs = Vec::with_capacity(range.hands.len());
 
-                    if history.player == 1 - traverser {
-                        let swap = traverser_reach_probs.clone();
-                        traverser_reach_probs = opp_reach_probs;
-                        opp_reach_probs = swap;
+                    // Get reach probs for each player based on their actions
+                    let mut traverser_reach_probs = vec![1.0; preflop_hands.len()];
+                    let mut opp_reach_probs = vec![1.0; preflop_hands.len()];
+                    let mut history_iter = ActionHistory::new();
+                    for action in history.get_actions() {
+                        for (i, preflop_hand) in preflop_hands.iter().enumerate() {
+                            let strat = self.get_strategy_action_translation(
+                                preflop_hand,
+                                &board,
+                                &history_iter,
+                            );
+                            let prob = strat.get(&action).expect("Action not in strategy");
+                            if &history_iter.player == traverser {
+                                traverser_reach_probs[i] *= prob;
+                            } else {
+                                opp_reach_probs[i] *= prob;
+                            }
+                        }
+                        history_iter.add(&action);
                     }
-
-
-                    let preflop_hands = non_blocking_preflop_hands(blockers)
 
                     iterate(
                         traverser.clone(),
