@@ -1,7 +1,6 @@
 use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::nodes::*;
-use crate::ranges::*;
 use crate::trainer::*;
 use crate::trainer_utils::*;
 use moka::sync::Cache;

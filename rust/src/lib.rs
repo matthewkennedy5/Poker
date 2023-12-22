@@ -14,6 +14,7 @@ extern crate serde;
 extern crate serde_json;
 #[macro_use]
 extern crate smallvec;
+extern crate nohash_hasher;
 
 mod backend;
 mod bot;
@@ -21,9 +22,9 @@ mod card_abstraction;
 mod card_utils;
 mod config;
 mod exploiter;
+mod nodes;
 mod ranges;
 mod trainer;
-mod nodes;
 mod trainer_utils;
 
 pub use backend::*;
@@ -32,7 +33,7 @@ pub use card_abstraction::*;
 pub use card_utils::*;
 pub use config::*;
 pub use exploiter::*;
+pub use nodes::*;
 pub use ranges::*;
 pub use trainer::*;
 pub use trainer_utils::*;
-pub use nodes::*;

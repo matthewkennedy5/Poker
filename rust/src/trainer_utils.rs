@@ -2,11 +2,9 @@ use crate::card_abstraction::Abstraction;
 use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::nodes::*;
-use itertools::Itertools;
 use once_cell::sync::Lazy;
 use rand::{prelude::SliceRandom, thread_rng};
 use smallvec::SmallVec;
-use statistical::univariate::standard_error_kurtosis;
 use std::{
     cmp::Eq,
     collections::{HashMap, HashSet},
@@ -550,6 +548,12 @@ struct HandData {
     hand: [Card; 2],
     strength: i32,
     prob: f64,
+    index: usize,
+}
+
+#[inline]
+fn card_index(card: &Card) -> usize {
+    13 * card.suit as usize + (card.rank as usize - 2)
 }
 
 pub fn terminal_utility_vectorized_fast(
@@ -559,6 +563,8 @@ pub fn terminal_utility_vectorized_fast(
     history: &ActionHistory,
     player: usize,
 ) -> Vec<f64> {
+    // START HERE: make sure the current code works (maybe fix the super slow load of IntMap read_serialized)
+    // and then keep killing off all the HashMaps. no hash!
     // https://www.cs.cmu.edu/~waugh/publications/johanson11.pdf "Example 3" at end of page 4
     if history.last_action().unwrap().action == ActionType::Fold {
         // Someone folded -- assign the chips to the winner.
@@ -571,12 +577,12 @@ pub fn terminal_utility_vectorized_fast(
         let opp_prob_sum: f64 = opp_reach_probs.iter().sum();
 
         // Precompute blocking probs for each card
-        let mut blocked_prob_sums: HashMap<Card, f64> = HashMap::with_capacity(52);
+        let mut blocked_prob_sums: Vec<f64> = vec![0.0; 52];
 
         // Calculate the sum of probabilities for each card in preflop hands
         for (hand, &prob) in preflop_hands.iter().zip(opp_reach_probs.iter()) {
-            *blocked_prob_sums.entry(hand[0]).or_insert(0.0) += prob;
-            *blocked_prob_sums.entry(hand[1]).or_insert(0.0) += prob;
+            blocked_prob_sums[card_index(&hand[0])] += prob;
+            blocked_prob_sums[card_index(&hand[1])] += prob;
         }
 
         let utils: Vec<f64> = preflop_hands
@@ -584,8 +590,8 @@ pub fn terminal_utility_vectorized_fast(
             .enumerate()
             .map(|(i, hand)| {
                 let total_prob = opp_prob_sum
-                    - blocked_prob_sums.get(&hand[0]).unwrap()
-                    - blocked_prob_sums.get(&hand[1]).unwrap()
+                    - blocked_prob_sums[card_index(&hand[0])]
+                    - blocked_prob_sums[card_index(&hand[1])]
                     + opp_reach_probs[i];
                 total_prob * winnings / preflop_hands.len() as f64
             })
@@ -602,14 +608,9 @@ pub fn terminal_utility_vectorized_fast(
                 hand: h,
                 strength,
                 prob: opp_reach_probs[i],
+                index: i,
             }
         })
-        .collect();
-
-    let original_hand_indices: HashMap<[Card; 2], usize> = hand_data
-        .iter()
-        .enumerate()
-        .map(|(i, hand_data)| (hand_data.hand, i))
         .collect();
 
     hand_data.sort_unstable_by(|a, b| a.strength.cmp(&b.strength));
@@ -617,16 +618,12 @@ pub fn terminal_utility_vectorized_fast(
     let deck = deck();
     // blockers stores the Vec of hands that are blocked by each card. The hands are indexes in hand
     // data, which is already sorted by strength from low to high.
-    let mut blockers: HashMap<Card, Vec<usize>> = deck
-        .iter()
-        .map(|&card| (card, Vec::with_capacity(52)))
-        .collect();
-
+    let mut blockers: Vec<Vec<usize>> = vec![Vec::with_capacity(52); 52];
     for (i, hand_info) in hand_data.iter().enumerate() {
         for card in &hand_info.hand {
-            if let Some(blocking_indexes) = blockers.get_mut(card) {
-                blocking_indexes.push(i);
-            }
+            let index = card_index(card);
+            let blocking_indexes = blockers.get_mut(index).unwrap();
+            blocking_indexes.push(i);
         }
     }
 
@@ -682,8 +679,8 @@ pub fn terminal_utility_vectorized_fast(
         let mut all_blockers: [usize; MAX_SIZE] = [0; MAX_SIZE];
 
         // Retrieve the sorted lists from blockers
-        let blockers1 = blockers.get(&d_hand[0]).unwrap();
-        let blockers2 = blockers.get(&d_hand[1]).unwrap();
+        let blockers1 = blockers.get(card_index(&d_hand[0])).unwrap();
+        let blockers2 = blockers.get(card_index(&d_hand[1])).unwrap();
 
         // Perform a one-pass merge
         let mut i = 0;
@@ -757,8 +754,7 @@ pub fn terminal_utility_vectorized_fast(
         let util = history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted)
             / preflop_hands.len() as f64;
 
-        let index: usize = original_hand_indices.get(&d_hand).unwrap().clone();
-        utils[index] = util;
+        utils[d.index] = util;
     }
     utils
 }

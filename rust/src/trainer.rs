@@ -4,7 +4,6 @@ use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::exploiter::*;
 use crate::nodes::*;
-use crate::ranges::Range;
 use crate::trainer_utils::*;
 use rand::prelude::*;
 use rayon::prelude::*;

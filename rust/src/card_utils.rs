@@ -1,4 +1,5 @@
 use crate::itertools::Itertools;
+use crate::nohash_hasher::IntMap;
 use once_cell::sync::Lazy;
 use rs_poker::core::{Hand, Rank, Rankable};
 use serde::{Deserialize, Serialize};
@@ -238,7 +239,7 @@ pub fn isomorphic_hand(cards: &[Card]) -> SmallVecHand {
 }
 
 pub struct FastHandTable {
-    strengths: HashMap<u64, i32>,
+    strengths: IntMap<u64, i32>,
 }
 
 impl FastHandTable {
@@ -257,10 +258,10 @@ impl FastHandTable {
         strength
     }
 
-    fn load_hand_strengths() -> HashMap<u64, i32> {
+    fn load_hand_strengths() -> IntMap<u64, i32> {
         if !Path::new(FAST_HAND_TABLE_PATH).exists() {
             println!("[INFO] Creating fast hand table.");
-            let mut table: HashMap<u64, i32> = HashMap::new();
+            let mut table: IntMap<u64, i32> = IntMap::default();
             let deck = deck();
             let bar = pbar(133784560);
             for hand in deck.iter().combinations(7) {
@@ -273,7 +274,7 @@ impl FastHandTable {
             bar.finish();
             serialize(table, FAST_HAND_TABLE_PATH);
         }
-        let table: HashMap<u64, i32> = read_serialized(FAST_HAND_TABLE_PATH);
+        let table: IntMap<u64, i32> = read_serialized(FAST_HAND_TABLE_PATH);
         table
     }
 }
@@ -542,12 +543,12 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> Vec<u64> {
 // There are multiple places where I have to serialize a HashMap of cards->i32
 // with some sort of data such as hand strength or abstraction ID. This loads
 // that data from a file desciptor and returns the lookup table.
-pub fn read_serialized(path: &str) -> HashMap<u64, i32> {
+pub fn read_serialized(path: &str) -> IntMap<u64, i32> {
     let reader = BufReader::new(File::open(path).unwrap());
     bincode::deserialize_from(reader).unwrap()
 }
 
-pub fn serialize(hand_data: HashMap<u64, i32>, path: &str) {
+pub fn serialize(hand_data: IntMap<u64, i32>, path: &str) {
     let file = File::create(path).unwrap();
     let buffer = BufWriter::new(file);
     bincode::serialize_into(buffer, &hand_data).unwrap();

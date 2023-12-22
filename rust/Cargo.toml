@@ -26,6 +26,10 @@ moka = { version = "*", features = ["sync"] }
 criterion = { version = "*", features = ["html_reports"] }
 smallvec = { version = "*", features = ["serde"] }
 dashmap = { version = "*", features = ["serde"] }
+nohash-hasher = "0.2.0"
+
+[build]
+rustflags = ["-C", "target-cpu=native"]
 
 [profile.release]
 debug = true

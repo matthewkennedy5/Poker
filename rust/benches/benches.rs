@@ -38,7 +38,7 @@ fn bench_terminal_utility_vectorized(c: &mut Criterion) {
     let mut deck = deck();
     deck.shuffle(&mut rand::thread_rng());
     let board = [deck[0], deck[1], deck[2], deck[3], deck[4]];
-    let mut preflop_hands = non_blocking_preflop_hands(&board);
+    let preflop_hands = non_blocking_preflop_hands(&board);
     let opp_reach_probs = vec![1.0; preflop_hands.len()];
     let history_fold =
         ActionHistory::from_strings(vec!["Bet 300", "Call 300", "Bet 300", "Fold 0"]);
@@ -74,6 +74,6 @@ fn bench_terminal_utility_vectorized(c: &mut Criterion) {
 criterion_group!(
     name=benches;
     config=Criterion::default().configure_from_args();
-    targets=bench_cfr, bench_isomorphic_hand, bench_win_probability_rollout, bench_play_hand, bench_terminal_utility_vectorized
+    targets=bench_cfr, bench_isomorphic_hand, bench_play_hand, bench_terminal_utility_vectorized
 );
 criterion_main!(benches);
