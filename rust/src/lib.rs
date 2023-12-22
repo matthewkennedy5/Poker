@@ -14,7 +14,6 @@ extern crate serde;
 extern crate serde_json;
 #[macro_use]
 extern crate smallvec;
-extern crate nohash_hasher;
 
 mod backend;
 mod bot;
