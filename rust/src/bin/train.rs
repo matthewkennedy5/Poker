@@ -20,7 +20,5 @@ fn main() {
     // START HERE: after making sure everything is still working, also start here to make sure your
     // changes are generally working for texas holdem. Like, bucket lookup post flop? isomorphic or pure lookup?
 
-    create_abstraction_clusters();
-    expand_abstraction_keys();
     train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
 }

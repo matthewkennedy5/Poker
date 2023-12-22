@@ -5,7 +5,7 @@
 // the number of possibilities in the game.
 
 use crate::config::CONFIG;
-use crate::{card_utils::*, ABSTRACTION};
+use crate::{card_utils::*, ABSTRACTION, RIVER};
 use dashmap::DashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
@@ -65,7 +65,7 @@ impl Abstraction {
     }
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        // let isomorphic = isomorphic_hand(cards);
+        let isomorphic = isomorphic_hand(cards);
 
         // flop holdem only hack
         let mut cards = [cards[0], cards[1], cards[2], cards[3], cards[4]];
@@ -175,6 +175,7 @@ pub fn get_hand_counts(n_cards: usize) -> FxHashMap<u64, i32> {
     hand_counts
 }
 
+// TODO: Call k means clustering from make_abstraction instead of E[HS^2]
 pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> FxHashMap<u64, i32> {
     match n_cards {
         5 => println!("[INFO] Preparing the flop abstraction."),
@@ -182,45 +183,84 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> FxHashMap<u64, i32> {
         7 => println!("[INFO] Preparing the river abstraction."),
         _ => panic!("Bad number of cards"),
     };
-    let hand_ehs2 = get_sorted_hand_ehs2(n_cards);
-    let hand_counts = get_hand_counts(n_cards);
-    let total_hands: u64 = hand_counts.values().map(|n| n.clone() as u64).sum();
-    debug_assert!(
-        total_hands
-            == match n_cards {
-                5 => 25_989_600,
-                6 => 305_377_800,
-                7 => 2_809_475_760,
-                _ => 0,
+
+    if n_cards == 5 {
+        let dists = get_equity_distributions("flop");
+        let buckets = k_means_cluster(dists, CONFIG.flop_buckets);
+        let hands = load_flop_isomorphic();
+        let abstraction: FxHashMap<u64, i32> = hands
+            .iter()
+            .zip(buckets.iter())
+            .map(|(&hand, &bucket)| (hand, bucket))
+            .collect();
+
+        // expand abstraciton keys to eliminate isomorphic hands
+        let deck = deck();
+        let mut table: FxHashMap<u64, i32> = FxHashMap::default();
+        println!("Saving massive table of all flop hands -> flop buckets...");
+        let bar = pbar(25989600);
+        for preflop in deck.iter().combinations(2) {
+            let mut sorted_preflop: SmallVecHand = preflop.iter().cloned().cloned().collect();
+            sorted_preflop.sort_unstable();
+            let mut rest_of_deck = deck.clone();
+            rest_of_deck.retain(|c| !preflop.contains(&c));
+            for board in rest_of_deck.iter().combinations(n_cards - 2) {
+                let mut sorted_board: SmallVecHand = board.iter().cloned().cloned().collect();
+                sorted_board.sort_unstable();
+
+                let mut cards = sorted_preflop.clone();
+                cards.extend(sorted_board);
+
+                let bin = abstraction
+                    .get(&cards2hand(&isomorphic_hand(&cards)))
+                    .unwrap()
+                    .clone();
+                table.insert(cards2hand(&cards), bin);
+                bar.inc(1);
             }
-    );
-    let mut clusters = FxHashMap::default();
-    let mut sum: u64 = 0;
-    let bar = pbar(hand_ehs2.len() as u64);
-    for hand in hand_ehs2 {
-        // Bucket the hand according to the percentile of its E[HS^2]
-        let count = hand_counts.get(&hand).unwrap().clone() as u64;
-        let bucket: i32 = ((n_buckets as f64) * (sum as f64) / (total_hands as f64)) as i32;
-        sum += count;
-        clusters.insert(hand, bucket);
-        debug_assert!(
-            bucket < n_buckets,
-            "Hand {} has bucket {} which is outside the range of 0 to {}",
-            hand2str(hand),
-            bucket,
-            n_buckets
-        );
-        bar.inc(1);
+        }
+        serialize(table, "products/flop_abstraction_large.bin");
+
+        abstraction
+    } else if n_cards == 6 {
+        let dists = get_equity_distributions("turn");
+        let buckets = k_means_cluster(dists, CONFIG.turn_buckets);
+        let hands = load_turn_isomorphic();
+        let abstraction: FxHashMap<u64, i32> = hands
+            .iter()
+            .zip(buckets.iter())
+            .map(|(&hand, &bucket)| (hand, bucket))
+            .collect();
+        serialize(abstraction.clone(), "products/turn_abstraction.bin");
+        abstraction
+    } else if n_cards == 7 {
+        let hand_ehs2 = get_sorted_hand_ehs2(n_cards);
+        let hand_counts = get_hand_counts(n_cards);
+        let total_hands: u64 = hand_counts.values().map(|n| n.clone() as u64).sum();
+        let mut clusters = FxHashMap::default();
+        let mut sum: u64 = 0;
+        let bar = pbar(hand_ehs2.len() as u64);
+        for hand in hand_ehs2 {
+            // Bucket the hand according to the percentile of its E[HS^2]
+            let count = hand_counts.get(&hand).unwrap().clone() as u64;
+            let bucket: i32 = ((n_buckets as f64) * (sum as f64) / (total_hands as f64)) as i32;
+            sum += count;
+            clusters.insert(hand, bucket);
+            debug_assert!(
+                bucket < n_buckets,
+                "Hand {} has bucket {} which is outside the range of 0 to {}",
+                hand2str(hand),
+                bucket,
+                n_buckets
+            );
+            bar.inc(1);
+        }
+        bar.finish();
+        serialize(clusters.clone(), RIVER_ABSTRACTION_PATH);
+        clusters
+    } else {
+        panic!();
     }
-    bar.finish();
-    let path = match n_cards {
-        5 => FLOP_ABSTRACTION_PATH,
-        6 => TURN_ABSTRACTION_PATH,
-        7 => RIVER_ABSTRACTION_PATH,
-        _ => panic!("Bad hand length"),
-    };
-    serialize(clusters.clone(), path);
-    clusters
 }
 
 // Returns the second moment of the hand's equity distribution.
@@ -357,28 +397,6 @@ pub fn print_abstraction() {
     }
 }
 
-pub fn create_abstraction_clusters() {
-    let dists = get_equity_distributions("flop");
-    let buckets = k_means_cluster(dists, CONFIG.flop_buckets);
-    let hands = load_flop_isomorphic();
-    let abstraction: FxHashMap<u64, i32> = hands
-        .iter()
-        .zip(buckets.iter())
-        .map(|(&hand, &bucket)| (hand, bucket))
-        .collect();
-    serialize(abstraction, "products/flop_abstraction.bin");
-
-    let dists = get_equity_distributions("turn");
-    let buckets = k_means_cluster(dists, CONFIG.turn_buckets);
-    let hands = load_turn_isomorphic();
-    let abstraction: FxHashMap<u64, i32> = hands
-        .iter()
-        .zip(buckets.iter())
-        .map(|(&hand, &bucket)| (hand, bucket))
-        .collect();
-    serialize(abstraction, "products/turn_abstraction.bin");
-}
-
 pub fn expand_abstraction_keys() {
     let deck = deck();
     let n_cards = 5;
@@ -451,7 +469,7 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
 
     let mut clusters: Vec<i32> = vec![0; distributions.len()];
 
-    let iters = 1_000;
+    let iters = 10;
     let bar = pbar(iters as u64);
     let mut prev_distance_sum = 0.0;
     for iter in 0..iters {
