@@ -4,8 +4,8 @@
 // abstraction id number, so we can treat similar hands as the same to reduce
 // the number of possibilities in the game.
 
+use crate::card_utils::*;
 use crate::config::CONFIG;
-use crate::{card_utils::*, ABSTRACTION, RIVER};
 use dashmap::DashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
@@ -14,7 +14,6 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 use std::sync::Mutex;
 use std::{
-    collections::HashMap,
     fs::File,
     io::{BufReader, BufWriter},
     path::Path,
@@ -75,7 +74,7 @@ impl Abstraction {
         let bin_result = match cards.len() {
             5 => self.flop.get(&hand),
             6 => self.turn.get(&hand),
-            7 => self.river.get(&hand),
+            // 7 => self.river.get(&hand),
             _ => panic!("Bad number of cards"),
         };
         *bin_result.unwrap()
@@ -289,6 +288,7 @@ pub fn equity_distribution_moment(hand: u64, moment: i32) -> f64 {
 // The equity here is different from the RIVER_EQUITY_CACHE. This is the equity across all possible
 // board rollout cards for a given player hole and opponent hole. The RIVER_EQUITY_CACHE is the
 // equity across all possible opponent hole cards for a given player hole and board.
+
 pub fn equity_distribution(hand: u64) -> Vec<f32> {
     let hand = hand2cards(hand);
     let board = &hand[2..];
@@ -397,31 +397,31 @@ pub fn print_abstraction() {
     }
 }
 
-pub fn expand_abstraction_keys() {
-    let deck = deck();
-    let n_cards = 5;
-    let mut table: FxHashMap<u64, i32> = FxHashMap::default();
-    println!("Saving massive table of all flop hands -> flop buckets...");
-    let bar = pbar(25989600);
-    for preflop in deck.iter().combinations(2) {
-        let mut sorted_preflop: SmallVecHand = preflop.iter().cloned().cloned().collect();
-        sorted_preflop.sort_unstable();
-        let mut rest_of_deck = deck.clone();
-        rest_of_deck.retain(|c| !preflop.contains(&c));
-        for board in rest_of_deck.iter().combinations(n_cards - 2) {
-            let mut sorted_board: SmallVecHand = board.iter().cloned().cloned().collect();
-            sorted_board.sort_unstable();
+// pub fn expand_abstraction_keys() {
+//     let deck = deck();
+//     let n_cards = 5;
+//     let mut table: FxHashMap<u64, i32> = FxHashMap::default();
+//     println!("Saving massive table of all flop hands -> flop buckets...");
+//     let bar = pbar(25989600);
+//     for preflop in deck.iter().combinations(2) {
+//         let mut sorted_preflop: SmallVecHand = preflop.iter().cloned().cloned().collect();
+//         sorted_preflop.sort_unstable();
+//         let mut rest_of_deck = deck.clone();
+//         rest_of_deck.retain(|c| !preflop.contains(&c));
+//         for board in rest_of_deck.iter().combinations(n_cards - 2) {
+//             let mut sorted_board: SmallVecHand = board.iter().cloned().cloned().collect();
+//             sorted_board.sort_unstable();
 
-            let mut cards = sorted_preflop.clone();
-            cards.extend(sorted_board);
+//             let mut cards = sorted_preflop.clone();
+//             cards.extend(sorted_board);
 
-            let bin = ABSTRACTION.bin(&cards);
-            table.insert(cards2hand(&cards), bin);
-            bar.inc(1);
-        }
-    }
-    serialize(table, "products/flop_abstraction_large.bin");
-}
+//             let bin = ABSTRACTION.bin(&cards);
+//             table.insert(cards2hand(&cards), bin);
+//             bar.inc(1);
+//         }
+//     }
+//     serialize(table, "products/flop_abstraction_large.bin");
+// }
 
 pub fn get_equity_distributions(street: &str) -> Vec<Vec<f32>> {
     let path = format!("products/{street}_equity_distributions.bin");
@@ -469,10 +469,10 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
 
     let mut clusters: Vec<i32> = vec![0; distributions.len()];
 
-    let iters = 10;
-    let bar = pbar(iters as u64);
+    const ITERS: u64 = 1_000;
+    let bar = pbar(ITERS as u64);
     let mut prev_distance_sum = 0.0;
-    for iter in 0..iters {
+    for iter in 0..ITERS {
         let distance_sum: Mutex<f64> = Mutex::new(0.0);
         clusters = distributions
             .par_iter()
@@ -495,7 +495,7 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
 
         let distance_sum_val: f64 = *distance_sum.lock().unwrap();
         println!("Iteration {iter}: {}", distance_sum_val);
-        if distance_sum_val == prev_distance_sum {
+        if (distance_sum_val - prev_distance_sum).abs() < 1e-6 {
             println!("Converged.");
             break;
         }
