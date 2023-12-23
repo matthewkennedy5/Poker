@@ -551,6 +551,7 @@ struct HandData {
     index: usize,
 }
 
+// Maps each card to a number 0-52
 #[inline]
 fn card_index(card: &Card) -> usize {
     13 * card.suit as usize + (card.rank as usize - 2)
@@ -626,6 +627,15 @@ pub fn terminal_utility_vectorized_fast(
             blocking_indexes.push(i);
         }
     }
+    // let mut blockers: [[usize; 52]; 52] = [[0; 52]; 52];
+    // let mut counters: [usize; 52] = [0; 52];
+    // for (i, hand_info) in hand_data.iter().enumerate() {
+    //     for card in &hand_info.hand {
+    //         let index = card_index(card);
+    //         blockers[index][counters[index]] = i;
+    //         counters[index] += 1;
+    //     }
+    // }
 
     // Ok so the basic idea here is:
     //  - sort the hands by strength
@@ -803,7 +813,7 @@ pub fn terminal_utility_vectorized(
         player,
     );
     // TODO Refactor: make this an automated test instead of assert
-    assert!({
+    debug_assert!({
         let slow = terminal_utility_vectorized_slow(
             preflop_hands.clone(),
             opp_reach_probs.clone(),

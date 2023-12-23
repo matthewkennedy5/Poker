@@ -1,8 +1,7 @@
 use crate::itertools::Itertools;
+use ahash::AHashMap;
 use once_cell::sync::Lazy;
-use rand::prelude::*;
 use rs_poker::core::{Hand, Rank, Rankable};
-use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use smallvec::{SmallVec, ToSmallVec};
 use std::{
@@ -240,7 +239,7 @@ pub fn isomorphic_hand(cards: &[Card]) -> SmallVecHand {
 }
 
 pub struct FastHandTable {
-    strengths: FxHashMap<u64, i32>,
+    strengths: AHashMap<u64, i32>,
 }
 
 impl FastHandTable {
@@ -259,10 +258,10 @@ impl FastHandTable {
         strength
     }
 
-    fn load_hand_strengths() -> FxHashMap<u64, i32> {
+    fn load_hand_strengths() -> AHashMap<u64, i32> {
         if !Path::new(FAST_HAND_TABLE_PATH).exists() {
             println!("[INFO] Creating fast hand table.");
-            let mut table: FxHashMap<u64, i32> = FxHashMap::default();
+            let mut table: AHashMap<u64, i32> = AHashMap::default();
             let deck = deck();
             let bar = pbar(133784560);
             for hand in deck.iter().combinations(7) {
@@ -275,7 +274,7 @@ impl FastHandTable {
             bar.finish();
             serialize(table, FAST_HAND_TABLE_PATH);
         }
-        let table: FxHashMap<u64, i32> = read_serialized(FAST_HAND_TABLE_PATH);
+        let table: AHashMap<u64, i32> = read_serialized(FAST_HAND_TABLE_PATH);
         table
     }
 }
@@ -541,17 +540,17 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> Vec<u64> {
     isomorphic_vec
 }
 
-// There are multiple places where I have to serialize a FxHashMap of cards->i32
+// There are multiple places where I have to serialize a AHashMap of cards->i32
 // with some sort of data such as hand strength or abstraction ID. This loads
 // that data from a file desciptor and returns the lookup table.
-pub fn read_serialized(path: &str) -> FxHashMap<u64, i32> {
-    println!("Deserializing FxHashMap...");
+pub fn read_serialized(path: &str) -> AHashMap<u64, i32> {
+    println!("Deserializing AHashMap...");
     let reader = BufReader::new(File::open(path).unwrap());
     bincode::deserialize_from(reader).unwrap()
 }
 
-pub fn serialize(hand_data: FxHashMap<u64, i32>, path: &str) {
-    println!("Serializing FxHashMap...");
+pub fn serialize(hand_data: AHashMap<u64, i32>, path: &str) {
+    println!("Serializing AHashMap...");
     let file = File::create(path).unwrap();
     let buffer = BufWriter::new(file);
     bincode::serialize_into(buffer, &hand_data).unwrap();

@@ -6,12 +6,12 @@
 
 use crate::card_utils::*;
 use crate::config::CONFIG;
+use ahash::AHashMap;
 use dashmap::DashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use rustc_hash::FxHashMap;
 use std::sync::Mutex;
 use std::{
     fs::File,
@@ -26,9 +26,9 @@ pub const TURN_ABSTRACTION_PATH: &str = "products/turn_abstraction.bin";
 pub const RIVER_ABSTRACTION_PATH: &str = "products/river_abstraction.bin";
 
 pub struct Abstraction {
-    flop: FxHashMap<u64, i32>,
-    turn: FxHashMap<u64, i32>,
-    river: FxHashMap<u64, i32>,
+    flop: AHashMap<u64, i32>,
+    turn: AHashMap<u64, i32>,
+    river: AHashMap<u64, i32>,
 }
 
 impl Abstraction {
@@ -64,7 +64,7 @@ impl Abstraction {
     }
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        let isomorphic = isomorphic_hand(cards);
+        // let isomorphic = isomorphic_hand(cards);
 
         // flop holdem only hack
         let mut cards = [cards[0], cards[1], cards[2], cards[3], cards[4]];
@@ -81,7 +81,10 @@ impl Abstraction {
     }
 }
 
-fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> FxHashMap<u64, i32> {
+fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> AHashMap<u64, i32> {
+    if n_cards > 5 {
+        return AHashMap::new();
+    }
     match File::open(path) {
         Err(_error) => make_abstraction(n_cards, n_buckets),
         Ok(_) => {
@@ -137,7 +140,7 @@ pub fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
     sorted_hands
 }
 
-pub fn get_hand_counts(n_cards: usize) -> FxHashMap<u64, i32> {
+pub fn get_hand_counts(n_cards: usize) -> AHashMap<u64, i32> {
     let path = format!("products/hand_counts_{n_cards}.bin");
 
     if Path::new(&path).exists() {
@@ -147,7 +150,7 @@ pub fn get_hand_counts(n_cards: usize) -> FxHashMap<u64, i32> {
 
     println!("[INFO] Getting {n_cards} hand counts...");
     let deck = deck();
-    let mut hand_counts: FxHashMap<u64, i32> = FxHashMap::default();
+    let mut hand_counts: AHashMap<u64, i32> = AHashMap::default();
     let bar = pbar(match n_cards {
         5 => 25_989_600,
         6 => 305_377_800,
@@ -175,7 +178,7 @@ pub fn get_hand_counts(n_cards: usize) -> FxHashMap<u64, i32> {
 }
 
 // TODO: Call k means clustering from make_abstraction instead of E[HS^2]
-pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> FxHashMap<u64, i32> {
+pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> AHashMap<u64, i32> {
     match n_cards {
         5 => println!("[INFO] Preparing the flop abstraction."),
         6 => println!("[INFO] Preparing the turn abstraction."),
@@ -187,7 +190,7 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> FxHashMap<u64, i32> {
         let dists = get_equity_distributions("flop");
         let buckets = k_means_cluster(dists, CONFIG.flop_buckets);
         let hands = load_flop_isomorphic();
-        let abstraction: FxHashMap<u64, i32> = hands
+        let abstraction: AHashMap<u64, i32> = hands
             .iter()
             .zip(buckets.iter())
             .map(|(&hand, &bucket)| (hand, bucket))
@@ -195,7 +198,7 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> FxHashMap<u64, i32> {
 
         // expand abstraciton keys to eliminate isomorphic hands
         let deck = deck();
-        let mut table: FxHashMap<u64, i32> = FxHashMap::default();
+        let mut table: AHashMap<u64, i32> = AHashMap::default();
         println!("Saving massive table of all flop hands -> flop buckets...");
         let bar = pbar(25989600);
         for preflop in deck.iter().combinations(2) {
@@ -225,7 +228,7 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> FxHashMap<u64, i32> {
         let dists = get_equity_distributions("turn");
         let buckets = k_means_cluster(dists, CONFIG.turn_buckets);
         let hands = load_turn_isomorphic();
-        let abstraction: FxHashMap<u64, i32> = hands
+        let abstraction: AHashMap<u64, i32> = hands
             .iter()
             .zip(buckets.iter())
             .map(|(&hand, &bucket)| (hand, bucket))
@@ -236,7 +239,7 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> FxHashMap<u64, i32> {
         let hand_ehs2 = get_sorted_hand_ehs2(n_cards);
         let hand_counts = get_hand_counts(n_cards);
         let total_hands: u64 = hand_counts.values().map(|n| n.clone() as u64).sum();
-        let mut clusters = FxHashMap::default();
+        let mut clusters = AHashMap::default();
         let mut sum: u64 = 0;
         let bar = pbar(hand_ehs2.len() as u64);
         for hand in hand_ehs2 {
@@ -400,7 +403,7 @@ pub fn print_abstraction() {
 // pub fn expand_abstraction_keys() {
 //     let deck = deck();
 //     let n_cards = 5;
-//     let mut table: FxHashMap<u64, i32> = FxHashMap::default();
+//     let mut table: AHashMap<u64, i32> = AHashMap::default();
 //     println!("Saving massive table of all flop hands -> flop buckets...");
 //     let bar = pbar(25989600);
 //     for preflop in deck.iter().combinations(2) {
