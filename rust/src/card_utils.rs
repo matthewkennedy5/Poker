@@ -544,13 +544,11 @@ pub fn deal_isomorphic(n_cards: usize, preserve_streets: bool) -> Vec<u64> {
 // with some sort of data such as hand strength or abstraction ID. This loads
 // that data from a file desciptor and returns the lookup table.
 pub fn read_serialized(path: &str) -> AHashMap<u64, i32> {
-    println!("Deserializing AHashMap...");
     let reader = BufReader::new(File::open(path).unwrap());
     bincode::deserialize_from(reader).unwrap()
 }
 
 pub fn serialize(hand_data: AHashMap<u64, i32>, path: &str) {
-    println!("Serializing AHashMap...");
     let file = File::create(path).unwrap();
     let buffer = BufWriter::new(file);
     bincode::serialize_into(buffer, &hand_data).unwrap();

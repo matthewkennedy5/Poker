@@ -673,13 +673,13 @@ fn blinds_stack_sizes() {
 #[test]
 fn isomorphic_hand_len() {
     let flop = load_flop_isomorphic();
-    assert_eq!(flop.len(), 1344590);
+    assert_eq!(flop.len(), 1_344_590);
     println!("Flop len: {}", flop.len());
     let turn = load_turn_isomorphic();
-    assert_eq!(turn.len(), 14444820);
+    assert_eq!(turn.len(), 14_444_820);
     println!("Turn len: {}", turn.len());
     let river = load_river_isomorphic();
-    assert_eq!(river.len(), 126192339);
+    assert_eq!(river.len(), 126_192_339);
     println!("River len: {}", river.len());
 }
 

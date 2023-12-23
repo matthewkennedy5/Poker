@@ -82,9 +82,6 @@ impl Abstraction {
 }
 
 fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> AHashMap<u64, i32> {
-    if n_cards > 5 {
-        return AHashMap::new();
-    }
     match File::open(path) {
         Err(_error) => make_abstraction(n_cards, n_buckets),
         Ok(_) => {
