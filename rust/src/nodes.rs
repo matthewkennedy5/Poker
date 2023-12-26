@@ -57,7 +57,7 @@ impl Nodes {
             if accumulated_regret > 0.0 {
                 accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
             } else {
-                accumulated_regret *= t.powf(1.0) / (t.powf(1.0) + 1.0);
+                accumulated_regret *= t.powf(0.0) / (t.powf(0.0) + 1.0);
             }
 
             node.regrets[action_index] = accumulated_regret;

@@ -4,8 +4,8 @@
 // abstraction id number, so we can treat similar hands as the same to reduce
 // the number of possibilities in the game.
 
+use crate::card_utils::*;
 use crate::config::CONFIG;
-use crate::{card_utils::*, FLOP};
 use ahash::AHashMap;
 use dashmap::DashMap;
 use itertools::Itertools;
