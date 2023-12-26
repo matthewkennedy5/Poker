@@ -4,14 +4,15 @@
 // abstraction id number, so we can treat similar hands as the same to reduce
 // the number of possibilities in the game.
 
-use crate::card_utils::*;
 use crate::config::CONFIG;
+use crate::{card_utils::*, FLOP};
 use ahash::AHashMap;
 use dashmap::DashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use smallvec::ToSmallVec;
 use std::sync::Mutex;
 use std::{
     fs::File,
@@ -64,17 +65,20 @@ impl Abstraction {
     }
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        // let isomorphic = isomorphic_hand(cards);
-
-        // flop holdem only hack
-        let mut cards = [cards[0], cards[1], cards[2], cards[3], cards[4]];
-        cards[0..2].sort_unstable();
-        cards[2..5].sort_unstable();
+        let mut cards: SmallVecHand = cards.to_smallvec();
+        // On the flop, I exploded the abstraction to all hands to avoid needing to call
+        // isomorphic_hand. For turn and river, you need to call isomorphic_hand.
+        if cards.len() == 5 {
+            cards[0..2].sort_unstable();
+            cards[2..5].sort_unstable();
+        } else {
+            cards = isomorphic_hand(&cards);
+        }
         let hand = cards2hand(&cards);
         let bin_result = match cards.len() {
             5 => self.flop.get(&hand),
             6 => self.turn.get(&hand),
-            // 7 => self.river.get(&hand),
+            7 => self.river.get(&hand),
             _ => panic!("Bad number of cards"),
         };
         *bin_result.unwrap()
@@ -218,7 +222,7 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> AHashMap<u64, i32> {
                 bar.inc(1);
             }
         }
-        serialize(table, "products/flop_abstraction_large.bin");
+        serialize(table, FLOP_ABSTRACTION_PATH);
 
         abstraction
     } else if n_cards == 6 {
@@ -230,7 +234,7 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> AHashMap<u64, i32> {
             .zip(buckets.iter())
             .map(|(&hand, &bucket)| (hand, bucket))
             .collect();
-        serialize(abstraction.clone(), "products/turn_abstraction.bin");
+        serialize(abstraction.clone(), TURN_ABSTRACTION_PATH);
         abstraction
     } else if n_cards == 7 {
         let hand_ehs2 = get_sorted_hand_ehs2(n_cards);
@@ -469,7 +473,7 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
 
     let mut clusters: Vec<i32> = vec![0; distributions.len()];
 
-    const ITERS: u64 = 100;
+    const ITERS: u64 = 1000;
     let bar = pbar(ITERS as u64);
     let mut prev_distance_sum = 0.0;
     for iter in 0..ITERS {

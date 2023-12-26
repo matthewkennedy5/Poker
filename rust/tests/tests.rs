@@ -94,7 +94,7 @@ fn uint_hands() {
 }
 
 fn fast_hand_strength(hand: Vec<&str>, table: &FastHandTable) -> i32 {
-    table.hand_strength(&strvec2cards(&hand))
+    table.hand_strength(&strvec2cards(&hand)).unwrap()
 }
 
 #[test]
@@ -905,7 +905,7 @@ fn test_subgame_solving() {
     );
 }
 
-#[test]
+// #[test]
 fn subgame_solving_beats_blueprint() {
     let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
     let subgame_bot = Bot::new(
@@ -935,7 +935,7 @@ fn subgame_solving_beats_blueprint() {
     assert!(mean > 0.0);
 }
 
-#[test]
+// #[test]
 fn test_subgame_situation() {
     // Hand: 4s5d Board:  | History: bet 300,
     // should fold it

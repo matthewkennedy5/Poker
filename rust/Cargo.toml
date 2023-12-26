@@ -28,9 +28,6 @@ smallvec = { version = "*", features = ["serde"] }
 dashmap = { version = "*", features = ["serde"] }
 ahash = {version="*", features=["serde"]}
 
-[build]
-rustflags = ["-C", "target-cpu=native"]
-
 [profile.release]
 debug = true
 

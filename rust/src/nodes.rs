@@ -64,22 +64,6 @@ impl Nodes {
         }
     }
 
-    // pub fn add_regret(&self, infoset: &InfoSet, action_index: usize, regret: f64) {
-    //     let history = infoset.history.clone();
-    //     let node_vec = self.dashmap.get(&history).unwrap();
-    //     let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
-    //     let mut node = node_mutex.lock().unwrap();
-    //     let mut accumulated_regret = node.regrets[action_index] + regret as f32;
-    //     // DCFR
-    //     let t: f32 = node.t as f32;
-    //     if accumulated_regret > 0.0 {
-    //         accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
-    //     } else {
-    //         accumulated_regret *= 0.5;
-    //     }
-    //     node.regrets[action_index] = accumulated_regret;
-    // }
-
     pub fn update_strategy_sum_vectorized(&self, infosets: &[InfoSet], probs: &[f64]) {
         let history = infosets[0].history.clone();
         let node_vec = self.dashmap.get(&history).unwrap();
@@ -220,10 +204,6 @@ impl Nodes {
             "No valid next actions for history {}",
             infoset.history
         );
-        // let node = match self.get(&infoset) {
-        //     Some(n) => n.clone(),
-        //     None => Node::new(num_actions),
-        // };
         let node = self.get(&infoset).expect("Node not found").clone(); // All nodes must be in infoset
         debug_assert!(
             node.num_actions == num_actions,
@@ -235,9 +215,6 @@ impl Nodes {
         let actions = infoset.next_actions(&self.bet_abstraction);
         let cumulative_strategy = node.cumulative_strategy();
         let sum: f32 = cumulative_strategy.iter().sum();
-        // println!("Infoset: {infoset}");
-        // println!("Actions: {:?}", actions);
-        // println!("Cumulative strategy: {:?}", cumulative_strategy);
         debug_assert!((sum - 1.0).abs() < 0.01);
         for (action, prob) in actions.iter().zip(node.cumulative_strategy().iter()) {
             strategy.insert(action.clone(), *prob as f64);

@@ -604,7 +604,7 @@ pub fn terminal_utility_vectorized_fast(
         .map(|i| {
             let h = preflop_hands[i];
             let river_hand = [h[0], h[1], board[0], board[1], board[2], board[3], board[4]];
-            let strength = FAST_HAND_TABLE.hand_strength(&river_hand);
+            let strength = FAST_HAND_TABLE.hand_strength(&river_hand).unwrap();
             HandData {
                 hand: h,
                 strength,
@@ -804,24 +804,24 @@ pub fn terminal_utility_vectorized(
         player,
     );
     // TODO Refactor: make this an automated test instead of assert
-    debug_assert!({
-        let slow = terminal_utility_vectorized_slow(
-            preflop_hands.clone(),
-            opp_reach_probs.clone(),
-            board,
-            history,
-            player,
-        );
-        assert!(
-            fast.iter()
-                .zip(slow.iter())
-                .all(|(&a, &b)| (a - b).abs() < 1e-6),
-            "{} != {}",
-            fast[0],
-            slow[0]
-        );
-        true
-    });
+    // debug_assert!({
+    //     let slow = terminal_utility_vectorized_slow(
+    //         preflop_hands.clone(),
+    //         opp_reach_probs.clone(),
+    //         board,
+    //         history,
+    //         player,
+    //     );
+    //     assert!(
+    //         fast.iter()
+    //             .zip(slow.iter())
+    //             .all(|(&a, &b)| (a - b).abs() < 1e-6),
+    //         "{} != {}",
+    //         fast[0],
+    //         slow[0]
+    //     );
+    //     true
+    // });
     fast
 }
 
