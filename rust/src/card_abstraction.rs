@@ -12,7 +12,6 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use smallvec::ToSmallVec;
 use std::sync::Mutex;
 use std::{
     fs::File,
@@ -22,7 +21,7 @@ use std::{
 
 pub static RIVER_EQUITY_CACHE: Lazy<DashMap<SmallVecHand, f64>> = Lazy::new(DashMap::new);
 
-pub const FLOP_ABSTRACTION_PATH: &str = "products/flop_abstraction_large.bin";
+pub const FLOP_ABSTRACTION_PATH: &str = "products/flop_abstraction.bin";
 pub const TURN_ABSTRACTION_PATH: &str = "products/turn_abstraction.bin";
 pub const RIVER_ABSTRACTION_PATH: &str = "products/river_abstraction.bin";
 
@@ -65,16 +64,7 @@ impl Abstraction {
     }
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        let mut cards: SmallVecHand = cards.to_smallvec();
-        // On the flop, I exploded the abstraction to all hands to avoid needing to call
-        // isomorphic_hand. For turn and river, you need to call isomorphic_hand.
-        if cards.len() == 5 {
-            cards[0..2].sort_unstable();
-            cards[2..5].sort_unstable();
-        } else {
-            cards = isomorphic_hand(&cards);
-        }
-        let hand = cards2hand(&cards);
+        let hand = cards2hand(&isomorphic_hand(cards));
         let bin_result = match cards.len() {
             5 => self.flop.get(&hand),
             6 => self.turn.get(&hand),
@@ -197,32 +187,34 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> AHashMap<u64, i32> {
             .map(|(&hand, &bucket)| (hand, bucket))
             .collect();
 
+        serialize(abstraction.clone(), FLOP_ABSTRACTION_PATH);
+
         // expand abstraciton keys to eliminate isomorphic hands
-        let deck = deck();
-        let mut table: AHashMap<u64, i32> = AHashMap::default();
-        println!("Saving massive table of all flop hands -> flop buckets...");
-        let bar = pbar(25989600);
-        for preflop in deck.iter().combinations(2) {
-            let mut sorted_preflop: SmallVecHand = preflop.iter().cloned().cloned().collect();
-            sorted_preflop.sort_unstable();
-            let mut rest_of_deck = deck.clone();
-            rest_of_deck.retain(|c| !preflop.contains(&c));
-            for board in rest_of_deck.iter().combinations(n_cards - 2) {
-                let mut sorted_board: SmallVecHand = board.iter().cloned().cloned().collect();
-                sorted_board.sort_unstable();
+        // let deck = deck();
+        // let mut table: AHashMap<u64, i32> = AHashMap::default();
+        // println!("Saving massive table of all flop hands -> flop buckets...");
+        // let bar = pbar(25989600);
+        // for preflop in deck.iter().combinations(2) {
+        //     let mut sorted_preflop: SmallVecHand = preflop.iter().cloned().cloned().collect();
+        //     sorted_preflop.sort_unstable();
+        //     let mut rest_of_deck = deck.clone();
+        //     rest_of_deck.retain(|c| !preflop.contains(&c));
+        //     for board in rest_of_deck.iter().combinations(n_cards - 2) {
+        //         let mut sorted_board: SmallVecHand = board.iter().cloned().cloned().collect();
+        //         sorted_board.sort_unstable();
 
-                let mut cards = sorted_preflop.clone();
-                cards.extend(sorted_board);
+        //         let mut cards = sorted_preflop.clone();
+        //         cards.extend(sorted_board);
 
-                let bin = abstraction
-                    .get(&cards2hand(&isomorphic_hand(&cards)))
-                    .unwrap()
-                    .clone();
-                table.insert(cards2hand(&cards), bin);
-                bar.inc(1);
-            }
-        }
-        serialize(table, FLOP_ABSTRACTION_PATH);
+        //         let bin = abstraction
+        //             .get(&cards2hand(&isomorphic_hand(&cards)))
+        //             .unwrap()
+        //             .clone();
+        //         table.insert(cards2hand(&cards), bin);
+        //         bar.inc(1);
+        //     }
+        // }
+        // serialize(table, FLOP_ABSTRACTION_PATH);
 
         abstraction
     } else if n_cards == 6 {
@@ -473,7 +465,7 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
 
     let mut clusters: Vec<i32> = vec![0; distributions.len()];
 
-    const ITERS: u64 = 1000;
+    const ITERS: u64 = 10;
     let bar = pbar(ITERS as u64);
     let mut prev_distance_sum = 0.0;
     for iter in 0..ITERS {
