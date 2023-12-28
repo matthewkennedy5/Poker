@@ -234,7 +234,7 @@ impl Nodes {
 pub struct Node {
     pub regrets: [f32; NUM_ACTIONS],
     pub strategy_sum: [f32; NUM_ACTIONS],
-    pub num_actions: usize,
+    pub num_actions: usize, // TODO: Do I need to store num_actions? and t? Honestly maybe not even strategy_sum.
     pub t: i32,
 }
 

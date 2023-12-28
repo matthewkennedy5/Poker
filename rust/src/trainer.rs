@@ -60,11 +60,6 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
                 total_t += node.t as u64;
                 if node.t == 0 {
                     zero += 1;
-                    // let infoset2 = InfoSet {
-                    //     card_bucket: card_bucket as i32,
-                    //     history: history.clone(),
-                    // };
-                    // println!("{}: {}", history.street, card_bucket);
                 }
             }
         }
@@ -201,7 +196,8 @@ pub fn iterate(
             let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
             let mut zeros: Vec<usize> = Vec::with_capacity(N);
             for i in 0..preflop_hands.len() {
-                if traverser_reach_probs[i] > 1e-10 || opp_reach_probs[i] > 1e-10 {
+                if true {
+                    // traverser_reach_probs[i] > 1e-10 || opp_reach_probs[i] > 1e-10 {
                     nonzero_preflop_hands.push(preflop_hands[i]);
                     nonzero_traverser_reach_probs.push(traverser_reach_probs[i]);
                     nonzero_opp_reach_probs.push(opp_reach_probs[i]);
