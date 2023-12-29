@@ -6,19 +6,10 @@ use optimus::*;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::*;
-use std::{
-    collections::{HashMap, HashSet},
-    fs::canonicalize,
-};
+use std::collections::{HashMap, HashSet};
 
-static BOT: Lazy<Bot> = Lazy::new(|| {
-    Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        CONFIG.subgame_solving,
-        false,
-        CONFIG.depth_limit,
-    )
-});
+static BOT: Lazy<Bot> =
+    Lazy::new(|| Bot::new(load_nodes(&CONFIG.nodes_path), CONFIG.subgame_solving));
 
 #[test]
 fn card_bitmap() {
@@ -905,15 +896,10 @@ fn test_subgame_solving() {
     );
 }
 
-// #[test]
+#[test]
 fn subgame_solving_beats_blueprint() {
-    let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
-    let subgame_bot = Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        true,
-        false,
-        CONFIG.depth_limit,
-    );
+    let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false);
+    let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true);
 
     let iters = 1_000_000;
     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
@@ -940,7 +926,7 @@ fn test_subgame_situation() {
     // Hand: 4s5d Board:  | History: bet 300,
     // should fold it
 
-    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, false, 100);
+    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true);
     let action = bot.get_action(
         &str2cards("4s5d"),
         &vec![],
@@ -1011,8 +997,8 @@ fn river_equity_cache_mem_usage() {
 // #[test]
 fn test_depth_limit_probability() {
     // Compare the subgame solving strategy with and without depth limited solving.
-    let full_subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, true, -1);
-    let depth_limit_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, true, 5);
+    let full_subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false);
+    let depth_limit_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false);
 
     let hands = 1_000;
     let bar = pbar(hands as u64);
@@ -1057,7 +1043,7 @@ fn test_depth_limit_probability() {
 fn subgame_strategy_stability() {
     // for depth in [10, 8, 6, 4, 2].iter() {
     let depth = 5;
-    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, depth.clone());
+    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true);
     let strategy = bot.get_strategy(
         &str2cards("8hAd"),
         &str2cards("8dAc7s"),

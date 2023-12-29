@@ -9,14 +9,8 @@ use actix_web::{web, App, HttpServer, Responder};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-static BOT: Lazy<Bot> = Lazy::new(|| {
-    Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        CONFIG.subgame_solving,
-        false,
-        CONFIG.depth_limit,
-    )
-});
+static BOT: Lazy<Bot> =
+    Lazy::new(|| Bot::new(load_nodes(&CONFIG.nodes_path), CONFIG.subgame_solving));
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct HandCompJSON {

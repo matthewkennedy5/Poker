@@ -16,23 +16,14 @@ pub struct Bot {
     blueprint: Nodes,
     preflop_cache: PreflopCache,
     subgame_solving: bool,
-    early_stopping: bool,
-    depth_limit: i32,
 }
 
 impl Bot {
-    pub fn new(
-        blueprint: Nodes,
-        subgame_solving: bool,
-        early_stopping: bool,
-        depth_limit: i32,
-    ) -> Bot {
+    pub fn new(blueprint: Nodes, subgame_solving: bool) -> Bot {
         Bot {
             blueprint,
             preflop_cache: Cache::new(10_000),
             subgame_solving: subgame_solving,
-            early_stopping: early_stopping,
-            depth_limit: depth_limit,
         }
     }
 
@@ -115,6 +106,8 @@ impl Bot {
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(&hole, &board, &history);
 
+        let depth_limit_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false);
+
         const NUM_EPOCHS: u64 = 2;
         let epoch = CONFIG.subgame_iters / NUM_EPOCHS;
         for i in 0..NUM_EPOCHS {
@@ -164,8 +157,8 @@ impl Bot {
                         traverser_reach_probs,
                         opp_reach_probs,
                         &nodes,
-                        self.depth_limit,
-                        None,
+                        1,
+                        Some(&depth_limit_bot),
                     );
                 }
                 bar.inc(1);

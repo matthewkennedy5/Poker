@@ -4,12 +4,7 @@ use std::fs::File;
 use std::io::Write;
 
 fn main() {
-    let bot = Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        CONFIG.subgame_solving,
-        false, 
-        CONFIG.depth_limit
-    );
+    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), CONFIG.subgame_solving);
     write_preflop_strategy(&bot, &CONFIG.preflop_strategy_path);
 }
 
@@ -27,7 +22,11 @@ pub fn write_preflop_strategy(bot: &Bot, path: &str) {
             "{}{}{}",
             rank_str(hand[0].rank),
             rank_str(hand[1].rank),
-            if hand[0].suit == hand[1].suit { "s" } else { "o" }
+            if hand[0].suit == hand[1].suit {
+                "s"
+            } else {
+                "o"
+            }
         );
         preflop_strategy.insert(hand_str, str_strategy);
     }
