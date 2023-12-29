@@ -1,5 +1,7 @@
 // For reading and storing the configuration file info
 
+// TODO: Change these to hard-coded params instead of the separate parameter file?
+
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -35,7 +37,6 @@ pub struct Config {
     // Real time solving
     pub subgame_solving: bool,
     pub subgame_iters: u64,
-    pub depth_limit: i32,
 
     // Preflop chart
     pub preflop_strategy_path: String,

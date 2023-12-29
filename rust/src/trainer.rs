@@ -24,7 +24,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
         let bar = card_utils::pbar(eval_every);
 
-        (0..eval_every).into_par_iter().for_each(|_| {
+        (0..eval_every).into_iter().for_each(|_| {
             cfr_iteration(&deck, &ActionHistory::new(), &nodes, -1);
             bar.inc(1);
         });
@@ -105,7 +105,7 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
             vec![1.0; N],
             vec![1.0; N],
             nodes,
-            -1,
+            i32::MAX,
             None,
         );
     });
@@ -119,7 +119,7 @@ pub fn iterate(
     traverser_reach_probs: Vec<f64>,
     opp_reach_probs: Vec<f64>,
     nodes: &Nodes,
-    depth_limit: i32,
+    depth: i32,
     depth_limit_bot: Option<&Bot>,
 ) -> Vec<f64> {
     let N = preflop_hands.len();
@@ -137,18 +137,18 @@ pub fn iterate(
         );
     }
 
-    if depth_limit < CONFIG.depth_limit && history.current_street_length == 0 {
-        // depth limited solving for future streets
-        return depth_limit_utility(
-            traverser,
-            preflop_hands,
-            board,
-            history,
-            traverser_reach_probs,
-            opp_reach_probs,
-            depth_limit_bot.expect("Depth limit bot not provided for depth limit utility"),
-        );
-    }
+    // if depth < 0 && history.current_street_length == 0 {
+    //     // depth limited solving for future streets
+    //     return depth_limit_utility(
+    //         traverser,
+    //         preflop_hands,
+    //         board,
+    //         history,
+    //         traverser_reach_probs,
+    //         opp_reach_probs,
+    //         depth_limit_bot.expect("Depth limit bot not provided for depth limit utility"),
+    //     );
+    // }
 
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
@@ -160,9 +160,6 @@ pub fn iterate(
 
     let strategies: Vec<SmallVecFloats> = nodes.get_current_strategy_vectorized(&infosets);
     let opponent = 1 - traverser;
-    if history.player == traverser {
-        nodes.update_strategy_sum_vectorized(&infosets, &traverser_reach_probs);
-    }
 
     let actions = history.next_actions(&nodes.bet_abstraction);
     let mut node_utility: Vec<f64> = vec![0.0; N];
@@ -195,8 +192,7 @@ pub fn iterate(
             let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
             let mut zeros: Vec<usize> = Vec::with_capacity(N);
             for i in 0..preflop_hands.len() {
-                if true {
-                    // traverser_reach_probs[i] > 1e-10 || opp_reach_probs[i] > 1e-10 {
+                if traverser_reach_probs[i] > 1e-20 || opp_reach_probs[i] > 1e-20 {
                     nonzero_preflop_hands.push(preflop_hands[i]);
                     nonzero_traverser_reach_probs.push(traverser_reach_probs[i]);
                     nonzero_opp_reach_probs.push(opp_reach_probs[i]);
@@ -205,19 +201,23 @@ pub fn iterate(
                 }
             }
 
+            if nonzero_preflop_hands.len() < preflop_hands.len() {
+                println!("Breakpoint");
+            }
+
             let mut utility: Vec<f64> = iterate(
                 traverser,
-                nonzero_preflop_hands,
+                nonzero_preflop_hands.clone(),
                 board,
                 &next_history,
                 nonzero_traverser_reach_probs,
                 nonzero_opp_reach_probs,
                 nodes,
-                depth_limit - 1,
+                depth - 1,
                 depth_limit_bot,
             );
 
-            // Hacky GPT-4 code sorry
+            // Insert 0s into the utility
             let mut result_utilities: Vec<f64> = vec![0.0; preflop_hands.len()];
             let mut utility_idx = 0;
             let mut zeros_idx = 0;
@@ -232,7 +232,6 @@ pub fn iterate(
                 }
             }
             utility = result_utilities;
-            // End hacky GPT-4 code
 
             for n in 0..node_utility.len() {
                 let prob: f32 = if history.player == traverser {
@@ -252,6 +251,7 @@ pub fn iterate(
         for (action_idx, action_utility) in action_utilities.iter().enumerate() {
             nodes.add_regret_vectorized(&infosets, action_utility, &node_utility, action_idx);
         }
+        nodes.update_strategy_sum_vectorized(&infosets, &traverser_reach_probs);
     }
     node_utility
 }

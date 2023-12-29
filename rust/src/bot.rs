@@ -49,7 +49,7 @@ impl Bot {
 
     // Wrapper for the real time solving for the bot's strategy
     pub fn get_strategy(&self, hole: &[Card], board: &[Card], history: &ActionHistory) -> Strategy {
-        if !self.subgame_solving || history.is_empty() {
+        if !self.subgame_solving || history.is_empty() || history.street < RIVER {
             self.get_strategy_action_translation(hole, board, history)
         } else {
             // Preflop cache
@@ -115,7 +115,7 @@ impl Bot {
                 nodes.reset_strategy_sum(&infoset);
             }
             let bar = pbar(epoch);
-            (0..epoch).into_par_iter().for_each(|_| {
+            (0..epoch).into_iter().for_each(|_| {
                 for traverser in [DEALER, OPPONENT].iter() {
                     let mut deck = deck();
                     deck.retain(|c| !hole.contains(c));
@@ -157,7 +157,7 @@ impl Bot {
                         traverser_reach_probs,
                         opp_reach_probs,
                         &nodes,
-                        1,
+                        0,
                         Some(&depth_limit_bot),
                     );
                 }
