@@ -108,13 +108,29 @@ pub fn iterate(
     }
 
     if history.hand_over() {
-        return terminal_utility_vectorized(
-            preflop_hands,
-            opp_reach_probs,
-            &board,
-            history,
-            traverser,
-        );
+        let mut nonzero_indexes: Vec<usize> = Vec::with_capacity(N);
+        let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
+        let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
+        let mut nonzero_traverser_reach_probs: Vec<f64> = Vec::with_capacity(N);
+        for i in 0..N {
+            if opp_reach_probs[i] > 0.0 || traverser_reach_probs[i] > 0.0 {
+                nonzero_indexes.push(i);
+                nonzero_preflop_hands.push(preflop_hands[i]);
+                nonzero_opp_reach_probs.push(opp_reach_probs[i]);
+                nonzero_traverser_reach_probs.push(traverser_reach_probs[i]);
+            }
+        }
+        let nonzero_utility =
+            terminal_utility_vectorized(preflop_hands, opp_reach_probs, &board, history, traverser);
+        let mut utility = vec![0.0; N];
+        let mut nonzero_idx = 0;
+        for i in 0..N {
+            if nonzero_idx < nonzero_indexes.len() && nonzero_indexes[nonzero_idx] == i {
+                utility[i] = nonzero_utility[nonzero_idx];
+                nonzero_idx += 1;
+            }
+        }
+        return utility;
     }
 
     // if depth < 0 && history.current_street_length == 0 {
@@ -165,39 +181,17 @@ pub fn iterate(
                 }
             }
 
-            let mut nonzero_indexes: Vec<usize> = Vec::with_capacity(N);
-            let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
-            let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
-            let mut nonzero_traverser_reach_probs: Vec<f64> = Vec::with_capacity(N);
-            for i in 0..N {
-                if opp_reach_probs[i] > 0.0 || traverser_reach_probs[i] > 0.0 {
-                    nonzero_indexes.push(i);
-                    nonzero_preflop_hands.push(preflop_hands[i]);
-                    nonzero_opp_reach_probs.push(opp_reach_probs[i]);
-                    nonzero_traverser_reach_probs.push(traverser_reach_probs[i]);
-                }
-            }
-
-            let nonzero_utility: Vec<f64> = iterate(
+            let utility: Vec<f64> = iterate(
                 traverser,
-                nonzero_preflop_hands,
+                preflop_hands.clone(),
                 board,
                 &next_history,
-                nonzero_traverser_reach_probs,
-                nonzero_opp_reach_probs,
+                traverser_reach_probs,
+                opp_reach_probs,
                 nodes,
                 depth - 1,
                 depth_limit_bot,
             );
-
-            let mut utility = vec![0.0; N];
-            let mut nonzero_idx = 0;
-            for i in 0..N {
-                if nonzero_idx < nonzero_indexes.len() && nonzero_indexes[nonzero_idx] == i {
-                    utility[i] = nonzero_utility[nonzero_idx];
-                    nonzero_idx += 1;
-                }
-            }
 
             for n in 0..node_utility.len() {
                 let prob: f32 = if history.player == traverser {
