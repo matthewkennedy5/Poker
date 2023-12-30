@@ -201,9 +201,9 @@ pub fn iterate(
                 }
             }
 
-            if nonzero_preflop_hands.len() < preflop_hands.len() {
-                println!("Breakpoint");
-            }
+            // if nonzero_preflop_hands.len() < preflop_hands.len() {
+            //     println!("Breakpoint");
+            // }
 
             let mut utility: Vec<f64> = iterate(
                 traverser,
@@ -251,6 +251,8 @@ pub fn iterate(
         for (action_idx, action_utility) in action_utilities.iter().enumerate() {
             nodes.add_regret_vectorized(&infosets, action_utility, &node_utility, action_idx);
         }
+        // Theory for what's going wrong with pruning: With pruning, node.t is incremented a lot less,
+        // so the strategy takes too long to pass t > 100 etc.
         nodes.update_strategy_sum_vectorized(&infosets, &traverser_reach_probs);
     }
     node_utility
