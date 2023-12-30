@@ -19,7 +19,7 @@ turn_buckets = 10_000    # Max:  14403610
 river_buckets = 10_000   # Max: 125756657
 
 # Filenames
-nodes_path = "products/nodes2.bin"
+nodes_path = "products/nodes.bin"
 
 # Training
 train_iters = 100_000

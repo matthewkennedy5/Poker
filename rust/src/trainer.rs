@@ -47,27 +47,6 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
             infoset.next_actions(&CONFIG.bet_abstraction)
         );
         println!("Node: {:?}", nodes.get(&infoset));
-
-        // Check what percent of nodes have t = 0
-        let mut zero = 0;
-        let mut total: u64 = 0;
-        let mut total_t: u64 = 0;
-        for elem in &nodes.dashmap {
-            let history_nodes = elem.value();
-            for (card_bucket, n) in history_nodes.iter().enumerate() {
-                let node = n.lock().unwrap();
-                total += 1;
-                total_t += node.t as u64;
-                if node.t == 0 {
-                    zero += 1;
-                }
-            }
-        }
-        println!("Fraction zeros: {}", zero as f64 / total as f64);
-        println!(
-            "Average t across all infosets: {}",
-            total_t as f64 / total as f64
-        );
     }
     println!("{} nodes reached.", nodes.len());
 }

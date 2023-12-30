@@ -50,16 +50,7 @@ impl Nodes {
             let infoset = &infosets[hand_idx];
             let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
             let mut node = node_mutex.lock().unwrap();
-            let mut accumulated_regret = node.regrets[action_index] + regret as f32;
-
-            // DCFR
-            let t: f32 = node.t as f32;
-            if accumulated_regret > 0.0 {
-                accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
-            } else {
-                accumulated_regret *= t.powf(1.0) / (t.powf(1.0) + 1.0);
-            }
-
+            let accumulated_regret = node.regrets[action_index] + regret as f32;
             node.regrets[action_index] = accumulated_regret;
         }
     }
@@ -81,10 +72,8 @@ impl Nodes {
                 for i in 0..current_strategy.len() {
                     // Add this action's probability to the cumulative strategy sum
                     node.strategy_sum[i] += current_strategy[i] * prob as f32;
-                    node.strategy_sum[i] *= node.t as f32 / (node.t as f32 + 1.0);
                 }
             }
-            node.t += 1;
         }
     }
 
@@ -100,15 +89,12 @@ impl Nodes {
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
         let current_strategy: SmallVecFloats = normalize_smallvec(&positive_regrets);
-        let d = (node.t - 100) as f32;
-        if prob > 0.0 && d > 0.0 {
+        if prob > 0.0 {
             for i in 0..current_strategy.len() {
                 // Add this action's probability to the cumulative strategy sum
                 node.strategy_sum[i] += current_strategy[i] * prob;
-                node.strategy_sum[i] *= d / (d + 1.0);
             }
         }
-        node.t += 1;
     }
 
     pub fn reset_strategy_sum(&self, infoset: &InfoSet) {
@@ -233,8 +219,7 @@ impl Nodes {
 pub struct Node {
     pub regrets: [f32; NUM_ACTIONS],
     pub strategy_sum: [f32; NUM_ACTIONS],
-    pub num_actions: usize, // TODO: Do I need to store num_actions? and t? Honestly maybe not even strategy_sum.
-    pub t: i32,
+    pub num_actions: usize, // TODO: Can you delete num_actions? and just go based on nonzero values
 }
 
 impl Node {
@@ -244,7 +229,6 @@ impl Node {
             regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
             num_actions,
-            t: 0,
         }
     }
 
