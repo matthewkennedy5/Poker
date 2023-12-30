@@ -592,7 +592,7 @@ pub fn terminal_utility_vectorized(
                     - blocked_prob_sums[card_index(&hand[0])]
                     - blocked_prob_sums[card_index(&hand[1])]
                     + opp_reach_probs[i];
-                total_prob * winnings / preflop_hands.len() as f64
+                total_prob * winnings
             })
             .collect();
         return utils;
@@ -750,8 +750,7 @@ pub fn terminal_utility_vectorized(
         prob_worse_adjusted -= prob_less;
         prob_better_adjusted -= prob_greater;
 
-        let util = history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted)
-            / preflop_hands.len() as f64;
+        let util = history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted);
 
         utils[d.index] = util;
     }

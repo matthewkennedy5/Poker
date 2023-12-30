@@ -165,17 +165,39 @@ pub fn iterate(
                 }
             }
 
-            let utility: Vec<f64> = iterate(
+            let mut nonzero_indexes: Vec<usize> = Vec::with_capacity(N);
+            let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
+            let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
+            let mut nonzero_traverser_reach_probs: Vec<f64> = Vec::with_capacity(N);
+            for i in 0..N {
+                if opp_reach_probs[i] > 0.0 || traverser_reach_probs[i] > 0.0 {
+                    nonzero_indexes.push(i);
+                    nonzero_preflop_hands.push(preflop_hands[i]);
+                    nonzero_opp_reach_probs.push(opp_reach_probs[i]);
+                    nonzero_traverser_reach_probs.push(traverser_reach_probs[i]);
+                }
+            }
+
+            let nonzero_utility: Vec<f64> = iterate(
                 traverser,
-                preflop_hands.clone(),
+                nonzero_preflop_hands,
                 board,
                 &next_history,
-                traverser_reach_probs,
-                opp_reach_probs,
+                nonzero_traverser_reach_probs,
+                nonzero_opp_reach_probs,
                 nodes,
                 depth - 1,
                 depth_limit_bot,
             );
+
+            let mut utility = vec![0.0; N];
+            let mut nonzero_idx = 0;
+            for i in 0..N {
+                if nonzero_idx < nonzero_indexes.len() && nonzero_indexes[nonzero_idx] == i {
+                    utility[i] = nonzero_utility[nonzero_idx];
+                    nonzero_idx += 1;
+                }
+            }
 
             for n in 0..node_utility.len() {
                 let prob: f32 = if history.player == traverser {
@@ -286,12 +308,6 @@ fn depth_limit_utility(
             for i in 0..opp_reach_probs.len() {
                 opp_reach_probs[i] *= probs[i] as f64;
             }
-        }
-
-        if traverser_reach_probs.iter().all(|&x| x < 1e-10)
-            && opp_reach_probs.iter().all(|&x| x < 1e-10)
-        {
-            return vec![0.0; N];
         }
 
         let utility = depth_limit_utility(
