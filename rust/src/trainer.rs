@@ -28,6 +28,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
             cfr_iteration(&deck, &ActionHistory::new(), &nodes, -1);
             bar.inc(1);
         });
+
         bar.finish_with_message("Done");
         serialize_nodes(&nodes);
         blueprint_exploitability(&nodes, CONFIG.lbr_iters);
@@ -107,13 +108,35 @@ pub fn iterate(
     }
 
     if history.hand_over() {
-        return terminal_utility_vectorized(
-            preflop_hands,
-            opp_reach_probs,
+        let mut nonzero_indexes: Vec<usize> = Vec::with_capacity(N);
+        let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
+        let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
+        for i in 0..N {
+            if opp_reach_probs[i] > 0.0 {
+                nonzero_indexes.push(i);
+                nonzero_preflop_hands.push(preflop_hands[i]);
+                nonzero_opp_reach_probs.push(opp_reach_probs[i]);
+            }
+        }
+
+        let nonzero_utils = terminal_utility_vectorized(
+            nonzero_preflop_hands,
+            nonzero_opp_reach_probs,
             &board,
             history,
             traverser,
         );
+
+        let mut utils = vec![0.0; N];
+        let mut nonzero_idx = 0;
+        for i in 0..N {
+            if nonzero_idx < nonzero_indexes.len() && nonzero_indexes[nonzero_idx] == i {
+                utils[i] = nonzero_utils[nonzero_idx];
+                nonzero_idx += 1;
+            }
+        }
+
+        return utils;
     }
 
     // if depth < 0 && history.current_street_length == 0 {
@@ -164,53 +187,17 @@ pub fn iterate(
                 }
             }
 
-            // Here - try filtering out the preflop hands for nonzero probs,
-            // then inserting back the zeros on the "backward pass".
-            let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
-            let mut nonzero_traverser_reach_probs: Vec<f64> = Vec::with_capacity(N);
-            let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
-            let mut zeros: Vec<usize> = Vec::with_capacity(N);
-            for i in 0..preflop_hands.len() {
-                if traverser_reach_probs[i] > 1e-20 || opp_reach_probs[i] > 1e-20 {
-                    nonzero_preflop_hands.push(preflop_hands[i]);
-                    nonzero_traverser_reach_probs.push(traverser_reach_probs[i]);
-                    nonzero_opp_reach_probs.push(opp_reach_probs[i]);
-                } else {
-                    zeros.push(i);
-                }
-            }
-
-            // if nonzero_preflop_hands.len() < preflop_hands.len() {
-            //     println!("Breakpoint");
-            // }
-
-            let mut utility: Vec<f64> = iterate(
+            let utility: Vec<f64> = iterate(
                 traverser,
-                nonzero_preflop_hands.clone(),
+                preflop_hands.clone(),
                 board,
                 &next_history,
-                nonzero_traverser_reach_probs,
-                nonzero_opp_reach_probs,
+                traverser_reach_probs,
+                opp_reach_probs,
                 nodes,
                 depth - 1,
                 depth_limit_bot,
             );
-
-            // Insert 0s into the utility
-            let mut result_utilities: Vec<f64> = vec![0.0; preflop_hands.len()];
-            let mut utility_idx = 0;
-            let mut zeros_idx = 0;
-            for i in 0..preflop_hands.len() {
-                if zeros_idx < zeros.len() && zeros[zeros_idx] == i {
-                    // If the current index is in `zeros`, we just increment zeros_idx to move to the next zero
-                    zeros_idx += 1;
-                } else {
-                    // Otherwise, insert the utility value from the `utility` vector
-                    result_utilities[i] = utility[utility_idx];
-                    utility_idx += 1;
-                }
-            }
-            utility = result_utilities;
 
             for n in 0..node_utility.len() {
                 let prob: f32 = if history.player == traverser {

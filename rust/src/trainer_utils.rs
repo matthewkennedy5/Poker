@@ -564,8 +564,6 @@ pub fn terminal_utility_vectorized_fast(
     history: &ActionHistory,
     player: usize,
 ) -> Vec<f64> {
-    // START HERE: make sure the current code works (maybe fix the super slow load of IntMap read_serialized)
-    // and then keep killing off all the HashMaps. no hash!
     // https://www.cs.cmu.edu/~waugh/publications/johanson11.pdf "Example 3" at end of page 4
     if history.last_action().unwrap().action == ActionType::Fold {
         // Someone folded -- assign the chips to the winner.
@@ -796,32 +794,55 @@ pub fn terminal_utility_vectorized(
     history: &ActionHistory,
     player: usize,
 ) -> Vec<f64> {
-    let fast = terminal_utility_vectorized_fast(
-        preflop_hands.clone(),
-        opp_reach_probs.clone(),
-        board,
+    let N = preflop_hands.len();
+    let mut nonzero_indexes: Vec<usize> = Vec::with_capacity(N);
+    let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
+    let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
+    for i in 0..N {
+        if opp_reach_probs[i] > 0.0 {
+            nonzero_indexes.push(i);
+            nonzero_preflop_hands.push(preflop_hands[i]);
+            nonzero_opp_reach_probs.push(opp_reach_probs[i]);
+        }
+    }
+
+    let nonzero_utils = terminal_utility_vectorized_fast(
+        nonzero_preflop_hands,
+        nonzero_opp_reach_probs,
+        &board,
         history,
         player,
     );
+
+    let mut utils = vec![0.0; N];
+    let mut nonzero_idx = 0;
+    for i in 0..N {
+        if nonzero_idx < nonzero_indexes.len() && nonzero_indexes[nonzero_idx] == i {
+            utils[i] = nonzero_utils[nonzero_idx];
+            nonzero_idx += 1;
+        }
+    }
+
     // TODO Refactor: make this an automated test instead of assert
-    // debug_assert!({
-    //     let slow = terminal_utility_vectorized_slow(
-    //         preflop_hands.clone(),
-    //         opp_reach_probs.clone(),
-    //         board,
-    //         history,
-    //         player,
-    //     );
-    //     assert!(
-    //         fast.iter()
-    //             .zip(slow.iter())
-    //             .all(|(&a, &b)| (a - b).abs() < 1e-6),
-    //         "{} != {}",
-    //         fast[0],
-    //         slow[0]
-    //     );
-    //     true
-    // });
+    let fast = utils;
+    debug_assert!({
+        let slow = terminal_utility_vectorized_slow(
+            preflop_hands.clone(),
+            opp_reach_probs.clone(),
+            board,
+            history,
+            player,
+        );
+        assert!(
+            fast.iter()
+                .zip(slow.iter())
+                .all(|(&a, &b)| (a - b).abs() < 1e-6),
+            "{} != {}",
+            fast[0],
+            slow[0]
+        );
+        true
+    });
     fast
 }
 
