@@ -108,35 +108,13 @@ pub fn iterate(
     }
 
     if history.hand_over() {
-        let mut nonzero_indexes: Vec<usize> = Vec::with_capacity(N);
-        let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
-        let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
-        for i in 0..N {
-            if opp_reach_probs[i] > 0.0 {
-                nonzero_indexes.push(i);
-                nonzero_preflop_hands.push(preflop_hands[i]);
-                nonzero_opp_reach_probs.push(opp_reach_probs[i]);
-            }
-        }
-
-        let nonzero_utils = terminal_utility_vectorized(
-            nonzero_preflop_hands,
-            nonzero_opp_reach_probs,
+        return terminal_utility_vectorized(
+            preflop_hands,
+            opp_reach_probs,
             &board,
             history,
             traverser,
         );
-
-        let mut utils = vec![0.0; N];
-        let mut nonzero_idx = 0;
-        for i in 0..N {
-            if nonzero_idx < nonzero_indexes.len() && nonzero_indexes[nonzero_idx] == i {
-                utils[i] = nonzero_utils[nonzero_idx];
-                nonzero_idx += 1;
-            }
-        }
-
-        return utils;
     }
 
     // if depth < 0 && history.current_street_length == 0 {
