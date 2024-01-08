@@ -565,6 +565,8 @@ pub fn terminal_utility_vectorized(
     player: usize,
 ) -> Vec<f64> {
     // https://www.cs.cmu.edu/~waugh/publications/johanson11.pdf "Example 3" at end of page 4
+
+    const MULTIPLE: f64 = 0.0001;
     if history.last_action().unwrap().action == ActionType::Fold {
         // Someone folded -- assign the chips to the winner.
         let winner = history.player;
@@ -592,7 +594,7 @@ pub fn terminal_utility_vectorized(
                     - blocked_prob_sums[card_index(&hand[0])]
                     - blocked_prob_sums[card_index(&hand[1])]
                     + opp_reach_probs[i];
-                total_prob * winnings
+                total_prob * winnings * MULTIPLE
             })
             .collect();
         return utils;
@@ -750,7 +752,8 @@ pub fn terminal_utility_vectorized(
         prob_worse_adjusted -= prob_less;
         prob_better_adjusted -= prob_greater;
 
-        let util = history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted);
+        let util =
+            history.pot() as f64 / 2.0 * (prob_worse_adjusted - prob_better_adjusted) * MULTIPLE;
 
         utils[d.index] = util;
     }

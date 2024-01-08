@@ -465,7 +465,7 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
 
     let mut clusters: Vec<i32> = vec![0; distributions.len()];
 
-    const ITERS: u64 = 10;
+    const ITERS: u64 = 200;
     let bar = pbar(ITERS as u64);
     let mut prev_distance_sum = 0.0;
     for iter in 0..ITERS {

@@ -18,6 +18,23 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
     } else {
         Nodes::new(&CONFIG.bet_abstraction)
     };
+
+    // Reset all strategy sums
+    // for entry in nodes.dashmap.iter() {
+    //     let history = entry.key();
+    //     let n_buckets = if history.street == PREFLOP {
+    //         169
+    //     } else {
+    //         10000
+    //     };
+    //     for card_bucket in 0..n_buckets {
+    //         nodes.reset_strategy_sum(&InfoSet {
+    //             history: history.clone(),
+    //             card_bucket: card_bucket,
+    //         });
+    //     }
+    // }
+
     println!("[INFO] Beginning training.");
     let num_epochs = iters / eval_every;
     for epoch in 0..num_epochs {
@@ -108,29 +125,49 @@ pub fn iterate(
     }
 
     if history.hand_over() {
-        let mut nonzero_indexes: Vec<usize> = Vec::with_capacity(N);
-        let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
-        let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
-        let mut nonzero_traverser_reach_probs: Vec<f64> = Vec::with_capacity(N);
-        for i in 0..N {
-            if opp_reach_probs[i] > 0.0 || traverser_reach_probs[i] > 0.0 {
-                nonzero_indexes.push(i);
-                nonzero_preflop_hands.push(preflop_hands[i]);
-                nonzero_opp_reach_probs.push(opp_reach_probs[i]);
-                nonzero_traverser_reach_probs.push(traverser_reach_probs[i]);
-            }
-        }
-        let nonzero_utility =
-            terminal_utility_vectorized(preflop_hands, opp_reach_probs, &board, history, traverser);
-        let mut utility = vec![0.0; N];
-        let mut nonzero_idx = 0;
-        for i in 0..N {
-            if nonzero_idx < nonzero_indexes.len() && nonzero_indexes[nonzero_idx] == i {
-                utility[i] = nonzero_utility[nonzero_idx];
-                nonzero_idx += 1;
-            }
-        }
-        return utility;
+        // let mut nonzero_indexes: Vec<usize> = Vec::with_capacity(N);
+        // let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
+        // let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
+        // let mut nonzero_traverser_reach_probs: Vec<f64> = Vec::with_capacity(N);
+        // for i in 0..N {
+        //     if opp_reach_probs[i] > 0.0 || traverser_reach_probs[i] > 0.0 {
+        //         nonzero_indexes.push(i);
+        //         nonzero_preflop_hands.push(preflop_hands[i]);
+        //         nonzero_opp_reach_probs.push(opp_reach_probs[i]);
+        //         nonzero_traverser_reach_probs.push(traverser_reach_probs[i]);
+        //     }
+        // }
+        // let nonzero_utility = terminal_utility_vectorized(
+        //     nonzero_preflop_hands,
+        //     nonzero_opp_reach_probs,
+        //     &board,
+        //     history,
+        //     traverser,
+        // );
+        // let mut utility = vec![0.0; N];
+        // let mut nonzero_idx = 0;
+        // for i in 0..N {
+        //     if nonzero_idx < nonzero_indexes.len() && nonzero_indexes[nonzero_idx] == i {
+        //         utility[i] = nonzero_utility[nonzero_idx];
+        //         nonzero_idx += 1;
+        //     }
+        // }
+
+        let og_utility = terminal_utility_vectorized(
+            preflop_hands,
+            opp_reach_probs.clone(),
+            &board,
+            history,
+            traverser,
+        );
+        // for i in 0..N {
+        //     assert!(
+        //         (traverser_reach_probs[i] < 1e-10 && opp_reach_probs[i] < 1e-10)
+        //             || (og_utility[i] - utility[i]).abs() < 1e-6
+        //     )
+        // }
+
+        return og_utility;
     }
 
     // if depth < 0 && history.current_street_length == 0 {

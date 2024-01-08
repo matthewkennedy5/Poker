@@ -50,7 +50,10 @@ impl Nodes {
             let infoset = &infosets[hand_idx];
             let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
             let mut node = node_mutex.lock().unwrap();
-            let accumulated_regret = node.regrets[action_index] + regret as f32;
+            let mut accumulated_regret = node.regrets[action_index] + regret as f32;
+            // if accumulated_regret < 0.0 {
+            //     accumulated_regret = 0.0;
+            // }
             node.regrets[action_index] = accumulated_regret;
         }
     }
