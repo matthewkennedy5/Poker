@@ -72,10 +72,6 @@ impl Range {
 
     pub fn normalize_range(&mut self) {
         let sum: f64 = self.probs.iter().sum();
-        if sum == 0.0 {
-            self.probs = vec![1.0 / N_PREFLOP_HANDS as f64; N_PREFLOP_HANDS];
-        } else {
-            self.probs = self.probs.iter().map(|prob| prob / sum).collect();
-        }
+        self.probs = self.probs.iter().map(|prob| prob / sum).collect();
     }
 }
