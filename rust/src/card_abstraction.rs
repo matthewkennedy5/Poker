@@ -6,6 +6,7 @@
 
 use crate::config::CONFIG;
 use crate::{card_utils::*, ABSTRACTION};
+use ahash::AHashMap as HashMap;
 use dashmap::DashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
@@ -14,7 +15,6 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use smallvec::ToSmallVec;
 use std::sync::Mutex;
 use std::{
-    collections::HashMap,
     fs::File,
     io::{BufReader, BufWriter},
     path::Path,

@@ -6,9 +6,9 @@ use crate::exploiter::*;
 use crate::nodes::*;
 use crate::ranges::Range;
 use crate::trainer_utils::*;
+use ahash::AHashMap as HashMap;
 use rand::prelude::*;
 use rayon::prelude::*;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 

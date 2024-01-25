@@ -1,10 +1,11 @@
 use crate::itertools::Itertools;
+use ahash::AHashMap as HashMap;
 use once_cell::sync::Lazy;
 use rs_poker::core::{Hand, Rank, Rankable};
 use serde::{Deserialize, Serialize};
 use smallvec::{SmallVec, ToSmallVec};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     fmt,
     fs::File,
     io::{BufReader, BufWriter},

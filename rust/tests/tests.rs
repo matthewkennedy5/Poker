@@ -6,7 +6,9 @@ use optimus::*;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::*;
-use std::{collections::{HashMap, HashSet}, fs::canonicalize};
+use std::{collections::HashSet, fs::canonicalize};
+use ahash::AHashMap as HashMap;
+
 
 static BOT: Lazy<Bot> = Lazy::new(|| {
     Bot::new(
