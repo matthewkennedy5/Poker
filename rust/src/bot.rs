@@ -1,3 +1,5 @@
+use core::num;
+
 use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::nodes::*;
@@ -113,49 +115,26 @@ impl Bot {
         let mut hole: [Card; 2] = [hole[0], hole[1]];
         hole.sort();
 
-        let subgame_root = history;
-        let translated_history = subgame_root.translate(&CONFIG.bet_abstraction);
+        // Just playing against blueprint for now, so no action translation. TODO
+        // let translated_history = subgame_root.translate(&CONFIG.bet_abstraction);
+        let translated_history = history.clone();
 
         // Get our beliefs of the opponent's range given their actions up to the subgame root.
         // Use action translation to map the actions so far to infosets in the blueprint strategy.
         let get_strategy = |hole: &[Card], board: &[Card], history: &ActionHistory| {
             self.get_strategy_action_translation(hole, board, history)
-            // TODO: The other move here is to get the opponent range via past unsafe subgame solving,
-            // and keep track of the range as you go.
         };
 
         let opp_range = Range::get_opponent_range(&hole, &board, &translated_history, get_strategy);
-        // println!("Player hand: {}", cards2str(&hole));
-        // println!("History: {}", translated);
-        // println!("Board: {}", cards2str(&board));
-        // println!("Beliefs about opponent hands:");
-
-        // The blueprint currently has weird ideas about the opponent's range, but keep in mind
-        // it is necessarily correct when playing against the blueprint.
-        // let mut beliefs: Vec<([Card; 2], f64)> = opp_range
-        //     .get_map()
-        //     .iter()
-        //     .map(|(hand, prob)| ([hand[0], hand[1]], prob.clone()))
-        //     .collect();
-        // beliefs.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-
-        // for (hand, prob) in beliefs {
-        //     println!("{}: {}", cards2str(&hand), prob)
-        // }
-
         let opp_action = history.last_action().unwrap();
-
-        // TODO: Add the opponent's action to the bet abstraction
-
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(&hole, &board, &translated_history);
-        // TODO Refactor: rename this SmallVecFloats thing to like F32SmallVec or something
         let mut prev_strategy: SmallVecFloats =
             smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
 
-        let num_epochs = 100;
+        let num_epochs = 2;
         // let epoch = CONFIG.subgame_iters / num_epochs;
-        let epoch = 10_000;
+        let epoch = CONFIG.subgame_iters / num_epochs;
         // let it keep solving the subgame until it converges. but with an upper limit to avoid
         // some kind of infinite loop situation.
         for i in 0..num_epochs {
@@ -164,7 +143,7 @@ impl Bot {
             }
             let bar = pbar(epoch);
             (0..epoch).into_par_iter().for_each(|_| {
-                for player in [DEALER, OPPONENT].iter() {
+                for traverser in [DEALER, OPPONENT].iter() {
                     let mut deck = deck();
                     deck.retain(|c| !hole.contains(c));
                     deck.retain(|c| !board.contains(c));
@@ -174,27 +153,49 @@ impl Bot {
                     board.extend(deck.iter().take(5 - board.len()).cloned());
                     let board = [board[0], board[1], board[2], board[3], board[4]];
 
-                    let mut range = Range::new();
-                    range.remove_blockers(&board);
-                    let mut preflop_hands = Vec::with_capacity(range.hands.len());
-                    // TODO Refactor: have a clean way to return a list of the non blocking hands. this
-                    // is duplicated in cfr_iteration as well.
-                    let mut traverser_reach_probs = Vec::with_capacity(range.hands.len());
-                    let mut opp_reach_probs = Vec::with_capacity(range.hands.len());
-                    for hand_index in 0..range.hands.len() {
-                        let prob = range.probs[hand_index];
-                        if prob > 0.0 {
-                            preflop_hands.push(range.hands[hand_index]);
-                            if range.hands[hand_index] == hole {
-                                traverser_reach_probs.push(1.0);
+                    // let mut range = Range::new();
+                    // range.remove_blockers(&board);
+                    // let mut preflop_hands = Vec::with_capacity(range.hands.len());
+                    // // TODO Refactor: have a clean way to return a list of the non blocking hands. this
+                    // // is duplicated in cfr_iteration as well.
+                    // let mut traverser_reach_probs = Vec::with_capacity(range.hands.len());
+                    // let mut opp_reach_probs = Vec::with_capacity(range.hands.len());
+                    // for hand_index in 0..range.hands.len() {
+                    //     let prob = range.probs[hand_index];
+                    //     if prob > 0.0 {
+                    //         preflop_hands.push(range.hands[hand_index]);
+                    //         if range.hands[hand_index] == hole {
+                    //             traverser_reach_probs.push(1.0);
+                    //         } else {
+                    //             traverser_reach_probs.push(0.0);
+                    //         }
+                    //         opp_reach_probs.push(opp_range.probs[hand_index]);
+                    //     }
+                    // }
+                    let preflop_hands = non_blocking_preflop_hands(&board);
+
+                    // Get reach probs for each player based on their actions
+                    let mut traverser_reach_probs = vec![1.0; preflop_hands.len()];
+                    let mut opp_reach_probs = vec![1.0; preflop_hands.len()];
+                    let mut history_iter = ActionHistory::new();
+                    for action in history.get_actions() {
+                        for (i, preflop_hand) in preflop_hands.iter().enumerate() {
+                            let strat = self.get_strategy_action_translation(
+                                preflop_hand,
+                                &board,
+                                &history_iter,
+                            );
+                            let prob = strat.get(&action).expect("Action not in strategy");
+                            if &history_iter.player == traverser {
+                                traverser_reach_probs[i] *= prob;
                             } else {
-                                traverser_reach_probs.push(0.0);
+                                opp_reach_probs[i] *= prob;
                             }
-                            opp_reach_probs.push(opp_range.probs[hand_index]);
                         }
+                        history_iter.add(&action);
                     }
                     iterate(
-                        player.clone(),
+                        traverser.clone(),
                         preflop_hands,
                         board,
                         &translated_history,
@@ -234,10 +235,10 @@ impl Bot {
             );
             println!("Node: {:?}", node);
             println!("Strategy: {:?}", strategy);
-            if self.early_stopping && diff < 0.01 {
-                println!("Stopping early because CFR strategy has converged.");
-                break;
-            }
+            // if self.early_stopping && diff < 0.01 {
+            //     println!("Stopping early because CFR strategy has converged.");
+            //     break;
+            // }
             prev_strategy = strategy;
             bar.finish();
         }

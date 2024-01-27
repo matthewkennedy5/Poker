@@ -1,3 +1,4 @@
+use ahash::AHashMap as HashMap;
 use dashmap::DashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
@@ -6,7 +7,7 @@ use optimus::*;
 use rand::prelude::*;
 use rayon::prelude::*;
 use smallvec::*;
-use std::{collections::{HashMap, HashSet}, fs::canonicalize};
+use std::collections::HashSet;
 
 static BOT: Lazy<Bot> = Lazy::new(|| {
     Bot::new(
@@ -79,7 +80,7 @@ fn uint_hands() {
     assert_eq!(len(hand), 7);
     assert_eq!(hand2str(str2hand("9d8c7c6s5hQh")), "9d8c7c6s5hQh");
 
-    let cards = vec![
+    let cards: SmallVecHand = smallvec![
         Card::new("8d"),
         Card::new("7c"),
         Card::new("2d"),
@@ -91,7 +92,7 @@ fn uint_hands() {
 }
 
 fn fast_hand_strength(hand: Vec<&str>, table: &FastHandTable) -> i32 {
-    table.hand_strength(&strvec2cards(&hand))
+    table.hand_strength(&strvec2cards(&hand)).unwrap()
 }
 
 #[test]
@@ -710,7 +711,7 @@ fn isomorphic_hand_example() {
     // my code goes: clubs->clubs, spades->diamonds, diamonds->hearts, hearts->spades
     //                  clubs < spades < diamonds < hearts
 
-    let result: Vec<Card> = isomorphic_hand_streets(&hand).to_vec();
+    let result: Vec<Card> = isomorphic_hand(&hand).to_vec();
     assert_eq!(result, expected_result, "{}", cards2str(&result));
     // Card { rank: 8, suit: 0 }, Card { rank: 2, suit: 3 }, Card { rank: 4, suit: 0 }, Card { rank: 4, suit: 1 }, Card { rank: 10, suit: 1 }, Card { rank: 10, suit: 2 }, Card { rank: 13, suit: 2 }]
 }
@@ -936,8 +937,6 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
     let mut deck: Vec<Card> = deck();
     let mut rng = &mut rand::thread_rng();
     deck.shuffle(&mut rng);
-    TODO: play both positions for a duplicated hand, rather than a random new hand each time. this
-        can reduce variance somewhat. 
     let subgame_bot_position = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
     let mut history = ActionHistory::new();
     while !history.hand_over() {
@@ -1106,6 +1105,4 @@ fn test_terminal_utility() {
 }
 
 #[test]
-fn test_terminal_utility_vectorized() {
-    
-}
+fn test_terminal_utility_vectorized() {}
