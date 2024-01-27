@@ -12,12 +12,9 @@ fn main() {
     // if !Path::new(TURN_ABSTRACTION_PATH).exists() {
     //     make_abstraction(6, CONFIG.turn_buckets);
     // }
-    // if !Path::new(RIVER_ABSTRACTION_PATH).exists() {
-    //     make_abstraction(7, CONFIG.river_buckets);
-    // }
-    // create_abstraction_clusters();
-    // print_abstraction();
-
-    // expand_abstraction_keys();
+    if !Path::new(RIVER_ABSTRACTION_PATH).exists() {
+        make_abstraction(7, CONFIG.river_buckets);
+    }
+    create_abstraction_clusters();
     train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
 }

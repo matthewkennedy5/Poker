@@ -248,13 +248,9 @@ impl FastHandTable {
         }
     }
 
-    pub fn hand_strength(&self, hand: &[Card]) -> i32 {
+    pub fn hand_strength(&self, hand: &[Card]) -> Option<i32> {
         let compact = cards2bitmap(hand);
-        let strength = *self
-            .strengths
-            .get(&compact)
-            .unwrap_or_else(|| panic!("{} not in FastHandTable", cards2str(hand)));
-        strength
+        self.strengths.get(&compact).cloned()
     }
 
     fn load_hand_strengths() -> HashMap<u64, i32> {

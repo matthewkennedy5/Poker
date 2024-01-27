@@ -596,7 +596,7 @@ pub fn terminal_utility_vectorized_fast(
         .map(|i| {
             let h = preflop_hands[i];
             let river_hand = [h[0], h[1], board[0], board[1], board[2], board[3], board[4]];
-            let strength = FAST_HAND_TABLE.hand_strength(&river_hand);
+            let strength = FAST_HAND_TABLE.hand_strength(&river_hand).unwrap().clone();
             HandData {
                 hand: h,
                 strength,

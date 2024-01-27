@@ -65,13 +65,8 @@ impl Abstraction {
     }
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        // let isomorphic = isomorphic_hand(cards);
-
-        // flop holdem only hack
-        let mut cards = [cards[0], cards[1], cards[2], cards[3], cards[4]];
-        cards[0..2].sort_unstable();
-        cards[2..5].sort_unstable();
-        let hand = cards2hand(&cards);
+        let isomorphic = isomorphic_hand(cards);
+        let hand = cards2hand(&isomorphic);
         let bin_result = match cards.len() {
             5 => self.flop.get(&hand),
             6 => self.turn.get(&hand),
@@ -451,7 +446,7 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
 
     let mut clusters: Vec<i32> = vec![0; distributions.len()];
 
-    let iters = 1_000;
+    let iters = 20;
     let bar = pbar(iters as u64);
     let mut prev_distance_sum = 0.0;
     for iter in 0..iters {
