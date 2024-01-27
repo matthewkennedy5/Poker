@@ -2,16 +2,11 @@ use crate::card_abstraction::Abstraction;
 use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::nodes::*;
-use itertools::Itertools;
+use ahash::AHashMap as HashMap;
 use once_cell::sync::Lazy;
 use rand::{prelude::SliceRandom, thread_rng};
 use smallvec::SmallVec;
-use std::{
-    cmp::Eq,
-    collections::{HashMap, HashSet},
-    fmt,
-    hash::Hash,
-};
+use std::{cmp::Eq, collections::HashSet, fmt, hash::Hash};
 
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;

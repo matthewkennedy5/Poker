@@ -26,6 +26,7 @@ moka = { version = "*", features = ["sync"] }
 criterion = { version = "*", features = ["html_reports"] }
 smallvec = { version = "*", features = ["serde"] }
 dashmap = { version = "*", features = ["serde"] }
+ahash = { version = "0.8.7", features = ["serde"] }
 
 [profile.release]
 debug = true

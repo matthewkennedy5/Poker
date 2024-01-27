@@ -1,8 +1,8 @@
 use crate::card_utils::*;
 use crate::trainer_utils::*;
+use ahash::AHashMap as HashMap;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
-use std::collections::HashMap;
 
 // If a hand's probability is below PROB_CUTOFF in the range, just skip it since it has a negligible
 // contribution to the range.
