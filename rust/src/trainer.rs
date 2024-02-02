@@ -289,7 +289,10 @@ fn depth_limit_utility(
         .map(|h| InfoSet::from_hand(h, &board, history))
         .collect();
 
-    let strategies: Vec<Strategy> = depth_limit_nodes.get_strategy_vectorized(&infosets);
+    // Later on you'll need to worry about action translation (nodes not having the exact action history)
+    // but for now you don't. You also definitely will never need to repeatedly translate the actions
+    // for each infoset.
+    let strategies: Vec<SmallVecFloats> = depth_limit_nodes.get_strategy_vectorized(&infosets);
 
     // Sample a random action depending on the total probability for each action
     let N = preflop_hands.len();
@@ -297,10 +300,11 @@ fn depth_limit_utility(
 
     let action_prob_sums: HashMap<Action, f64> = next_actions
         .iter()
-        .map(|action| {
+        .enumerate()
+        .map(|(action_index, action)| {
             let mut prob_sum: f64 = 0.0;
             for i in 0..N {
-                let action_prob = strategies[i].get(action).unwrap().clone();
+                let action_prob = strategies[i].get(action_index).unwrap().clone() as f64;
                 let reach_prob = if history.player == traverser {
                     traverser_reach_probs[i]
                 } else {
@@ -324,10 +328,10 @@ fn depth_limit_utility(
         .unwrap()];
 
     let mut node_utility: Vec<f64> = vec![0.0; N];
-    for action in next_actions {
+    for (action_index, action) in next_actions.iter().enumerate() {
         let probs: Vec<f64> = strategies
             .iter()
-            .map(|strategy| strategy.get(&action).unwrap().clone())
+            .map(|strategy| strategy.get(action_index).unwrap().clone() as f64)
             .collect();
 
         let mut next_history = history.clone();

@@ -64,11 +64,14 @@ impl Abstraction {
     }
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
+        // TODO: Try a gigantic lookup table on the river. Time/space tradeoff.
         let isomorphic = isomorphic_hand(cards);
         let hand = cards2hand(&isomorphic);
         let bin_result = match cards.len() {
             5 => self.flop.get(&hand),
             6 => self.turn.get(&hand),
+            // TODO: Something's wrong here, AHashMap shouldn't be so slow.
+            // Try a different hashmap library?
             7 => self.river.get(&hand),
             _ => panic!("Bad number of cards"),
         };

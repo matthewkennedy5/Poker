@@ -225,12 +225,12 @@ impl Nodes {
         strategy
     }
 
-    pub fn get_strategy_vectorized(&self, infosets: &[InfoSet]) -> Vec<Strategy> {
+    pub fn get_strategy_vectorized(&self, infosets: &[InfoSet]) -> Vec<SmallVecFloats> {
         let history: &ActionHistory = &infosets[0].history;
         let node_vec_ref = self.dashmap.get(history).unwrap();
         let node_vec = node_vec_ref.value();
 
-        let strategies: Vec<Strategy> = infosets
+        let strategies: Vec<SmallVecFloats> = infosets
             .iter()
             .map(|infoset| {
                 let node = node_vec
@@ -238,13 +238,7 @@ impl Nodes {
                     .unwrap()
                     .lock()
                     .unwrap();
-                let cumulative_strategy = node.cumulative_strategy();
-                let actions = infoset.next_actions(&self.bet_abstraction);
-                let mut strategy = Strategy::new();
-                for (action, prob) in actions.iter().zip(node.cumulative_strategy().iter()) {
-                    strategy.insert(action.clone(), *prob as f64);
-                }
-                strategy
+                node.cumulative_strategy()
             })
             .collect();
         strategies
