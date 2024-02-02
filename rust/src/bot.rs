@@ -149,7 +149,7 @@ impl Bot {
                 nodes.reset_strategy_sum(&infoset);
             }
             let bar = pbar(epoch);
-            (0..epoch).into_par_iter().for_each(|_| {
+            (0..epoch).into_iter().for_each(|_| {
                 for &traverser in [DEALER, OPPONENT].iter() {
                     let mut deck = deck();
                     deck.retain(|c| !hole.contains(c));
@@ -206,7 +206,7 @@ impl Bot {
                         nonzero_opp_reach_probs,
                         &nodes,
                         self.depth_limit,
-                        Some(&self),
+                        Some(&self.blueprint),
                     );
                 }
                 bar.inc(1);
@@ -221,11 +221,6 @@ impl Bot {
                 .as_str(),
             );
             let strategy = node.cumulative_strategy();
-            // let diff: f32 = strategy
-            //     .iter()
-            //     .zip(prev_strategy.iter())
-            //     .map(|(&a, &b)| (a - b).abs())
-            //     .sum();
             println!(
                 "Hand: {} Board: {} | History: {}",
                 cards2str(&hole),
@@ -238,7 +233,6 @@ impl Bot {
             );
             println!("Node: {:?}", node);
             println!("Strategy: {:?}", strategy);
-            // prev_strategy = strategy;
             bar.finish();
         }
 

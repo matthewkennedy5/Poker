@@ -1,4 +1,3 @@
-use crate::bot::Bot;
 use crate::card_utils;
 use crate::card_utils::*;
 use crate::config::CONFIG;
@@ -25,7 +24,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
         println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
         let bar = card_utils::pbar(eval_every);
 
-        (0..eval_every).into_par_iter().for_each(|_| {
+        (0..eval_every).into_iter().for_each(|_| {
             cfr_iteration(&deck, &ActionHistory::new(), &nodes, -1);
             bar.inc(1);
         });
@@ -129,7 +128,7 @@ pub fn iterate(
     opp_reach_probs: Vec<f64>,
     nodes: &Nodes,
     depth_limit: i32,
-    depth_limit_bot: Option<&Bot>,
+    depth_limit_nodes: Option<&Nodes>,
 ) -> Vec<f64> {
     let N = preflop_hands.len();
     if N == 0 {
@@ -155,7 +154,7 @@ pub fn iterate(
             history,
             traverser_reach_probs,
             opp_reach_probs,
-            depth_limit_bot.expect("Depth limit bot not provided for depth limit utility"),
+            depth_limit_nodes.expect("Depth limit nodes not provided"),
         );
     }
 
@@ -220,7 +219,7 @@ pub fn iterate(
                 nonzero_opp_reach_probs,
                 nodes,
                 depth_limit - 1,
-                depth_limit_bot,
+                depth_limit_nodes,
             );
 
             // Hacky GPT-4 code sorry
@@ -271,7 +270,7 @@ fn depth_limit_utility(
     history: &ActionHistory,
     traverser_reach_probs: Vec<f64>,
     opp_reach_probs: Vec<f64>,
-    depth_limit_bot: &Bot,
+    depth_limit_nodes: &Nodes,
 ) -> Vec<f64> {
     if history.hand_over() {
         return terminal_utility_vectorized(
@@ -285,12 +284,12 @@ fn depth_limit_utility(
     // Basically the same as iterate(), except:
     // - get the strategies / prob updates from the depth_limit_bot
     // - don't update any nodes
-    let strategies: Vec<Strategy> = preflop_hands
+    let infosets: Vec<InfoSet> = preflop_hands
         .iter()
-        .map(|preflop_hand| {
-            depth_limit_bot.get_strategy_action_translation(preflop_hand, &board, history)
-        })
+        .map(|h| InfoSet::from_hand(h, &board, history))
         .collect();
+
+    let strategies: Vec<Strategy> = depth_limit_nodes.get_strategy_vectorized(&infosets);
 
     // Sample a random action depending on the total probability for each action
     let N = preflop_hands.len();
@@ -377,7 +376,7 @@ fn depth_limit_utility(
             &next_history,
             nonzero_traverser_reach_probs,
             nonzero_opp_reach_probs,
-            depth_limit_bot,
+            depth_limit_nodes,
         );
 
         // Hacky GPT-4 code sorry

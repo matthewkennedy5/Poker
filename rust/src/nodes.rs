@@ -214,42 +214,40 @@ impl Nodes {
 
     pub fn get_strategy(&self, hole: &[Card], board: &[Card], history: &ActionHistory) -> Strategy {
         let infoset = InfoSet::from_hand(hole, board, history);
-        let num_actions = infoset.next_actions(&self.bet_abstraction).len();
-        debug_assert!(
-            num_actions > 0,
-            "No valid next actions for history {}",
-            infoset.history
-        );
-        // let node = match self.get(&infoset) {
-        //     Some(n) => n.clone(),
-        //     None => Node::new(num_actions),
-        // };
         let node = self.get(&infoset).expect("Node not found").clone(); // All nodes must be in infoset
-        debug_assert!(
-            node.num_actions == num_actions,
-            "{} {}",
-            node.num_actions,
-            num_actions
-        );
         let mut strategy = Strategy::new();
         let actions = infoset.next_actions(&self.bet_abstraction);
         let cumulative_strategy = node.cumulative_strategy();
-        let sum: f32 = cumulative_strategy.iter().sum();
-        // println!("Infoset: {infoset}");
-        // println!("Actions: {:?}", actions);
-        // println!("Cumulative strategy: {:?}", cumulative_strategy);
-        debug_assert!((sum - 1.0).abs() < 0.01);
         for (action, prob) in actions.iter().zip(node.cumulative_strategy().iter()) {
             strategy.insert(action.clone(), *prob as f64);
         }
         let sum: f64 = strategy.values().sum();
-        debug_assert!(
-            { (sum - 1.0).abs() < 0.01 },
-            "Strategy {:?} sums to {}",
-            strategy,
-            sum,
-        );
         strategy
+    }
+
+    pub fn get_strategy_vectorized(&self, infosets: &[InfoSet]) -> Vec<Strategy> {
+        let history: &ActionHistory = &infosets[0].history;
+        let node_vec_ref = self.dashmap.get(history).unwrap();
+        let node_vec = node_vec_ref.value();
+
+        let strategies: Vec<Strategy> = infosets
+            .iter()
+            .map(|infoset| {
+                let node = node_vec
+                    .get(infoset.card_bucket as usize)
+                    .unwrap()
+                    .lock()
+                    .unwrap();
+                let cumulative_strategy = node.cumulative_strategy();
+                let actions = infoset.next_actions(&self.bet_abstraction);
+                let mut strategy = Strategy::new();
+                for (action, prob) in actions.iter().zip(node.cumulative_strategy().iter()) {
+                    strategy.insert(action.clone(), *prob as f64);
+                }
+                strategy
+            })
+            .collect();
+        strategies
     }
 }
 
@@ -273,6 +271,7 @@ impl Node {
     }
 
     pub fn cumulative_strategy(&self) -> SmallVecFloats {
+        // TODO: Should this round off low probabilities here? < 0.05
         normalize_smallvec(&self.strategy_sum[..self.num_actions])
     }
 }

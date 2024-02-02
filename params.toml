@@ -27,7 +27,7 @@ warm_start = false
 
 # Realtime solving
 subgame_solving = true
-subgame_iters = 1_000 
+subgame_iters = 10_000 
 depth_limit = 3   # -1 means always solve to the end of the game
 
 # Preflop chart
