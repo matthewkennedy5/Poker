@@ -150,26 +150,6 @@ impl Bot {
                     let mut board = board.clone();
                     board.extend(deck.iter().take(5 - board.len()).cloned());
                     let board = [board[0], board[1], board[2], board[3], board[4]];
-
-                    // let mut range = Range::new();
-                    // range.remove_blockers(&board);
-                    // let mut preflop_hands = Vec::with_capacity(range.hands.len());
-                    // // TODO Refactor: have a clean way to return a list of the non blocking hands. this
-                    // // is duplicated in cfr_iteration as well.
-                    // let mut traverser_reach_probs = Vec::with_capacity(range.hands.len());
-                    // let mut opp_reach_probs = Vec::with_capacity(range.hands.len());
-                    // for hand_index in 0..range.hands.len() {
-                    //     let prob = range.probs[hand_index];
-                    //     if prob > 0.0 {
-                    //         preflop_hands.push(range.hands[hand_index]);
-                    //         if range.hands[hand_index] == hole {
-                    //             traverser_reach_probs.push(1.0);
-                    //         } else {
-                    //             traverser_reach_probs.push(0.0);
-                    //         }
-                    //         opp_reach_probs.push(opp_range.probs[hand_index]);
-                    //     }
-                    // }
                     let preflop_hands = non_blocking_preflop_hands(&board);
 
                     // Get reach probs for each player based on their actions

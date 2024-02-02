@@ -61,11 +61,6 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
                 total_t += node.t as u64;
                 if node.t == 0 {
                     zero += 1;
-                    // let infoset2 = InfoSet {
-                    //     card_bucket: card_bucket as i32,
-                    //     history: history.clone(),
-                    // };
-                    // println!("{}: {}", history.street, card_bucket);
                 }
             }
         }
