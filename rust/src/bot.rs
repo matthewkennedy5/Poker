@@ -17,22 +17,15 @@ pub struct Bot {
     blueprint: Nodes,
     preflop_cache: PreflopCache,
     subgame_solving: bool,
-    early_stopping: bool,
     depth_limit: i32,
 }
 
 impl Bot {
-    pub fn new(
-        blueprint: Nodes,
-        subgame_solving: bool,
-        early_stopping: bool,
-        depth_limit: i32,
-    ) -> Bot {
+    pub fn new(blueprint: Nodes, subgame_solving: bool, depth_limit: i32) -> Bot {
         Bot {
             blueprint,
             preflop_cache: Cache::new(10_000),
             subgame_solving: subgame_solving,
-            early_stopping: early_stopping,
             depth_limit: depth_limit,
         }
     }
@@ -213,10 +206,6 @@ impl Bot {
             );
             println!("Node: {:?}", node);
             println!("Strategy: {:?}", strategy);
-            // if self.early_stopping && diff < 0.01 {
-            //     println!("Stopping early because CFR strategy has converged.");
-            //     break;
-            // }
             prev_strategy = strategy;
             bar.finish();
         }

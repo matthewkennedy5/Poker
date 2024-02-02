@@ -6,13 +6,30 @@ use std::time::Duration;
 fn bench_cfr(c: &mut Criterion) {
     let nodes: Nodes = Nodes::new(&CONFIG.bet_abstraction);
     let mut group = c.benchmark_group("cfr");
-    group.warm_up_time(Duration::new(60, 0));
-    // group.sample_size(10);
     group.bench_function("cfr", |b| {
         b.iter(|| cfr_iteration(&deck(), &ActionHistory::new(), &nodes, -1))
     });
     group.finish();
 }
+
+// fn bench_subgame_solving(c: &mut Criterion) {
+//     let blueprint = load_nodes(&CONFIG.nodes_path);
+//     let mut group = c.benchmark_group("subgame_solving");
+//     let bot = Bot::new(load_nodes(&CONFIG.nodes_path, true, false, &CONFIG.depth_limit)
+//     group.bench_function("subgame_solving", |b| {
+//         b.iter(|| {
+//             subgame_solving(
+//                 &blueprint,
+//                 &str2cards("8dTd"),
+//                 &str2cards("Ad7c8c"),
+//                 &ActionHistory::new(),
+//                 0,
+//                 1,
+//             )
+//         })
+//     });
+//     group.finish();
+// }
 
 fn bench_isomorphic_hand(c: &mut Criterion) {
     let mut deck = deck();

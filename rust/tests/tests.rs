@@ -905,13 +905,8 @@ fn test_subgame_solving() {
 
 #[test]
 fn subgame_solving_beats_blueprint() {
-    let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
-    let subgame_bot = Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        true,
-        true,
-        CONFIG.depth_limit,
-    );
+    let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, 100);
+    let subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, CONFIG.depth_limit);
 
     let iters = 1_000_000;
     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
@@ -982,8 +977,8 @@ fn river_equity_cache_mem_usage() {
 // #[test]
 fn test_depth_limit_probability() {
     // Compare the subgame solving strategy with and without depth limited solving.
-    let full_subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, true, -1);
-    let depth_limit_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, true, 5);
+    let full_subgame_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, -1);
+    let depth_limit_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, 5);
 
     let hands = 1_000;
     let bar = pbar(hands as u64);
@@ -1028,7 +1023,7 @@ fn test_depth_limit_probability() {
 fn subgame_strategy_stability() {
     // for depth in [10, 8, 6, 4, 2].iter() {
     let depth = 5;
-    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, true, depth.clone());
+    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, depth.clone());
     let strategy = bot.get_strategy(
         &str2cards("8hAd"),
         &str2cards("8dAc7s"),
