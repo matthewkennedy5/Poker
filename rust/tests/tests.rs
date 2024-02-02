@@ -13,7 +13,6 @@ static BOT: Lazy<Bot> = Lazy::new(|| {
     Bot::new(
         load_nodes(&CONFIG.nodes_path),
         CONFIG.subgame_solving,
-        false,
         CONFIG.depth_limit,
     )
 });

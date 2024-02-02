@@ -12,24 +12,22 @@ fn bench_cfr(c: &mut Criterion) {
     group.finish();
 }
 
-// fn bench_subgame_solving(c: &mut Criterion) {
-//     let blueprint = load_nodes(&CONFIG.nodes_path);
-//     let mut group = c.benchmark_group("subgame_solving");
-//     let bot = Bot::new(load_nodes(&CONFIG.nodes_path, true, false, &CONFIG.depth_limit)
-//     group.bench_function("subgame_solving", |b| {
-//         b.iter(|| {
-//             subgame_solving(
-//                 &blueprint,
-//                 &str2cards("8dTd"),
-//                 &str2cards("Ad7c8c"),
-//                 &ActionHistory::new(),
-//                 0,
-//                 1,
-//             )
-//         })
-//     });
-//     group.finish();
-// }
+fn bench_subgame_solving(c: &mut Criterion) {
+    let blueprint = load_nodes(&CONFIG.nodes_path);
+    let mut group = c.benchmark_group("subgame_solving");
+    let bot = Bot::new(load_nodes(&CONFIG.nodes_path), true, CONFIG.depth_limit);
+    group.sample_size(10);
+    group.bench_function("subgame_solving", |b| {
+        b.iter(|| {
+            bot.get_strategy(
+                &str2cards("5sTc"),
+                &str2cards("8h9hAd"),
+                &ActionHistory::from_strings(vec!["Call 100", "Call 100", "Call 0"]),
+            )
+        })
+    });
+    group.finish();
+}
 
 fn bench_isomorphic_hand(c: &mut Criterion) {
     let mut deck = deck();
@@ -113,6 +111,6 @@ fn bench_terminal_utility_vectorized(c: &mut Criterion) {
 criterion_group!(
     name=benches;
     config=Criterion::default().configure_from_args();
-    targets=bench_cfr, bench_isomorphic_hand, bench_win_probability_rollout, bench_play_hand, bench_terminal_utility_vectorized
+    targets=bench_cfr, bench_subgame_solving, bench_isomorphic_hand, bench_win_probability_rollout, bench_play_hand, bench_terminal_utility_vectorized
 );
 criterion_main!(benches);

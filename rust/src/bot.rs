@@ -120,21 +120,37 @@ impl Bot {
         let opp_action = history.last_action().unwrap();
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(&hole, &board, &translated_history);
-        let mut prev_strategy: SmallVecFloats =
-            smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
+        // let mut prev_strategy: SmallVecFloats =
+        //     smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
+
+        // Get reach probs for each player based on their actions
+        let preflop_hands = non_blocking_preflop_hands(&board);
+        let mut dealer_reach_probs = vec![1.0; preflop_hands.len()];
+        let mut oop_reach_probs = vec![1.0; preflop_hands.len()];
+        let mut history_iter = ActionHistory::new();
+        for action in history.get_actions() {
+            for (i, preflop_hand) in preflop_hands.iter().enumerate() {
+                let strat =
+                    self.get_strategy_action_translation(preflop_hand, &board, &history_iter);
+                let prob = strat.get(&action).expect("Action not in strategy");
+                if history_iter.player == DEALER {
+                    dealer_reach_probs[i] *= prob;
+                } else {
+                    oop_reach_probs[i] *= prob;
+                }
+            }
+            history_iter.add(&action);
+        }
 
         let num_epochs = 2;
-        // let epoch = CONFIG.subgame_iters / num_epochs;
         let epoch = CONFIG.subgame_iters / num_epochs;
-        // let it keep solving the subgame until it converges. but with an upper limit to avoid
-        // some kind of infinite loop situation.
         for i in 0..num_epochs {
             if i == 1 {
                 nodes.reset_strategy_sum(&infoset);
             }
             let bar = pbar(epoch);
-            (0..epoch).into_iter().for_each(|_| {
-                for traverser in [DEALER, OPPONENT].iter() {
+            (0..epoch).into_par_iter().for_each(|_| {
+                for &traverser in [DEALER, OPPONENT].iter() {
                     let mut deck = deck();
                     deck.retain(|c| !hole.contains(c));
                     deck.retain(|c| !board.contains(c));
@@ -143,35 +159,51 @@ impl Bot {
                     let mut board = board.clone();
                     board.extend(deck.iter().take(5 - board.len()).cloned());
                     let board = [board[0], board[1], board[2], board[3], board[4]];
-                    let preflop_hands = non_blocking_preflop_hands(&board);
+                    let iter_preflop_hands = non_blocking_preflop_hands(&board);
 
-                    // Get reach probs for each player based on their actions
-                    let mut traverser_reach_probs = vec![1.0; preflop_hands.len()];
-                    let mut opp_reach_probs = vec![1.0; preflop_hands.len()];
-                    let mut history_iter = ActionHistory::new();
-                    for action in history.get_actions() {
-                        for (i, preflop_hand) in preflop_hands.iter().enumerate() {
-                            let strat = self.get_strategy_action_translation(
-                                preflop_hand,
-                                &board,
-                                &history_iter,
-                            );
-                            let prob = strat.get(&action).expect("Action not in strategy");
-                            if &history_iter.player == traverser {
-                                traverser_reach_probs[i] *= prob;
-                            } else {
-                                opp_reach_probs[i] *= prob;
-                            }
+                    // Some preflop_hands are not in iter_preflop_hands. For those, also delete
+                    // the reach probs at the same indexes
+                    let mut dealer_reach_probs = dealer_reach_probs.clone();
+                    let mut oop_reach_probs = oop_reach_probs.clone();
+                    for (i, preflop_hand) in preflop_hands.iter().enumerate() {
+                        if !iter_preflop_hands.contains(preflop_hand) {
+                            dealer_reach_probs[i] = 0.0;
+                            oop_reach_probs[i] = 0.0;
                         }
-                        history_iter.add(&action);
                     }
+
+                    let traverser_reach_probs;
+                    let opp_reach_probs;
+                    if traverser == DEALER {
+                        traverser_reach_probs = dealer_reach_probs.clone();
+                        opp_reach_probs = oop_reach_probs.clone();
+                    } else {
+                        traverser_reach_probs = oop_reach_probs.clone();
+                        opp_reach_probs = dealer_reach_probs.clone();
+                    };
+
+                    let N = iter_preflop_hands.len();
+                    let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
+                    let mut nonzero_traverser_reach_probs: Vec<f64> = Vec::with_capacity(N);
+                    let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
+                    let mut zeros: Vec<usize> = Vec::with_capacity(N);
+                    for i in 0..preflop_hands.len() {
+                        if traverser_reach_probs[i] > 1e-10 || opp_reach_probs[i] > 1e-10 {
+                            nonzero_preflop_hands.push(preflop_hands[i]);
+                            nonzero_traverser_reach_probs.push(traverser_reach_probs[i]);
+                            nonzero_opp_reach_probs.push(opp_reach_probs[i]);
+                        } else {
+                            zeros.push(i);
+                        }
+                    }
+
                     iterate(
-                        traverser.clone(),
-                        preflop_hands,
+                        traverser,
+                        nonzero_preflop_hands,
                         board,
                         &translated_history,
-                        traverser_reach_probs,
-                        opp_reach_probs,
+                        nonzero_traverser_reach_probs,
+                        nonzero_opp_reach_probs,
                         &nodes,
                         self.depth_limit,
                         Some(&self),
@@ -189,11 +221,11 @@ impl Bot {
                 .as_str(),
             );
             let strategy = node.cumulative_strategy();
-            let diff: f32 = strategy
-                .iter()
-                .zip(prev_strategy.iter())
-                .map(|(&a, &b)| (a - b).abs())
-                .sum();
+            // let diff: f32 = strategy
+            //     .iter()
+            //     .zip(prev_strategy.iter())
+            //     .map(|(&a, &b)| (a - b).abs())
+            //     .sum();
             println!(
                 "Hand: {} Board: {} | History: {}",
                 cards2str(&hole),
@@ -206,7 +238,7 @@ impl Bot {
             );
             println!("Node: {:?}", node);
             println!("Strategy: {:?}", strategy);
-            prev_strategy = strategy;
+            // prev_strategy = strategy;
             bar.finish();
         }
 
