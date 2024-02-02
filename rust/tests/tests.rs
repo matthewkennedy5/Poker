@@ -80,7 +80,7 @@ fn uint_hands() {
     assert_eq!(len(hand), 7);
     assert_eq!(hand2str(str2hand("9d8c7c6s5hQh")), "9d8c7c6s5hQh");
 
-    let cards: SmallVecHand = smallvec![
+    let cards: Vec<Card> = vec![
         Card::new("8d"),
         Card::new("7c"),
         Card::new("2d"),
@@ -903,7 +903,7 @@ fn test_subgame_solving() {
     );
 }
 
-// #[test]
+#[test]
 fn subgame_solving_beats_blueprint() {
     let blueprint_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, false, 100);
     let subgame_bot = Bot::new(
