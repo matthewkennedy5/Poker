@@ -21,7 +21,7 @@ use std::{
 
 pub static RIVER_EQUITY_CACHE: Lazy<DashMap<SmallVecHand, f64>> = Lazy::new(DashMap::new);
 
-pub const FLOP_ABSTRACTION_PATH: &str = "products/flop_abstraction_large.bin";
+pub const FLOP_ABSTRACTION_PATH: &str = "products/flop_abstraction.bin";
 pub const TURN_ABSTRACTION_PATH: &str = "products/turn_abstraction.bin";
 pub const RIVER_ABSTRACTION_PATH: &str = "products/river_abstraction.bin";
 
@@ -64,7 +64,14 @@ impl Abstraction {
     }
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        // TODO: Try a gigantic lookup table on the river. Time/space tradeoff.
+        // let isomorphic = if cards.len() == 7 {
+        //     isomorphic_hand(cards)
+        // } else {
+        //     let mut isomorphic = cards.to_smallvec();
+        //     isomorphic[0..2].sort_unstable();
+        //     isomorphic[2..].sort_unstable();
+        //     isomorphic
+        // };
         let isomorphic = isomorphic_hand(cards);
         let hand = cards2hand(&isomorphic);
         let bin_result = match cards.len() {
@@ -376,12 +383,14 @@ pub fn create_abstraction_clusters() {
     serialize(abstraction, "products/turn_abstraction.bin");
 }
 
-pub fn expand_abstraction_keys() {
+pub fn expand_abstraction_keys(n_cards: usize) {
     let deck = deck();
-    let n_cards = 5;
     let mut table: HashMap<u64, i32> = HashMap::new();
-    println!("Saving massive table of all flop hands -> flop buckets...");
-    let bar = pbar(25989600);
+    let bar = pbar(match n_cards {
+        5 => 25989600,
+        6 => 305377800,
+        _ => panic!(),
+    });
     for preflop in deck.iter().combinations(2) {
         let mut sorted_preflop: SmallVecHand = preflop.iter().cloned().cloned().collect();
         sorted_preflop.sort_unstable();
@@ -399,7 +408,13 @@ pub fn expand_abstraction_keys() {
             bar.inc(1);
         }
     }
-    serialize(table, "products/flop_abstraction_large.bin");
+    bar.finish_with_message("Done.");
+    let path = match n_cards {
+        5 => "products/flop_abstraction_large.bin",
+        6 => "products/turn_abstraction_large.bin",
+        _ => panic!(),
+    };
+    serialize(table, path);
 }
 
 pub fn get_equity_distributions(street: &str) -> Vec<Vec<f32>> {
