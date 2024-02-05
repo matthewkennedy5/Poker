@@ -160,20 +160,15 @@ pub fn pbar(n: u64) -> indicatif::ProgressBar {
     bar
 }
 
-fn sort_isomorphic(cards: &[Card]) -> SmallVecHand {
-    let mut sorted: SmallVecHand = SmallVec::with_capacity(7);
+#[inline]
+fn sort_isomorphic(cards: &mut [Card]) {
+    // let mut sorted: SmallVecHand = SmallVec::with_capacity(7);
     if cards.len() > 2 {
-        let mut preflop: SmallVecHand = cards[..2].to_smallvec();
-        let mut board: SmallVecHand = cards[2..].to_smallvec();
-        preflop.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
-        board.sort_unstable_by_key(|c: &Card| (c.suit, c.rank));
-        sorted.extend(preflop);
-        sorted.extend(board);
+        cards[0..2].sort_unstable_by_key(|c| (c.suit, c.rank));
+        cards[2..].sort_unstable_by_key(|c| (c.suit, c.rank));
     } else {
-        sorted = cards.to_smallvec();
-        sorted.sort_unstable_by_key(|c| (c.suit, c.rank));
+        cards.sort_unstable_by_key(|c| (c.suit, c.rank));
     }
-    sorted
 }
 
 // https://stackoverflow.com/a/3831682
@@ -196,8 +191,8 @@ fn sort_isomorphic(cards: &[Card]) -> SmallVecHand {
 // If streets == true, it separately considers the preflop and postflop (private vs public info).
 //
 pub fn isomorphic_hand(cards: &[Card]) -> SmallVecHand {
-    let mut cards_mut: SmallVecHand = cards.to_smallvec();
-    let cards = sort_isomorphic(&mut cards_mut);
+    let mut cards: SmallVecHand = cards.to_smallvec();
+    sort_isomorphic(&mut cards);
 
     // by_suits creates a lookup of suit -> ranks with that suit in the hand
     let mut by_suits: [SmallVec<[u8; 7]>; 4] = [smallvec![], smallvec![], smallvec![], smallvec![]];
@@ -234,7 +229,7 @@ pub fn isomorphic_hand(cards: &[Card]) -> SmallVecHand {
         })
         .collect();
 
-    isomorphic = sort_isomorphic(&mut isomorphic);
+    sort_isomorphic(&mut isomorphic);
     isomorphic
 }
 

@@ -64,14 +64,6 @@ impl Abstraction {
     }
 
     fn postflop_bin(&self, cards: &[Card]) -> i32 {
-        // let isomorphic = if cards.len() == 7 {
-        //     isomorphic_hand(cards)
-        // } else {
-        //     let mut isomorphic = cards.to_smallvec();
-        //     isomorphic[0..2].sort_unstable();
-        //     isomorphic[2..].sort_unstable();
-        //     isomorphic
-        // };
         let isomorphic = isomorphic_hand(cards);
         let hand = cards2hand(&isomorphic);
         let bin_result = match cards.len() {

@@ -149,7 +149,7 @@ impl Bot {
                 nodes.reset_strategy_sum(&infoset);
             }
             let bar = pbar(epoch);
-            (0..epoch).into_par_iter().for_each(|_| {
+            (0..epoch).into_iter().for_each(|_| {
                 for &traverser in [DEALER, OPPONENT].iter() {
                     let mut deck = deck();
                     deck.retain(|c| !hole.contains(c));
