@@ -116,13 +116,8 @@ impl Bot {
             self.get_strategy_action_translation(hole, board, history)
         };
 
-        let opp_range = Range::get_opponent_range(&hole, &board, &translated_history, get_strategy);
-        let opp_action = history.last_action().unwrap();
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(&hole, &board, &translated_history);
-        // let mut prev_strategy: SmallVecFloats =
-        //     smallvec![-1.0; infoset.next_actions(&CONFIG.bet_abstraction).len()];
-
         // Get reach probs for each player based on their actions
         let preflop_hands = non_blocking_preflop_hands(&board);
         let mut dealer_reach_probs = vec![1.0; preflop_hands.len()];
@@ -140,6 +135,20 @@ impl Bot {
                 }
             }
             history_iter.add(&action);
+        }
+
+        // Smooth the reach probs so 50% of the probability mass is the uniform distribution
+        let normalize = |reach_probs: &mut Vec<f64>| {
+            let sum: f64 = reach_probs.iter().sum();
+            for prob in reach_probs.iter_mut() {
+                *prob /= sum;
+            }
+        };
+        normalize(&mut dealer_reach_probs);
+        normalize(&mut oop_reach_probs);
+        for i in 0..preflop_hands.len() {
+            dealer_reach_probs[i] += 1.0 / preflop_hands.len() as f64;
+            oop_reach_probs[i] += 1.0 / preflop_hands.len() as f64;
         }
 
         let num_epochs = 2;
