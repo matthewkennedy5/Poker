@@ -1,5 +1,4 @@
 use optimus::*;
-
 use std::path::Path;
 
 fn main() {
@@ -12,13 +11,10 @@ fn main() {
     // if !Path::new(TURN_ABSTRACTION_PATH).exists() {
     //     make_abstraction(6, CONFIG.turn_buckets);
     // }
-    // if !Path::new(RIVER_ABSTRACTION_PATH).exists() {
-    //     make_abstraction(7, CONFIG.river_buckets);
-    // }
+    if !Path::new(RIVER_ABSTRACTION_PATH).exists() {
+        make_abstraction(7, CONFIG.river_buckets);
+    }
     // create_abstraction_clusters();
-
-    expand_abstraction_keys(5);
-    expand_abstraction_keys(6);
-
-    // train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
+    train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
+    // subgame_solving_beats_blueprint();
 }

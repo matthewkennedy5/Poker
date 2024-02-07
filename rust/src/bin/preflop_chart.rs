@@ -1,5 +1,5 @@
+use ahash::AHashMap as HashMap;
 use optimus::*;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 
