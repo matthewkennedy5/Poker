@@ -106,18 +106,15 @@ impl Bot {
         let mut hole: [Card; 2] = [hole[0], hole[1]];
         hole.sort();
 
-        // Just playing against blueprint for now, so no action translation. TODO
-        // let translated_history = subgame_root.translate(&CONFIG.bet_abstraction);
-        let translated_history = history.clone();
+        // Works as follows:
+        // (1) Get beliefs of the opponent's range, using the bllueprint and action translation
+        // (2) Solve the subgame given the beliefs from (1)
 
-        // Get our beliefs of the opponent's range given their actions up to the subgame root.
-        // Use action translation to map the actions so far to infosets in the blueprint strategy.
         let get_strategy = |hole: &[Card], board: &[Card], history: &ActionHistory| {
             self.get_strategy_action_translation(hole, board, history)
         };
-
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
-        let infoset = InfoSet::from_hand(&hole, &board, &translated_history);
+        let infoset = InfoSet::from_hand(&hole, &board, history);
         // Get reach probs for each player based on their actions
         let preflop_hands = non_blocking_preflop_hands(&board);
         let mut dealer_reach_probs = vec![1.0; preflop_hands.len()];
@@ -138,6 +135,8 @@ impl Bot {
         }
 
         // Smooth the reach probs so 50% of the probability mass is the uniform distribution
+        // TODO: I think this smoothing might be too strong. Another thing to try could be ensuring
+        // that each hand has at least a 1/1000 probability.
         let normalize = |reach_probs: &mut Vec<f64>| {
             let sum: f64 = reach_probs.iter().sum();
             for prob in reach_probs.iter_mut() {
@@ -147,8 +146,8 @@ impl Bot {
         normalize(&mut dealer_reach_probs);
         normalize(&mut oop_reach_probs);
         for i in 0..preflop_hands.len() {
-            dealer_reach_probs[i] += 1.0 / preflop_hands.len() as f64;
-            oop_reach_probs[i] += 1.0 / preflop_hands.len() as f64;
+            dealer_reach_probs[i] += 0.1 / preflop_hands.len() as f64;
+            oop_reach_probs[i] += 0.1 / preflop_hands.len() as f64;
         }
 
         let num_epochs = 2;
@@ -210,7 +209,7 @@ impl Bot {
                         traverser,
                         nonzero_preflop_hands,
                         board,
-                        &translated_history,
+                        history,
                         nonzero_traverser_reach_probs,
                         nonzero_opp_reach_probs,
                         &nodes,

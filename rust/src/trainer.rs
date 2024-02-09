@@ -285,15 +285,14 @@ fn depth_limit_utility(
     // Basically the same as iterate(), except:
     // - get the strategies / prob updates from the depth_limit_bot
     // - don't update any nodes
-    let infosets: Vec<InfoSet> = preflop_hands
+    let translated_history = history.translate(&depth_limit_nodes.bet_abstraction);
+    let translated_infosets: Vec<InfoSet> = preflop_hands
         .iter()
-        .map(|h| InfoSet::from_hand(h, &board, history))
+        .map(|h| InfoSet::from_hand(h, &board, &translated_history))
         .collect();
 
-    // Later on you'll need to worry about action translation (nodes not having the exact action history)
-    // but for now you don't. You also definitely will never need to repeatedly translate the actions
-    // for each infoset.
-    let strategies: Vec<SmallVecFloats> = depth_limit_nodes.get_strategy_vectorized(&infosets);
+    let strategies: Vec<SmallVecFloats> =
+        depth_limit_nodes.get_strategy_vectorized(&translated_infosets);
 
     // Sample a random action depending on the total probability for each action
     let N = preflop_hands.len();
