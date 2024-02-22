@@ -145,19 +145,20 @@ pub fn iterate(
         );
     }
 
-    if depth_limit < CONFIG.depth_limit && history.current_street_length == 0 {
-        // depth limited solving for future streets
+    // TODO: Don't call this if you're training a blueprint. 
+    // if depth_limit < CONFIG.depth_limit && history.current_street_length == 0 {
+    //     // depth limited solving for future streets
 
-        return depth_limit_utility(
-            traverser,
-            preflop_hands,
-            board,
-            history,
-            traverser_reach_probs,
-            opp_reach_probs,
-            depth_limit_nodes.expect("Depth limit nodes not provided"),
-        );
-    }
+    //     return depth_limit_utility(
+    //         traverser,
+    //         preflop_hands,
+    //         board,
+    //         history,
+    //         traverser_reach_probs,
+    //         opp_reach_probs,
+    //         depth_limit_nodes.expect("Depth limit nodes not provided"),
+    //     );
+    // }
 
     // Look up the DCFR node for this information set, or make a new one if it
     // doesn't exist
