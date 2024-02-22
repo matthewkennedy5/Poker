@@ -264,6 +264,9 @@ pub fn iterate(
 
 // For now, this samples rollouts at the depth limit to estimate the utility.
 // https://arxiv.org/pdf/1805.08195.pdf
+// Basically the same as iterate(), except:
+// - get the strategies / prob updates from the depth_limit_bot
+// - don't update any nodes
 fn depth_limit_utility(
     traverser: usize,
     preflop_hands: Vec<[Card; 2]>,
@@ -273,7 +276,8 @@ fn depth_limit_utility(
     opp_reach_probs: Vec<f64>,
     depth_limit_nodes: &Nodes,
 ) -> Vec<f64> {
-    if history.hand_over() {
+    let translated_history = history.translate(&depth_limit_nodes.bet_abstraction);
+    if translated_history.hand_over() {
         return terminal_utility_vectorized(
             preflop_hands,
             opp_reach_probs,
@@ -282,10 +286,6 @@ fn depth_limit_utility(
             traverser,
         );
     }
-    // Basically the same as iterate(), except:
-    // - get the strategies / prob updates from the depth_limit_bot
-    // - don't update any nodes
-    let translated_history = history.translate(&depth_limit_nodes.bet_abstraction);
     let translated_infosets: Vec<InfoSet> = preflop_hands
         .iter()
         .map(|h| InfoSet::from_hand(h, &board, &translated_history))
@@ -296,7 +296,7 @@ fn depth_limit_utility(
 
     // Sample a random action depending on the total probability for each action
     let N = preflop_hands.len();
-    let next_actions = history.next_actions(&CONFIG.bet_abstraction);
+    let next_actions = translated_history.next_actions(&depth_limit_nodes.bet_abstraction);
 
     let action_prob_sums: HashMap<Action, f64> = next_actions
         .iter()
@@ -334,7 +334,7 @@ fn depth_limit_utility(
             .map(|strategy| strategy.get(action_index).unwrap().clone() as f64)
             .collect();
 
-        let mut next_history = history.clone();
+        let mut next_history = translated_history.clone();
         next_history.add(&action);
 
         let mut traverser_reach_probs = traverser_reach_probs.clone();

@@ -7,7 +7,7 @@ last_street = "river"
 # Bet abstractions, expressed as multiples of the pot size. -1 means "all-in".
 # This does not include the call and fold actions. 
 bet_abstraction = [
-    [1.0, 3.0, -1.0],
+    [1.0, 2.0, 3.0, -1.0],
     [0.5, 1.0, -1.0],
     [0.5, 1.0, -1.0],
     [0.5, 1.0, -1.0],

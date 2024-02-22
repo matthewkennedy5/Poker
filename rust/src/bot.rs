@@ -1,7 +1,6 @@
 use crate::card_utils::*;
 use crate::config::CONFIG;
 use crate::nodes::*;
-use crate::ranges::*;
 use crate::trainer::*;
 use crate::trainer_utils::*;
 use moka::sync::Cache;
@@ -119,12 +118,17 @@ impl Bot {
         let preflop_hands = non_blocking_preflop_hands(&board);
         let mut dealer_reach_probs = vec![1.0; preflop_hands.len()];
         let mut oop_reach_probs = vec![1.0; preflop_hands.len()];
+        let translated_history = history.translate(&self.blueprint.bet_abstraction);
         let mut history_iter = ActionHistory::new();
-        for action in history.get_actions() {
+        for action in translated_history.get_actions() {
             for (i, preflop_hand) in preflop_hands.iter().enumerate() {
+                // TODO: Don't need to call action translation multiple times. Just a single
+                // translated history will do.
                 let strat =
                     self.get_strategy_action_translation(preflop_hand, &board, &history_iter);
-                let prob = strat.get(&action).expect("Action not in strategy");
+                let prob = strat
+                    .get(&action)
+                    .expect(format!("Action {} not in strategy {:?}", action, strat).as_str());
                 if history_iter.player == DEALER {
                     dealer_reach_probs[i] *= prob;
                 } else {
@@ -134,9 +138,6 @@ impl Bot {
             history_iter.add(&action);
         }
 
-        // Smooth the reach probs so 50% of the probability mass is the uniform distribution
-        // TODO: I think this smoothing might be too strong. Another thing to try could be ensuring
-        // that each hand has at least a 1/1000 probability.
         let normalize = |reach_probs: &mut Vec<f64>| {
             let sum: f64 = reach_probs.iter().sum();
             for prob in reach_probs.iter_mut() {
@@ -146,8 +147,8 @@ impl Bot {
         normalize(&mut dealer_reach_probs);
         normalize(&mut oop_reach_probs);
         for i in 0..preflop_hands.len() {
-            dealer_reach_probs[i] += 0.1 / preflop_hands.len() as f64;
-            oop_reach_probs[i] += 0.1 / preflop_hands.len() as f64;
+            dealer_reach_probs[i] += 0.3 / preflop_hands.len() as f64;
+            oop_reach_probs[i] += 0.3 / preflop_hands.len() as f64;
         }
 
         let num_epochs = 2;

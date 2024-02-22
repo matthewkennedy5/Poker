@@ -291,15 +291,15 @@ impl ActionHistory {
         history
     }
 
-    // Performs action translation and returns a translated version of the
-    // current history, with actions mapped to those of the given bet abstraction.
-    // This assumes that folding and calling are always going to be implicitly
-    // allowed in the abstraction.
+    // Maps this history to the closest match within the given bet abstraction.
     pub fn translate(&self, bet_abstraction: &Vec<Vec<f64>>) -> ActionHistory {
         let mut translated = ActionHistory::new();
         let mut untranslated = ActionHistory::new();
         for action in self.get_actions() {
             let translated_next_actions = translated.next_actions(bet_abstraction);
+            if translated_next_actions.is_empty() {
+                break;
+            }
             let translated_action;
             if action.action == ActionType::Fold {
                 translated_action = FOLD;
@@ -326,9 +326,7 @@ impl ActionHistory {
                         }
                     }
                     if candidate_bets.is_empty() {
-                        // The only legal bet size in the abstraction is the all-in amount, but
-                        // we don't want to end the hand, so we reduce the bet size slightly.
-                        candidate_bets.push(translated.max_bet() - CONFIG.big_blind);
+                        candidate_bets.push(translated.max_bet());
                     }
                     let closest_bet_size = find_closest_log(candidate_bets, action.amount);
                     translated_action = Action {

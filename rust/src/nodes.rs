@@ -5,7 +5,7 @@ use dashmap::DashMap;
 use std::sync::Mutex;
 
 // Upper limit on branching factor of blueprint game tree.
-pub const NUM_ACTIONS: usize = 4;
+pub const NUM_ACTIONS: usize = 5;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Nodes {
@@ -227,7 +227,10 @@ impl Nodes {
 
     pub fn get_strategy_vectorized(&self, infosets: &[InfoSet]) -> Vec<SmallVecFloats> {
         let history: &ActionHistory = &infosets[0].history;
-        let node_vec_ref = self.dashmap.get(history).unwrap();
+        let node_vec_ref = self
+            .dashmap
+            .get(history)
+            .expect(format!("History {} not found in blueprint", history).as_str());
         let node_vec = node_vec_ref.value();
 
         let strategies: Vec<SmallVecFloats> = infosets
