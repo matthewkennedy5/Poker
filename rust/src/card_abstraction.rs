@@ -11,7 +11,8 @@ use dashmap::DashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::*;
+use smallvec::ToSmallVec;
 use std::sync::Mutex;
 use std::{
     fs::File,
@@ -115,7 +116,7 @@ pub fn get_sorted_hand_ehs2(n_cards: usize) -> Vec<u64> {
 
     // Cluster the hands based on E[HS^2] percentile bucketing.
     // Calculate all E[HS^2] values in parallel
-    let bar = pbar(isomorphic_hands.len() as u64);
+    let bar = pbar(isomorphic_hands.len());
     let mut hand_ehs2: Vec<(u64, f64)> = isomorphic_hands
         .par_iter()
         .map(|h| {
@@ -192,7 +193,7 @@ pub fn make_abstraction(n_cards: usize, n_buckets: i32) -> HashMap<u64, i32> {
     );
     let mut clusters = HashMap::new();
     let mut sum: u64 = 0;
-    let bar = pbar(hand_ehs2.len() as u64);
+    let bar = pbar(hand_ehs2.len());
     for hand in hand_ehs2 {
         // Bucket the hand according to the percentile of its E[HS^2]
         let count = hand_counts.get(&hand).unwrap().clone() as u64;
@@ -354,25 +355,39 @@ pub fn print_abstraction() {
 }
 
 pub fn create_abstraction_clusters() {
-    let dists = get_equity_distributions("flop");
-    let buckets = k_means_cluster(dists, CONFIG.flop_buckets);
-    let hands = load_flop_isomorphic();
-    let abstraction: HashMap<u64, i32> = hands
-        .iter()
-        .zip(buckets.iter())
-        .map(|(&hand, &bucket)| (hand, bucket))
-        .collect();
-    serialize(abstraction, "products/flop_abstraction.bin");
+    // let dists = get_equity_distributions("flop");
+    // let buckets = k_means_cluster(dists, CONFIG.flop_buckets, true);
+    // let hands = load_flop_isomorphic();
+    // let abstraction: HashMap<u64, i32> = hands
+    //     .iter()
+    //     .zip(buckets.iter())
+    //     .map(|(&hand, &bucket)| (hand, bucket))
+    //     .collect();
+    // serialize(abstraction, "products/flop_abstraction.bin");
 
-    let dists = get_equity_distributions("turn");
-    let buckets = k_means_cluster(dists, CONFIG.turn_buckets);
-    let hands = load_turn_isomorphic();
+    // let dists = get_equity_distributions("turn");
+    // let buckets = k_means_cluster(dists, CONFIG.turn_buckets, true);
+    // let hands = load_turn_isomorphic();
+    // let abstraction: HashMap<u64, i32> = hands
+    //     .iter()
+    //     .zip(buckets.iter())
+    //     .map(|(&hand, &bucket)| (hand, bucket))
+    //     .collect();
+    // serialize(abstraction, "products/turn_abstraction.bin");
+
+    // let dists = get_ochs_distributions();
+
+    let reader = BufReader::new(File::open("products/ochs_distributions.bin").unwrap());
+    let dists = bincode::deserialize_from(reader).unwrap();
+
+    let buckets = k_means_cluster(dists, CONFIG.river_buckets, false);
+    let hands = load_river_isomorphic();
     let abstraction: HashMap<u64, i32> = hands
         .iter()
         .zip(buckets.iter())
         .map(|(&hand, &bucket)| (hand, bucket))
         .collect();
-    serialize(abstraction, "products/turn_abstraction.bin");
+    serialize(abstraction, "products/river_abstraction.bin");
 }
 
 pub fn expand_abstraction_keys(n_cards: usize) {
@@ -409,6 +424,146 @@ pub fn expand_abstraction_keys(n_cards: usize) {
     serialize(table, path);
 }
 
+pub fn get_ochs_distributions() -> Vec<Vec<f32>> {
+    let iso = load_river_isomorphic();
+    // from https://webdocs.cs.ualberta.ca/~bowling/papers/13aamas-abstraction.pdf Table 1
+    let abstract_preflop_clusters: Vec<Vec<&str>> = vec![
+        vec![
+            "23s", "24s", "25s", "26s", "27s", "32o", "34s", "35s", "36s", "37s", "42o", "43o",
+            "45s", "46s", "52o", "53o", "54o", "62o", "63o", "64o", "65o", "72o", "73o", "74o",
+            "82o", "83o",
+        ],
+        vec![
+            "82s", "92s", "T2s", "83s", "93s", "74s", "84s", "94s", "75o", "84o", "85o", "92o",
+            "93o", "94o", "95o", "T2o", "T3o", "T4o", "T5o", "J2o", "J3o",
+        ],
+        vec![
+            "56s", "57s", "58s", "59s", "5Ts", "3Ts", "34s", "67s", "68s", "69s", "6Ts", "78s",
+            "79s", "89s", "76o", "86o", "87o", "96o", "97o", "98o", "T6o", "T7o", "T8o",
+        ],
+        vec![
+            "J2s", "Q2s", "K2s", "J3s", "Q3s", "J4s", "Q4s", "J5s", "Q5s", "J6s", "J4o", "J5o",
+            "J6o", "J7o", "Q2o", "Q3o", "Q4o", "Q5o", "Q6o", "Q7o", "K2o", "K3o", "K4o",
+        ],
+        vec![
+            "Q6s", "T7s", "J7s", "Q7s", "T8s", "J8s", "Q8s", "T9s", "J9s", "Q9s", "JTs", "9To",
+            "J8o", "J9o", "JTo", "Q8o", "QTo", "Q9o", "QJo", "22o",
+        ],
+        vec![
+            "A2s", "K3s", "A3s", "K4s", "A4s", "K5s", "A5s", "K6s", "K7s", "K8s", "A6s", "33o",
+            "44o", "55o", "A2o", "A3o", "A4o", "A5o", "A6o", "A7o", "A8o", "K5o", "K6o", "K7o",
+            "K8o", "K9o",
+        ],
+        vec![
+            "66o", "77o", "A7s", "K9s", "A9s", "A8s", "ATs", "AJs", "AQs", "AKs", "KTs", "KJs",
+            "KQs", "AKo", "QTs", "QJs", "QKo", "AQo", "KJo", "AJo", "KTo", "ATo", "A9o",
+        ],
+        vec!["88o", "99o", "TTo", "JJo", "QQo", "KKo", "AAo"],
+    ];
+    assert_eq!(
+        abstract_preflop_clusters
+            .iter()
+            .map(|cluster| cluster.len())
+            .sum::<usize>(),
+        169
+    );
+    // Expand the preflop clusters to incorporate all suits, instead of categories
+    let mut expanded_preflop_clusters: Vec<Vec<[Card; 2]>> = Vec::new();
+    for cluster in abstract_preflop_clusters.iter() {
+        let mut expanded_cluster: Vec<String> = Vec::new();
+        for hand in cluster {
+            let cards = hand.chars().collect::<Vec<char>>();
+            let rank1 = cards[0];
+            let rank2 = cards[1];
+            let suited = cards.get(2);
+
+            match suited {
+                Some(&'s') => {
+                    // Correctly iterate for suited hands - 4 combinations
+                    for suit in ['c', 'd', 'h', 's'].iter() {
+                        expanded_cluster.push(format!("{}{}{}{}", rank1, suit, rank2, suit));
+                    }
+                }
+                _ => {
+                    // Correctly iterate for offsuit hands - 12 combinations
+                    let suits = ['c', 'd', 'h', 's'];
+                    for i in 0..suits.len() {
+                        for j in 0..suits.len() {
+                            if (i == j) || (rank1 == rank2 && j < i) {
+                                continue;
+                            }
+                            expanded_cluster
+                                .push(format!("{}{}{}{}", rank1, suits[i], rank2, suits[j]));
+                        }
+                    }
+                }
+            }
+        }
+        let expanded_cluster_cards: Vec<[Card; 2]> = expanded_cluster
+            .iter()
+            .map(|hand_str| {
+                let cards = str2cards(hand_str);
+                [cards[0], cards[1]]
+            })
+            .collect();
+        expanded_preflop_clusters.push(expanded_cluster_cards);
+    }
+    assert_eq!(
+        expanded_preflop_clusters
+            .iter()
+            .map(|cluster| cluster.len())
+            .sum::<usize>(),
+        1326
+    );
+
+    let bar = pbar(iso.len());
+    let ochs_features: Vec<Vec<f32>> = iso
+        .par_iter()
+        .map(|hand| {
+            let hand = hand2cards(*hand);
+            let board: SmallVecHand = hand[2..].to_smallvec();
+            let equities: Vec<f32> = expanded_preflop_clusters
+                .iter()
+                .map(|cluster| {
+                    // Get the equity of hand against the cluster
+                    let mut n_wins = 0.0;
+                    for opp_preflop in cluster {
+                        if hand.contains(&opp_preflop[0]) || hand.contains(&opp_preflop[1]) {
+                            continue;
+                        }
+                        let opp_hand = [
+                            opp_preflop[0],
+                            opp_preflop[1],
+                            board[0],
+                            board[1],
+                            board[2],
+                            board[3],
+                            board[4],
+                        ];
+                        let opp_strength = FAST_HAND_TABLE.hand_strength(&opp_hand);
+                        let my_strength = FAST_HAND_TABLE.hand_strength(&hand);
+                        if my_strength > opp_strength {
+                            n_wins += 1.0;
+                        } else if my_strength == opp_strength {
+                            n_wins += 0.5;
+                        }
+                    }
+                    let equity = n_wins / cluster.len() as f32;
+                    equity
+                })
+                .collect();
+            bar.inc(1);
+            equities
+        })
+        .collect();
+    bar.finish_with_message("Done");
+
+    let file = File::create(format!("products/ochs_distributions.bin")).unwrap();
+    let buffer = BufWriter::new(file);
+    bincode::serialize_into(buffer, &ochs_features).unwrap();
+    ochs_features
+}
+
 pub fn get_equity_distributions(street: &str) -> Vec<Vec<f32>> {
     let path = format!("products/{street}_equity_distributions.bin");
     match File::open(path) {
@@ -419,7 +574,7 @@ pub fn get_equity_distributions(street: &str) -> Vec<Vec<f32>> {
             } else {
                 load_turn_isomorphic()
             };
-            let bar = pbar(iso.len() as u64);
+            let bar = pbar(iso.len());
             let dists: Vec<Vec<f32>> = iso
                 .par_iter()
                 .map(|hand| {
@@ -442,7 +597,7 @@ pub fn get_equity_distributions(street: &str) -> Vec<Vec<f32>> {
     }
 }
 
-pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
+pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32, use_emd: bool) -> Vec<i32> {
     assert!(k > 0 && k < 1_000_000_000);
 
     // Pick random equity distributions (hands) to be initialized as the centers of the clusters
@@ -455,11 +610,12 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
 
     let mut clusters: Vec<i32> = vec![0; distributions.len()];
 
-    let iters = 20;
-    let bar = pbar(iters as u64);
+    let iters = CONFIG.k_means_iters;
+    let bar = pbar(iters as usize);
     let mut prev_distance_sum = 0.0;
     for iter in 0..iters {
         let distance_sum: Mutex<f64> = Mutex::new(0.0);
+        let iter_bar = pbar(distributions.len());
         clusters = distributions
             .par_iter()
             .map(|x| {
@@ -467,7 +623,14 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
                 let mut closest_center: i32 = 0;
                 let mut closest_distance = f32::INFINITY;
                 for (i, center) in centers.iter().enumerate() {
-                    let distance = earth_movers_distance(x, center);
+                    let distance: f32 = if use_emd {
+                        earth_movers_distance(x, center)
+                    } else {
+                        x.iter()
+                            .zip(center.iter())
+                            .map(|(i, j)| (i - j).powf(2.0))
+                            .sum()
+                    };
                     if distance < closest_distance {
                         closest_center = i as i32;
                         closest_distance = distance;
@@ -475,19 +638,22 @@ pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32) -> Vec<i32> {
                 }
                 let mut d = distance_sum.lock().unwrap();
                 *d += closest_distance as f64;
+                iter_bar.inc(1);
                 closest_center
             })
             .collect();
 
+        iter_bar.finish();
         let distance_sum_val: f64 = *distance_sum.lock().unwrap();
         println!("Iteration {iter}: {}", distance_sum_val);
-        if distance_sum_val == prev_distance_sum {
+        if (distance_sum_val - prev_distance_sum).abs() < 1e-6 {
             println!("Converged.");
             break;
         }
         prev_distance_sum = distance_sum_val;
 
         centers = (0..k)
+            .into_par_iter()
             .map(|cluster| {
                 // Find the Euclidian mean of each cluster - the new centroid
                 let mut sum: Vec<f32> = vec![0.0; distributions[0].len()];

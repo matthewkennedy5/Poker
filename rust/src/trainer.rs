@@ -11,7 +11,7 @@ use rayon::prelude::*;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
-pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
+pub fn train(iters: usize, eval_every: usize, warm_start: bool) {
     let deck = card_utils::deck();
     let nodes = if warm_start {
         load_nodes(&CONFIG.nodes_path)
@@ -22,7 +22,7 @@ pub fn train(iters: u64, eval_every: u64, warm_start: bool) {
     let num_epochs = iters / eval_every;
     for epoch in 0..num_epochs {
         println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
-        let bar = card_utils::pbar(eval_every);
+        let bar = card_utils::pbar(eval_every as usize);
 
         (0..eval_every).into_par_iter().for_each(|_| {
             cfr_iteration(&deck, &ActionHistory::new(), &nodes, -1);
@@ -145,7 +145,7 @@ pub fn iterate(
         );
     }
 
-    // TODO: Don't call this if you're training a blueprint. 
+    // TODO: Don't call this if you're training a blueprint.
     // if depth_limit < CONFIG.depth_limit && history.current_street_length == 0 {
     //     // depth limited solving for future streets
 

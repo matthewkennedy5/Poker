@@ -51,7 +51,7 @@ impl Bot {
 
     // Wrapper for the real time solving for the bot's strategy
     pub fn get_strategy(&self, hole: &[Card], board: &[Card], history: &ActionHistory) -> Strategy {
-        if !self.subgame_solving || history.is_empty() {
+        if !self.subgame_solving || history.is_empty() || history.street < RIVER {
             self.get_strategy_action_translation(hole, board, history)
         } else {
             // Preflop cache
@@ -138,18 +138,18 @@ impl Bot {
             history_iter.add(&action);
         }
 
-        let normalize = |reach_probs: &mut Vec<f64>| {
-            let sum: f64 = reach_probs.iter().sum();
-            for prob in reach_probs.iter_mut() {
-                *prob /= sum;
-            }
-        };
-        normalize(&mut dealer_reach_probs);
-        normalize(&mut oop_reach_probs);
-        for i in 0..preflop_hands.len() {
-            dealer_reach_probs[i] += 0.3 / preflop_hands.len() as f64;
-            oop_reach_probs[i] += 0.3 / preflop_hands.len() as f64;
-        }
+        // let normalize = |reach_probs: &mut Vec<f64>| {
+        //     let sum: f64 = reach_probs.iter().sum();
+        //     for prob in reach_probs.iter_mut() {
+        //         *prob /= sum;
+        //     }
+        // };
+        // normalize(&mut dealer_reach_probs);
+        // normalize(&mut oop_reach_probs);
+        // for i in 0..preflop_hands.len() {
+        //     dealer_reach_probs[i] += 0.1 / preflop_hands.len() as f64;
+        //     oop_reach_probs[i] += 0.1 / preflop_hands.len() as f64;
+        // }
 
         let num_epochs = 2;
         let epoch = CONFIG.subgame_iters / num_epochs;
@@ -157,7 +157,7 @@ impl Bot {
             if i == 1 {
                 nodes.reset_strategy_sum(&infoset);
             }
-            let bar = pbar(epoch);
+            let bar = pbar(epoch as usize);
             (0..epoch).into_par_iter().for_each(|_| {
                 for &traverser in [DEALER, OPPONENT].iter() {
                     let mut deck = deck();

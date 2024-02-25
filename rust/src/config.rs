@@ -27,14 +27,15 @@ pub struct Config {
     pub nodes_path: String,
 
     // Training
-    pub train_iters: u64,
-    pub lbr_iters: u64,
-    pub eval_every: u64,
+    pub train_iters: usize,
+    pub lbr_iters: usize,
+    pub eval_every: usize,
     pub warm_start: bool,
+    pub k_means_iters: u64,
 
     // Real time solving
     pub subgame_solving: bool,
-    pub subgame_iters: u64,
+    pub subgame_iters: usize,
     pub depth_limit: i32,
 
     // Preflop chart

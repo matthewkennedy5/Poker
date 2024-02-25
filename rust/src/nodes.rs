@@ -5,7 +5,7 @@ use dashmap::DashMap;
 use std::sync::Mutex;
 
 // Upper limit on branching factor of blueprint game tree.
-pub const NUM_ACTIONS: usize = 4;
+pub const NUM_ACTIONS: usize = 5;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Nodes {

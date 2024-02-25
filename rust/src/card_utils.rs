@@ -148,8 +148,8 @@ pub fn strvec2cards(strvec: &[&str]) -> Vec<Card> {
     cardvec
 }
 
-pub fn pbar(n: u64) -> indicatif::ProgressBar {
-    let bar = indicatif::ProgressBar::new(n);
+pub fn pbar(n: usize) -> indicatif::ProgressBar {
+    let bar = indicatif::ProgressBar::new(n as u64);
     bar.set_style(
         indicatif::ProgressStyle::default_bar()
             .template(

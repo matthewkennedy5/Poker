@@ -447,20 +447,25 @@ def main():
     num_hands = args.num_hands
     SUBGAME_SOLVING = args.subgame_solving
 
-    # num_procs = 100
-    # hands_per_cpu = int(num_hands / num_procs)
-    # input =[hands_per_cpu for p in range(num_procs)]
+    num_procs = 1
+    inputs = [1 for _ in range(num_hands)]  # Prepare inputs for play_hands function
 
-    scores = []
-    for n in trange(num_hands):
-        score_list = play_hands(1)
-        scores += score_list
-        if len(scores) > 2:
-            mean = np.mean(scores) / BIG_BLIND
-            std = np.std(scores) / BIG_BLIND
-            conf = 1.96 * std / np.sqrt(len(scores))
-            print(f'Winnings: {mean} +/- {conf} BB/h')
+    with mp.Pool(processes=num_procs) as pool:
+        total_scores = []
+        for result in tqdm(pool.imap_unordered(play_hands, inputs), total=len(inputs), desc="Playing Hands"):
+            total_scores.extend(result)
+            if len(total_scores) > 2:
+                mean = np.mean(total_scores) / BIG_BLIND
+                std = np.std(total_scores) / BIG_BLIND
+                conf = 1.96 * std / np.sqrt(len(total_scores))
+                print(f'Current Winnings: {mean:.2f} +/- {conf:.2f} BB/h')
+    scores = total_scores
 
+    if len(scores) > 2:
+        mean = np.mean(scores) / BIG_BLIND
+        std = np.std(scores) / BIG_BLIND
+        conf = 1.96 * std / np.sqrt(len(scores))
+        print(f'Winnings: {mean} +/- {conf} BB/h')
     
     
 if __name__ == '__main__':
