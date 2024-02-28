@@ -30,9 +30,9 @@ bet_abstraction = [
         -1.0,
     ],
 ]
-flop_buckets = 10_000 # Max:   1342562
-turn_buckets = 10_000 # Max:  14403610
-river_buckets = 10_000 # Max: 125756657
+flop_buckets = 20_000 # Max:   1342562
+turn_buckets = 20_000 # Max:  14403610
+river_buckets = 20_000 # Max: 125756657
 
 # Filenames
 nodes_path = "products/nodes.bin"
@@ -45,9 +45,9 @@ warm_start = false
 k_means_iters = 1000
 
 # Realtime solving
-subgame_solving = true
+subgame_solving = false
 subgame_iters = 10_000
-depth_limit = 3        # -1 means always solve to the end of the game
+depth_limit = 3         # -1 means always solve to the end of the game
 
 # Preflop chart
 preflop_strategy_path = "products/preflop_strategy.json"

@@ -355,25 +355,25 @@ pub fn print_abstraction() {
 }
 
 pub fn create_abstraction_clusters() {
-    // let dists = get_equity_distributions("flop");
-    // let buckets = k_means_cluster(dists, CONFIG.flop_buckets, true);
-    // let hands = load_flop_isomorphic();
-    // let abstraction: HashMap<u64, i32> = hands
-    //     .iter()
-    //     .zip(buckets.iter())
-    //     .map(|(&hand, &bucket)| (hand, bucket))
-    //     .collect();
-    // serialize(abstraction, "products/flop_abstraction.bin");
+    let dists = get_equity_distributions("flop");
+    let buckets = k_means_cluster(dists, CONFIG.flop_buckets, true);
+    let hands = load_flop_isomorphic();
+    let abstraction: HashMap<u64, i32> = hands
+        .iter()
+        .zip(buckets.iter())
+        .map(|(&hand, &bucket)| (hand, bucket))
+        .collect();
+    serialize(abstraction, "products/flop_abstraction.bin");
 
-    // let dists = get_equity_distributions("turn");
-    // let buckets = k_means_cluster(dists, CONFIG.turn_buckets, true);
-    // let hands = load_turn_isomorphic();
-    // let abstraction: HashMap<u64, i32> = hands
-    //     .iter()
-    //     .zip(buckets.iter())
-    //     .map(|(&hand, &bucket)| (hand, bucket))
-    //     .collect();
-    // serialize(abstraction, "products/turn_abstraction.bin");
+    let dists = get_equity_distributions("turn");
+    let buckets = k_means_cluster(dists, CONFIG.turn_buckets, true);
+    let hands = load_turn_isomorphic();
+    let abstraction: HashMap<u64, i32> = hands
+        .iter()
+        .zip(buckets.iter())
+        .map(|(&hand, &bucket)| (hand, bucket))
+        .collect();
+    serialize(abstraction, "products/turn_abstraction.bin");
 
     // let dists = get_ochs_distributions();
 
