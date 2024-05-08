@@ -841,7 +841,7 @@ fn abstraction_distributes_hands_evenly() {
     let mut counts: Vec<i32> = vec![0; CONFIG.flop_buckets as usize];
     let mut deck = deck();
 
-    let n: u64 = 10_000_000;
+    let n: usize = 10_000_000;
     let bar = pbar(n);
     for _ in 0..10_000_000 {
         deck.shuffle(&mut thread_rng());
@@ -909,7 +909,7 @@ fn subgame_solving_beats_blueprint() {
 
     let iters = 1_000_000;
     let mut winnings: Vec<f64> = Vec::with_capacity(iters as usize);
-    let bar = pbar(iters as u64);
+    let bar = pbar(iters);
     let mut mean = 0.0;
     for i in 0..iters {
         let amount = play_hand_bots(&blueprint_bot, &subgame_bot);
@@ -963,7 +963,7 @@ fn play_hand_bots(blueprint_bot: &Bot, subgame_bot: &Bot) -> f64 {
 // Tests that the river equity cache fits in memory
 fn river_equity_cache_mem_usage() {
     let river_iso = load_river_isomorphic();
-    let bar = pbar(river_iso.len() as u64);
+    let bar = pbar(river_iso.len());
     river_iso.into_par_iter().for_each(|hand| {
         let smallvec_hand: SmallVecHand = hand2cards(hand).to_smallvec();
         RIVER_EQUITY_CACHE.insert(smallvec_hand, 0.0);
@@ -980,7 +980,7 @@ fn test_depth_limit_probability() {
     let depth_limit_bot = Bot::new(load_nodes(&CONFIG.nodes_path), false, 5);
 
     let hands = 1_000;
-    let bar = pbar(hands as u64);
+    let bar = pbar(hands);
     for i in 0..hands {
         let mut deck: Vec<Card> = deck();
         let mut rng = &mut rand::thread_rng();
@@ -1052,7 +1052,7 @@ fn equity_distribution_expectations() {
         } else {
             load_turn_isomorphic()
         };
-        let bar = pbar(dists.len() as u64);
+        let bar = pbar(dists.len());
         (0..dists.len()).into_par_iter().for_each(|i| {
             let hand = flop_hands[i];
             let dist = dists[i].clone();
@@ -1099,4 +1099,8 @@ fn test_terminal_utility() {
 }
 
 #[test]
-fn test_terminal_utility_vectorized() {}
+fn test_raise_frac() {
+    let history = ActionHistory::from_strings(vec!["Bet 300", "Call 300", "Bet 300"]);
+    let next_actions = history.next_actions(&CONFIG.bet_abstraction);
+    println!("{:?}", next_actions);
+}

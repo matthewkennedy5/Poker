@@ -600,13 +600,53 @@ pub fn get_equity_distributions(street: &str) -> Vec<Vec<f32>> {
 pub fn k_means_cluster(distributions: Vec<Vec<f32>>, k: i32, use_emd: bool) -> Vec<i32> {
     assert!(k > 0 && k < 1_000_000_000);
 
-    // Pick random equity distributions (hands) to be initialized as the centers of the clusters
-    let mut centers: Vec<Vec<f32>> = distributions
+    // k-means++ initialization
+    let mut centers: Vec<Vec<f32>> = Vec::with_capacity(k as usize);
+    let first_center = distributions
         .iter()
-        .choose_multiple(&mut thread_rng(), k as usize)
-        .iter()
-        .map(|v| v.to_vec())
-        .collect();
+        .choose(&mut thread_rng())
+        .expect("Distributions cannot be empty")
+        .to_vec();
+    centers.push(first_center);
+
+    println!("Initializing centroids with k-means++");
+    let bar = pbar(k as usize);
+    for _ in 1..k {
+        let subset = distributions
+            .choose_multiple(&mut thread_rng(), 10000)
+            .cloned()
+            .collect::<Vec<Vec<f32>>>();
+        let distances: Vec<f32> = subset
+            .par_iter()
+            .map(|dist| {
+                centers
+                    .iter()
+                    .map(|center| {
+                        dist.iter()
+                            .zip(center.iter())
+                            .map(|(d, c)| (d - c).powi(2))
+                            .sum::<f32>()
+                            .sqrt()
+                    })
+                    .min_by(|a, b| a.partial_cmp(b).unwrap())
+                    .unwrap_or(f32::INFINITY)
+            })
+            .collect();
+
+        // Use the squared distances to calculate the sum for the probability distribution
+        let sum: f32 = distances.iter().map(|d| d.powi(2)).sum();
+        let choice = thread_rng().gen_range(0.0..sum);
+        let mut cumulative = 0.0;
+        for (i, &dist) in distances.iter().enumerate() {
+            cumulative += dist;
+            if cumulative >= choice {
+                centers.push(subset[i].clone());
+                break;
+            }
+        }
+        bar.inc(1);
+    }
+    bar.finish();
 
     let mut clusters: Vec<i32> = vec![0; distributions.len()];
 
