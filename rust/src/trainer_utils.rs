@@ -235,7 +235,7 @@ impl ActionHistory {
             let bet_size = if pot_fraction == &ALL_IN {
                 self.stacks[self.player]
             } else {
-                (pot_fraction * (pot as f64)) as Amount
+                (pot_fraction * (pot as f64)) as Amount + self.to_call()
             };
             let action = Action {
                 action: ActionType::Bet,

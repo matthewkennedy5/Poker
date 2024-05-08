@@ -1038,7 +1038,16 @@ fn test_terminal_utility() {
 
 #[test]
 fn test_raise_frac() {
-    let history = ActionHistory::from_strings(vec!["Bet 300", "Call 300", "Bet 300"]);
+    let history = ActionHistory::from_strings(vec!["Bet 1000", "Call 1000", "Bet 1000"]);
     let next_actions = history.next_actions(&CONFIG.bet_abstraction);
-    println!("{:?}", next_actions);
+    let bet_2500 = Action {
+        action: ActionType::Bet,
+        amount: 2500,
+    };
+    let bet_4000 = Action {
+        action: ActionType::Bet,
+        amount: 4000,
+    };
+    assert!(next_actions.contains(&bet_2500));
+    assert!(next_actions.contains(&bet_4000));
 }
