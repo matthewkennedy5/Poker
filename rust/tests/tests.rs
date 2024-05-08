@@ -553,68 +553,6 @@ fn all_in_call() {
     }));
 }
 
-// #[test]
-// fn terminal_utility_blinds() {
-//     let history = ActionHistory::from_strings(vec!["Call 100", "Fold 0"]);
-//     let util = terminal_utility_old(&deck(), &history, DEALER);
-//     assert_eq!(util, 100.0);
-//     let util = terminal_utility_old(&deck(), &history, OPPONENT);
-//     assert_eq!(util, -100.0);
-
-//     let history = ActionHistory::from_strings(vec!["Fold 0"]);
-//     let util = terminal_utility_old(&deck(), &history, DEALER);
-//     assert_eq!(util, -50.0);
-//     let util = terminal_utility_old(&deck(), &history, OPPONENT);
-//     assert_eq!(util, 50.0);
-// }
-
-// fn play_hand_always_call() -> f64 {
-//     let mut deck: Vec<Card> = deck();
-//     let mut rng = &mut rand::thread_rng();
-//     deck.shuffle(&mut rng);
-//     let bot = *[DEALER, OPPONENT].choose(&mut rng).unwrap();
-//     let mut history = ActionHistory::new();
-//     while !history.hand_over() {
-//         let action = if history.player == bot {
-//             let hand = get_hand(&deck, bot, history.street);
-//             let hole = &hand[..2];
-//             let board = &hand[2..];
-//             BOT.get_action(hole, board, &history)
-//         } else {
-//             // Opponent only uses check/call actions
-//             Action {
-//                 action: ActionType::Call,
-//                 amount: history.to_call(),
-//             }
-//         };
-//         history.add(&action);
-//     }
-//     terminal_utility_old(&deck, &history, bot)
-// }
-
-// #[test]
-// fn bot_beats_always_call() {
-//     println!("[INFO] Starting game against always call bot...");
-//     let iters = 10_000;
-//     let bar = pbar(iters);
-//     let winnings: Vec<f64> = (0..iters)
-//         .into_par_iter()
-//         .map(|_i| {
-//             let score = play_hand_always_call() / (CONFIG.big_blind as f64);
-//             bar.inc(1);
-//             score
-//         })
-//         .collect();
-//     bar.finish();
-//     let mean = statistical::mean(&winnings);
-//     let std = statistical::standard_deviation(&winnings, Some(mean));
-//     let confidence = 1.96 * std / (iters as f64).sqrt();
-//     println!("Score against check/call bot: {mean} +/- {confidence} BB/h\n");
-// }
-
-// TODO: Write a test to make sure that the nodes contain all the infosets (no gaps)
-// Only matters for the final training process
-
 #[test]
 fn cpu_action_backend() {
     let history = ActionHistory::from_strings(vec![
