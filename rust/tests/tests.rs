@@ -809,10 +809,10 @@ fn abstraction_buckets_in_range() {
             hands = load_flop_isomorphic();
             n_buckets = CONFIG.flop_buckets;
         } else if street == TURN {
-            load_turn_isomorphic();
+            hands = load_turn_isomorphic();
             n_buckets = CONFIG.turn_buckets;
         } else if street == RIVER {
-            load_river_isomorphic();
+            hands = load_river_isomorphic();
             n_buckets = CONFIG.river_buckets;
         } else {
             panic!("bad street");
@@ -820,6 +820,7 @@ fn abstraction_buckets_in_range() {
         for hand in hands {
             let cards = hand2cards(hand);
             let bucket = abstraction.bin(&cards);
+            // println!("Hand: {}, Bucket: {}", hand2str(hand), bucket);
             assert!(
                 0 <= bucket && bucket < n_buckets,
                 "Hand {} has bucket {} which is outside the range of 0 to {}",
@@ -1051,3 +1052,4 @@ fn test_raise_frac() {
     assert!(next_actions.contains(&bet_2500));
     assert!(next_actions.contains(&bet_4000));
 }
+
