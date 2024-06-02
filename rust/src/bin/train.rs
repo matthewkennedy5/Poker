@@ -15,8 +15,12 @@ fn main() {
     //     make_abstraction(7, CONFIG.river_buckets);
     // }
     // create_abstraction_clusters();
+    //
+    // START HERE: Prune the initial preflop actions to only have Bet 200, not Call 100 or Bet 300. That will hugely reduce the size of the action tree, speeding everything up.
+
+    if CONFIG.last_street != "river" {
+        println!("Warning: last_street is {}", CONFIG.last_street);
+    }
     train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
-    let nodes = load_nodes(&CONFIG.nodes_path);
-    println!("{} nodes", nodes.len());
     // subgame_solving_beats_blueprint();
 }

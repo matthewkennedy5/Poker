@@ -1053,3 +1053,44 @@ fn test_raise_frac() {
     assert!(next_actions.contains(&bet_4000));
 }
 
+#[test]
+fn blueprint_contains_all_infosets() {
+    let nodes = load_nodes(&CONFIG.nodes_path);
+    let mut all_histories = Vec::new();
+    let mut stack = vec![ActionHistory::new()];
+    // Get all possible action histories
+    while let Some(current_history) = stack.pop() {
+        all_histories.push(current_history.clone());
+        let next_actions = current_history.next_actions(&CONFIG.bet_abstraction);
+        for action in next_actions {
+            let mut new_history = current_history.clone();
+            new_history.add(&action);
+            stack.push(new_history);
+        }
+    }
+    println!("There are {} histories", all_histories.len());
+    for history in all_histories {
+        let n_buckets = if history.street == PREFLOP {
+            169
+        } else if history.street == FLOP {
+            CONFIG.flop_buckets
+        } else if history.street == TURN {
+            CONFIG.turn_buckets
+        } else if history.street == RIVER {
+            CONFIG.river_buckets
+        } else {
+            panic!("Invalid street: {}", history.street)
+        };
+        for card_bucket in 0..n_buckets {
+            let infoset = InfoSet {
+                history: history.clone(),
+                card_bucket: card_bucket,
+            };
+            assert!(
+                nodes.get(&infoset).is_some(),
+                "Infoset {} not found in blueprint",
+                infoset
+            );
+        }
+    }
+}

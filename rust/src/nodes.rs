@@ -69,14 +69,14 @@ impl Nodes {
         let node_vec = self.dashmap.get(&history).unwrap();
         let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
         let mut node = node_mutex.lock().unwrap();
-        let mut accumulated_regret = node.regrets[action_index] + regret as f32;
+        let accumulated_regret = node.regrets[action_index] + regret as f32;
         // DCFR
         let t: f32 = node.t as f32;
-//      if accumulated_regret > 0.0 {
-//          accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
-//      } else {
-//          accumulated_regret *= 0.5;
-//      }
+        //      if accumulated_regret > 0.0 {
+        //          accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
+        //      } else {
+        //          accumulated_regret *= 0.5;
+        //      }
         node.regrets[action_index] = accumulated_regret;
     }
 
@@ -93,7 +93,7 @@ impl Nodes {
                 .map(|r| if *r >= 0.0 { *r } else { 0.0 })
                 .collect();
             let current_strategy: SmallVecFloats = normalize_smallvec(&positive_regrets);
-            if prob > 0.0  {
+            if prob > 0.0 {
                 for i in 0..current_strategy.len() {
                     // Add this action's probability to the cumulative strategy sum
                     node.strategy_sum[i] += current_strategy[i] * prob as f32;
@@ -213,7 +213,10 @@ impl Nodes {
 
     pub fn get_strategy(&self, hole: &[Card], board: &[Card], history: &ActionHistory) -> Strategy {
         let infoset = InfoSet::from_hand(hole, board, history);
-        let node = self.get(&infoset).expect("Node not found").clone(); // All nodes must be in infoset
+        let node = self
+            .get(&infoset)
+            .expect(&format!("Node not found for infoset {}", &infoset))
+            .clone(); // All nodes must be in infoset
         let mut strategy = Strategy::new();
         let actions = infoset.next_actions(&self.bet_abstraction);
         let cumulative_strategy = node.cumulative_strategy();

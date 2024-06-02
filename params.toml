@@ -2,7 +2,7 @@
 stack_size = 20000
 big_blind = 100
 small_blind = 50
-last_street = "flop"
+last_street = "river"
 
 # TODO: This params file should be a Rust file
 
@@ -11,7 +11,6 @@ last_street = "flop"
 bet_abstraction = [
     [
         1.0,
-        2.0,
         -1.0,
     ],
     [
@@ -38,9 +37,9 @@ river_buckets = 1_000 # Max: 125756657
 nodes_path = "products/nodes.bin"
 
 # Training
-train_iters = 100
-lbr_iters = 100
-eval_every = 100
+train_iters = 10_000_000
+lbr_iters = 10
+eval_every = 1_000
 warm_start = false
 k_means_iters = 1000
 
