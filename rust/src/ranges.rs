@@ -98,17 +98,41 @@ impl Range {
         opp_range.remove_blockers(hole);
         for action in history.get_actions() {
             if history_iter.player == opponent {
-                // Update the opponent's range based on their action
+                // Update the opponent's range based on the actual action they took.
+                // The likelihood is the probability that they would take this action
+                // given each possible hand.
+                let actual_action = action.clone();
                 let likelihoods = |hole: &[Card]| {
                     let strat = get_strategy(hole, board, &history_iter);
-                    let action = sample_action_from_strategy(&strat);
-                    strat.get(&action).unwrap().clone()
+                    match strat.get(&actual_action) {
+                        Some(&prob) => prob,
+                        None => 0.0,
+                    }
                 };
                 opp_range.update(likelihoods);
             }
             history_iter.add(&action);
         }
         opp_range
+    }
+
+    /// Bayesian update using precomputed bucket-indexed action probabilities.
+    /// `bucket_probs[bucket]` is the probability of the action for that card bucket.
+    /// `hand_buckets[i]` is the precomputed card bucket for hand i.
+    pub fn update_with_bucket_probs(&mut self, bucket_probs: &[f64], hand_buckets: &[i32]) {
+        for i in 0..self.hands.len() {
+            if self.probs[i] < PROB_CUTOFF {
+                continue;
+            }
+            let bucket = hand_buckets[i] as usize;
+            let action_prob = if bucket < bucket_probs.len() {
+                bucket_probs[bucket]
+            } else {
+                0.0
+            };
+            self.probs[i] *= action_prob;
+        }
+        self.normalize_range();
     }
 
     pub fn normalize_range(&mut self) {

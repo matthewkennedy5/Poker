@@ -69,14 +69,14 @@ impl Nodes {
         let node_vec = self.dashmap.get(&history).unwrap();
         let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
         let mut node = node_mutex.lock().unwrap();
-        let accumulated_regret = node.regrets[action_index] + regret as f32;
-        // DCFR
+        let mut accumulated_regret = node.regrets[action_index] + regret as f32;
+        // DCFR discounting (consistent with add_regret_vectorized)
         let t: f32 = node.t as f32;
-        //      if accumulated_regret > 0.0 {
-        //          accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
-        //      } else {
-        //          accumulated_regret *= 0.5;
-        //      }
+        if accumulated_regret > 0.0 {
+            accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
+        } else {
+            accumulated_regret *= t.powf(0.5) / (t.powf(0.5) + 1.0);
+        }
         node.regrets[action_index] = accumulated_regret;
     }
 
@@ -93,14 +93,18 @@ impl Nodes {
                 .map(|r| if *r >= 0.0 { *r } else { 0.0 })
                 .collect();
             let current_strategy: SmallVecFloats = normalize_smallvec(&positive_regrets);
+            node.t += 1;
             if prob > 0.0 {
+                // DCFR strategy sum weighting: discount old strategy sum so that
+                // iteration t's contribution is weighted by t^gamma (gamma=2).
+                // Equivalent to multiplying old sum by (t/(t+1))^2 before adding.
+                let t = node.t as f32;
+                let discount = (t / (t + 1.0)).powi(2);
                 for i in 0..current_strategy.len() {
-                    // Add this action's probability to the cumulative strategy sum
+                    node.strategy_sum[i] *= discount;
                     node.strategy_sum[i] += current_strategy[i] * prob as f32;
-                    // node.strategy_sum[i] *= d / (d + 1.0);
                 }
             }
-            node.t += 1;
         }
     }
 
@@ -116,15 +120,16 @@ impl Nodes {
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
         let current_strategy: SmallVecFloats = normalize_smallvec(&positive_regrets);
-        let d = (node.t - 100) as f32;
-        if prob > 0.0 && d > 0.0 {
+        node.t += 1;
+        if prob > 0.0 {
+            // DCFR strategy sum weighting (gamma=2)
+            let t = node.t as f32;
+            let discount = (t / (t + 1.0)).powi(2);
             for i in 0..current_strategy.len() {
-                // Add this action's probability to the cumulative strategy sum
+                node.strategy_sum[i] *= discount;
                 node.strategy_sum[i] += current_strategy[i] * prob;
-                node.strategy_sum[i] *= d / (d + 1.0);
             }
         }
-        node.t += 1;
     }
 
     pub fn reset_strategy_sum(&self, infoset: &InfoSet) {
@@ -157,27 +162,22 @@ impl Nodes {
         }
         let node_vec_ref = self.dashmap.get(history).unwrap();
         let node_vec = node_vec_ref.value();
-        let positive_regrets: Vec<[f32; NUM_ACTIONS]> = infosets
+        let regret_norms: Vec<SmallVecFloats> = infosets
             .iter()
             .map(|infoset| {
-                let mut r = node_vec
+                let node = node_vec
                     .get(infoset.card_bucket as usize)
                     .unwrap()
                     .lock()
-                    .unwrap()
-                    .regrets;
-                for i in 0..r.len() {
-                    if r[i] < 0.0 {
-                        r[i] = 0.0;
-                    }
-                }
-                r
+                    .unwrap();
+                let positive_regrets: SmallVecFloats = node
+                    .regrets
+                    .iter()
+                    .take(node.num_actions)
+                    .map(|&r| if r >= 0.0 { r } else { 0.0 })
+                    .collect();
+                normalize_smallvec(&positive_regrets)
             })
-            .collect();
-
-        let regret_norms: Vec<SmallVecFloats> = positive_regrets
-            .iter()
-            .map(|r| normalize_smallvec(r))
             .collect();
         regret_norms
     }
@@ -225,6 +225,35 @@ impl Nodes {
         }
         let sum: f64 = strategy.values().sum();
         strategy
+    }
+
+    /// For a given history and action, returns the probability of that action
+    /// for each card bucket. Single DashMap lookup instead of per-hand lookups.
+    pub fn get_action_prob_by_bucket(
+        &self,
+        history: &ActionHistory,
+        action: &Action,
+    ) -> Option<Vec<f64>> {
+        let actions = history.next_actions(&self.bet_abstraction);
+        let action_idx = actions.iter().position(|a| a == action);
+        let node_vec = self.dashmap.get(history)?;
+        let probs: Vec<f64> = node_vec
+            .value()
+            .iter()
+            .map(|mutex| match action_idx {
+                Some(idx) => {
+                    let node = mutex.lock().unwrap();
+                    let strat = node.cumulative_strategy();
+                    if idx < strat.len() {
+                        strat[idx] as f64
+                    } else {
+                        0.0
+                    }
+                }
+                None => 0.0,
+            })
+            .collect();
+        Some(probs)
     }
 
     pub fn get_strategy_vectorized(&self, infosets: &[InfoSet]) -> Vec<SmallVecFloats> {
