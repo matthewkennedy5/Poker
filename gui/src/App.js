@@ -7,7 +7,7 @@ import './App.css';
 
 const axios = require('axios');
 
-const URL = 'http://localhost'
+const URL = ''
 
 class App extends Component {
 

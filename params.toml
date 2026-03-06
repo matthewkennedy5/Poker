@@ -38,8 +38,8 @@ nodes_path = "products/nodes.bin"
 
 # Training
 train_iters = 1_000_000
-lbr_iters = 60_000
-eval_every = 10_000
+lbr_iters = 100_000
+eval_every = 25_000
 warm_start = true
 k_means_iters = 1000
 

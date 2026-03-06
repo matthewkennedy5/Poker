@@ -3,7 +3,6 @@ use crate::config::CONFIG;
 use crate::trainer::load_nodes;
 use crate::trainer_utils::*;
 use crate::{card_utils::*, OPPONENT};
-use actix_cors::Cors;
 use actix_files as fs;
 use actix_web::{web, App, HttpServer, Responder};
 use once_cell::sync::Lazy;
@@ -37,13 +36,14 @@ struct InfoSetJSON {
 }
 
 async fn get_cpu_action(infoset: web::Json<InfoSetJSON>) -> impl Responder {
-    // println!("[INFO] Received CPU action request: {:#?}", infoset);
-
     let cpu_cards = parse_cards(&infoset.cpuCards);
     let board = parse_cards(&infoset.board);
     let history = parse_history(&infoset.history);
 
+    println!("[BOT] cards={:?} board={:?} history={}", infoset.cpuCards, infoset.board, format_history(&infoset.history));
+
     let action = BOT.get_action(&cpu_cards, &board, &history);
+    println!("[BOT] -> {:?}", action);
     let action_json = serde_json::to_string(&action).unwrap();
     action_json
 }
@@ -75,6 +75,8 @@ struct HistoryAndCardsJSON {
 }
 
 async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responder {
+    println!("[GAME] history={} dealer={:?} opponent={:?} board={:?}",
+        format_history(&json.history), json.dealerCards, json.opponentCards, json.boardCards);
     let history = parse_history(&json.history);
     let street = match history.street {
         0 => "preflop",
@@ -126,6 +128,12 @@ async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responde
     serde_json::to_string(&history_info).unwrap()
 }
 
+fn format_history(h: &[ActionJSON]) -> String {
+    h.iter().map(|a| {
+        if a.amount > 0 { format!("{} ${}", a.action, a.amount) } else { a.action.clone() }
+    }).collect::<Vec<_>>().join(" → ")
+}
+
 fn parse_history(h: &[ActionJSON]) -> ActionHistory {
     let mut history = ActionHistory::new();
     for action_json in h {
@@ -160,9 +168,8 @@ pub async fn start_server() -> std::io::Result<()> {
             .route("/api/bot", web::post().to(get_cpu_action))
             .route("/api/historyInfo", web::post().to(get_history_info))
             .service(fs::Files::new("/", "../gui/build").index_file("index.html"))
-            .wrap(Cors::permissive())
     })
-    .bind("0.0.0.0:80")?
+    .bind("127.0.0.1:8080")?
     .run()
     .await
 }

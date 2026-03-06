@@ -19,7 +19,6 @@ once_cell = "*"
 actix-web = "*"
 actix-rt = "*"
 actix-files = "*"
-actix-cors = "*"
 toml = "*"
 rs_poker = "*"
 moka = { version = "*", features = ["sync"] }
