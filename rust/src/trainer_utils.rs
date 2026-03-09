@@ -447,7 +447,8 @@ impl InfoSet {
 
     pub fn from_hand(hole: &[Card], board: &[Card], history: &ActionHistory) -> InfoSet {
         debug_assert!(!board.contains(&hole[0]) && !board.contains(&hole[1]));
-        let board = &board[..board_length(history.street)];
+        let expected = board_length(history.street);
+        let board = &board[..expected.min(board.len())];
         let hand: SmallVecHand = hole.iter().chain(board.iter()).cloned().collect();
         InfoSet {
             history: history.clone(),

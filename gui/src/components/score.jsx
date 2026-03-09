@@ -1,17 +1,10 @@
-import React, {Component} from 'react';
+import React from 'react';
 
-class Score extends Component {
-
-    render() {
-        return (
-            <div className="score">
-                <b>Session: ${this.props.score} <br></br>
-                   Hands: {this.props.hands}</b>
-            </div>
-        );
-    };
-
-};
-
-export default Score;
-
+export default function Score({ score, hands }) {
+  return (
+    <div className="score">
+      <b>Session: ${score} <br />
+         Hands: {hands}</b>
+    </div>
+  );
+}

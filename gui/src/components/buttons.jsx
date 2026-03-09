@@ -1,114 +1,100 @@
-import React, {Component} from 'react';
+import React, { useState } from 'react';
 
-const BUTTON_STYLE = "btn btn-custom m-1"
+const BUTTON_STYLE = "btn btn-custom m-1";
 
-class Buttons extends Component {
+export default function Buttons({
+  nextHand, fold, check, call, callAmount, bet,
+  updateBetAmount, updateBetAmountFromEvent, betAmount,
+  minBetAmount, allInAmount, pot, enabledButtons, disabled,
+}) {
+  const [raiseUIVisible, setRaiseUIVisible] = useState(false);
 
-    constructor(props) {
-        super(props);
-        this.state = {
-            raiseUIVisible: false,
-        }
-        this.showRaiseUI = this.showRaiseUI.bind(this);
-        this.hideRaiseUI = this.hideRaiseUI.bind(this);
-    }
+  const raiseButtonPressed = () => {
+    setRaiseUIVisible(false);
+    bet();
+  };
 
-    showRaiseUI() {
-        this.setState({raiseUIVisible: true});
-    }
+  const enabled = enabledButtons;
 
-    hideRaiseUI() {
-        this.setState({raiseUIVisible: false});
-    }
+  let callText = "CALL";
+  if (callAmount > 0) {
+    callText += " $" + callAmount;
+  }
 
-    raiseButtonPressed = () => {
-        this.hideRaiseUI();
-        this.props.bet();
-    }
+  if (enabled.includes("nextHand")) {
+    return (
+      <div className="buttons">
+        <button onClick={nextHand} className={BUTTON_STYLE} disabled={disabled}>
+          NEXT HAND
+        </button>
+      </div>
+    );
+  }
 
-    render() {
-        const enabled = this.props.enabledButtons;
+  if (raiseUIVisible) {
+    return (
+      <div>
+        <div id="label-and-buttons">
+          <div id="your-bet">
+            <p id="label">Your bet</p>
+            <input type="text" id="betInput" value={betAmount} onChange={updateBetAmountFromEvent} className="m-1" />
+          </div>
+          <div className="back-raise-buttons">
+            <button onClick={raiseButtonPressed} id="raise-button" className={BUTTON_STYLE} disabled={disabled || betAmount < minBetAmount || betAmount > allInAmount}>RAISE</button>
+            <button onClick={() => setRaiseUIVisible(false)} id="back-button" className={BUTTON_STYLE + " back"} disabled={disabled}>BACK</button>
+          </div>
+        </div>
+        <div className="raise-controller">
+          <div className="default-buttons">
+            <button className="btn btn-custom default-bet m-1" onClick={() => updateBetAmount(minBetAmount)} disabled={disabled}>
+              MIN RAISE
+            </button>
+            <button className="btn btn-custom default-bet m-1" onClick={() => updateBetAmount(pot / 2)} disabled={disabled || pot / 2 < minBetAmount}>
+              1/2 POT
+            </button>
+            <button className="btn btn-custom default-bet m-1" onClick={() => updateBetAmount(pot * 3 / 4)} disabled={disabled || pot * 3 / 4 < minBetAmount}>
+              3/4 POT
+            </button>
+            <button className="btn btn-custom default-bet m-1" onClick={() => updateBetAmount(pot)} disabled={disabled || pot < minBetAmount}>
+              POT
+            </button>
+            <button className="btn btn-custom default-bet m-1" onClick={() => updateBetAmount(allInAmount)} disabled={disabled}>
+              ALL IN
+            </button>
+          </div>
+          <div className="slider">
+            <input type="range"
+              className="range-slider m-1"
+              id="slider"
+              min={minBetAmount}
+              max={allInAmount}
+              value={betAmount}
+              onChange={updateBetAmountFromEvent} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-        let call_text = "CALL";
-        if (this.props.callAmount > 0) {
-            call_text += " $" + this.props.callAmount;
-        }
+  return (
+    <div className="buttons">
+      {enabled.includes("Check") ? (
+        <button onClick={check} className={BUTTON_STYLE} disabled={disabled || !enabled.includes("Check")}>
+          CHECK
+        </button>
+      ) : (
+        <button onClick={call} className={BUTTON_STYLE} disabled={disabled || !enabled.includes("Call")}>
+          {callText}
+        </button>
+      )}
 
-        if (enabled.includes("nextHand")) {
-            return (
-                <div className="buttons">
-                    <button onClick={this.props.nextHand} className={BUTTON_STYLE}>
-                        NEXT HAND
-                    </button>
-                </div>
-            );
-        } else if (this.state.raiseUIVisible) {
-            // Display slider and options for betting
-            return (
-                <div>
-                    <div id="label-and-buttons">
-                        <div id="your-bet">
-                            <p id="label">Your bet</p>
-                            <input type="text" id="betInput" value={this.props.betAmount} onChange={this.props.updateBetAmountFromEvent} className="m-1"/>
-                        </div>
-                        <div className="back-raise-buttons">
-                            <button onClick={this.raiseButtonPressed} id="raise-button" className={BUTTON_STYLE} disabled={this.props.betAmount < this.props.minBetAmount || this.props.betAmount > this.props.allInAmount}>RAISE</button>
-                            <button onClick={this.hideRaiseUI} id="back-button" className={BUTTON_STYLE + " back"}>BACK</button>
-                        </div>
-                    </div>
-                    <div className="raise-controller">
-                        <div className="default-buttons">
-                            <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.minBetAmount)}>
-                                MIN RAISE
-                            </button>
-                            <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot / 2)} disabled={this.props.pot / 2 < this.props.minBetAmount}>
-                                1/2 POT
-                            </button>
-                            <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot * 3/4)} disabled={this.props.pot * 3/4 < this.props.minBetAmount}>
-                                3/4 POT
-                            </button>
-                            <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.pot)} disabled={this.props.pot < this.props.minBetAmount}>
-                                POT
-                            </button>
-                            <button className="btn btn-custom default-bet m-1" onClick={() => this.props.updateBetAmount(this.props.allInAmount)}>
-                                ALL IN
-                            </button>
-                        </div>
-                        <div className="slider">
-                            <input type="range"
-                                className="range-slider m-1"
-                                id="slider"
-                                min={this.props.minBetAmount}
-                                max={this.props.allInAmount}
-                                value={this.props.betAmount}
-                                onChange={this.props.updateBetAmountFromEvent}/>
-                        </div>
-                    </div>
-                </div>
-            );
-        } else {
-            // Normal row of buttons: Call Raise Fold
-            return (
-                <div className="buttons">
-                    {enabled.includes("Check") ?
-                        (<button onClick={this.props.check} className={BUTTON_STYLE} disabled={!enabled.includes("Check")}>
-                            CHECK
-                        </button>)
-                        : (<button onClick={this.props.call} className={BUTTON_STYLE} disabled={!enabled.includes("Call")}>
-                            {call_text}
-                        </button>)}
+      <button onClick={() => setRaiseUIVisible(true)} className={BUTTON_STYLE} disabled={disabled || !enabled.includes("Raise")}>
+        RAISE
+      </button>
 
-                    <button onClick={this.showRaiseUI} className={BUTTON_STYLE} disabled={!enabled.includes("Raise")}>
-                        RAISE
-                    </button>
-
-                    <button onClick={this.props.fold} className={BUTTON_STYLE + " fold"} disabled={!enabled.includes("Fold")}>
-                        FOLD
-                    </button>
-                </div>
-            );
-        }
-    };
+      <button onClick={fold} className={BUTTON_STYLE + " fold"} disabled={disabled || !enabled.includes("Fold")}>
+        FOLD
+      </button>
+    </div>
+  );
 }
-
-export default Buttons;

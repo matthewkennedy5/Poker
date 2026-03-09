@@ -162,7 +162,9 @@ fn parse_cards(cards: &[String]) -> Vec<Card> {
 
 #[actix_rt::main]
 pub async fn start_server() -> std::io::Result<()> {
-    println!("[INFO] Launched server");
+    // Force eager initialization so the first request isn't slow
+    Lazy::force(&BOT);
+    println!("[INFO] Bot loaded, starting server");
     HttpServer::new(|| {
         App::new()
             .route("/api/bot", web::post().to(get_cpu_action))
