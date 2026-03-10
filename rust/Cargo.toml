@@ -26,6 +26,8 @@ criterion = { version = "*", features = ["html_reports"] }
 smallvec = { version = "*", features = ["serde"] }
 dashmap = { version = "*", features = ["serde"] }
 ahash = { version = "*", features = ["serde"] }
+memmap2 = "*"
+xxhash-rust = { version = "*", features = ["xxh3"] }
 
 [profile.release]
 debug = true
@@ -52,3 +54,7 @@ path = "src/bin/exploit.rs"
 [[bin]]
 name = "preflop-chart"
 path = "src/bin/preflop_chart.rs"
+
+[[bin]]
+name = "convert"
+path = "src/bin/convert.rs"

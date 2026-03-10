@@ -1,5 +1,4 @@
 use optimus::*;
-use std::path::Path;
 
 fn main() {
     // If the abstraction file doesn't exist, we want to first create the

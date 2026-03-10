@@ -50,7 +50,7 @@ impl Abstraction {
     }
 
     // Map each possible preflop hand to an integer in (0..169)
-    fn preflop_bin(cards: &[Card]) -> i32 {
+    pub fn preflop_bin(cards: &[Card]) -> i32 {
         let mut cards = cards.to_vec();
         cards.sort_by_key(|c| c.rank);
         // Ranks start at 2, so shift it to start at 0

@@ -1,6 +1,4 @@
-use crate::bot::Bot;
-use crate::config::CONFIG;
-use crate::trainer::load_nodes;
+use crate::readonly::{ReadOnlyAbstraction, ReadOnlyBot, ReadOnlyNodes};
 use crate::trainer_utils::*;
 use crate::{card_utils::*, OPPONENT};
 use actix_files as fs;
@@ -8,12 +6,18 @@ use actix_web::{web, App, HttpServer, Responder};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-static BOT: Lazy<Bot> = Lazy::new(|| {
-    Bot::new(
-        load_nodes(&CONFIG.nodes_path),
-        CONFIG.subgame_solving,
-        CONFIG.depth_limit,
-    )
+static BOT: Lazy<ReadOnlyBot> = Lazy::new(|| {
+    let abstraction = ReadOnlyAbstraction::open(
+        "products/readonly_flop.bin",
+        "products/readonly_turn.bin",
+        "products/readonly_river.bin",
+    );
+    let nodes = ReadOnlyNodes::open(
+        "products/readonly_nodes.idx",
+        "products/readonly_nodes.dat",
+        abstraction,
+    );
+    ReadOnlyBot::new(nodes)
 });
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
