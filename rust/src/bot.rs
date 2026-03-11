@@ -222,14 +222,14 @@ impl Bot {
             });
 
             // Stop early if the cumulative strategy has not changed in 1000 iters
-            let node = nodes.get(&infoset).expect(
+            let (node, num_actions) = nodes.get(&infoset).expect(
                 format!(
                     "Infoset {:?} not found in subgame nodes: {:?}",
                     infoset, nodes
                 )
                 .as_str(),
             );
-            let strategy = node.cumulative_strategy();
+            let strategy = node.cumulative_strategy(num_actions as usize);
             println!(
                 "Hand: {} Board: {} | History: {}",
                 cards2str(&hole),

@@ -49,8 +49,8 @@ function getCPUActionText(game) {
   const { street, winner, pot, history, whoseTurn, humanPosition } = game;
 
   if (street === 'showdown') {
-    if (winner === 'human') return 'You win a pot of $' + pot;
-    if (winner === 'cpu') return 'CPU wins a pot of $' + pot;
+    if (winner === 'human') return 'You win $' + pot;
+    if (winner === 'cpu') return 'CPU wins $' + pot;
   }
 
   let prevAction;
@@ -63,9 +63,9 @@ function getCPUActionText(game) {
   if (prevAction === undefined) {
     return whoseTurn === humanPosition ? 'Your turn' : '';
   }
-  if (prevAction.action === 'Fold') return 'CPU folds.';
+  if (prevAction.action === 'Fold') return 'CPU folds';
   if (prevAction.action === 'Call') {
-    return prevAction.amount === 0 ? 'CPU checks.' : 'CPU calls $' + prevAction.amount;
+    return prevAction.amount === 0 ? 'CPU checks' : 'CPU calls $' + prevAction.amount;
   }
   if (prevAction.action === 'Bet') return 'CPU bets $' + prevAction.amount;
   return 'Your turn';
@@ -91,6 +91,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <Score score={game.score} hands={game.numHands} />
       <Table
         pot={game.pot}
         cpuStack={cpuStack}
@@ -115,11 +116,6 @@ export default function App() {
         pot={game.pot}
         enabledButtons={enabledButtons}
         disabled={game.loading}
-      />
-      <Score
-        className="score"
-        score={game.score}
-        hands={game.numHands}
       />
     </div>
   );

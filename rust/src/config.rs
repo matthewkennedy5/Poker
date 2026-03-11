@@ -33,6 +33,9 @@ pub struct Config {
     pub warm_start: bool,
     pub k_means_iters: u64,
 
+    // Tree size
+    pub raise_limit: usize, // Max number of bets/raises per street (0 = unlimited)
+
     // Real time solving
     pub subgame_solving: bool,
     pub subgame_iters: usize,

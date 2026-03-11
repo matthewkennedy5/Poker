@@ -1,287 +1,414 @@
-:root {
-  --button-color: #53d78b;
-  --fold-color: red;
-  display: flex;
-  justify-content: center;
-  background-color: #474747;
-}
-
-.App {
-  text-align: center;
-}
-
-.app {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 100vh;
-  width: 100vw;
-  max-width: 450px;
-  background-color: #272727;
-  font-family: Mulish,sans-serif;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.poker-table, .single-card {
-  background-color: rgb(25, 120, 52);
-}
-
-.poker-table {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 20%;
-  margin: 5%;
-  width: 90%;
-  height: 60%;
-}
-
-.human-cards, .cpu-cards {
-  flex: 1;
-  display: grid;
-  justify-content: center;
-  align-content: center;
-  grid-auto-flow: column;
-  gap: 10px;
-  width: 35%;
-  height: 100%;
-}
-
-.board-cards {
-  flex: 1;
-  display: grid;
-  justify-content: center;
-  align-content: center;
-  grid-auto-flow: column;
-  gap: 10px;
-}
-
-.single-card {
-  display: inline-block;
-  height: 100%;
-  width: 100%;
-  max-height: 15vh;
-  border: 0px;
-}
-
-.cpu-action {
-  flex: 0.2;
-  font-size: 2vh;
-  font-weight: bold;
-}
-
-.pot {
-  flex: 0.2;
-  font-size: 3vh;
-}
-
-.cpu-stack, .human-stack {
-  flex: 0.5;
-  font-size: 2vh;
-  height: 100%;
-  display: flex;
-  align-items: center;
-}
-
-label {
-  position: absolute;
-  width: 100%;
-  left: 0;
-  font-family: "Courier New";
-  text-align: center;
-  color: rgba(255, 255, 255, 0.84);
-}
-
-.score {
-  font-size: 2vh;
-  text-align: center;
-  color: white;
-  padding: 10%;
-  width: 100%;
-}
-
-.buttons {
-  display: flex;
-  justify-content: center;
-}
-
-/* Bootstrap button */
-.btn.btn-custom, .btn.btn-custom:focus {
-  background-color: transparent;
-  border: 2px solid;
-  color: var(--button-color);
-  border-radius: 0.5rem;
-  font-size: 0.8rem;
-  padding: 4% 8%;
-  display: inline-block;
-  font-weight: bold;
-}
-
-@media (hover: hover) {
-  .btn.btn-custom:hover {
-    background-color: var(--button-color);  
-  }
-}
-
-.btn.fold {
-  color: var(--fold-color);
-}
-
-.btn.back {
-  color: white;
-}
-
-.btn.back:hover {
-  background-color: white;
-}
-
-.btn.fold:hover {
-  background-color: var(--fold-color);
-}
-
-.raise-controller {
-  display: flex;
-  flex-direction: column;
-  background-color: #2f2f2f;
-  border-radius: 0.5rem;
-  margin: 1%;
-  height: 8vh;
-}
-
-.back-raise-buttons {
-  flex-basis: 50%;
-  display: flex;
-  align-items: stretch;
-  justify-content: stretch;
-}
-
-#back-button {
-  flex-basis: 50%;
-}
-
-#raise-button {
-  flex-basis: 50%;
-}
-
-.default-buttons {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  justify-content: space-evenly;
-  height: 50%;
-}
-
-.slider {
-  height: 50%;
-}
-
-.btn.default-bet, .btn.default-bet:focus {
-  color: white;
-  font-size: 50%;
-  border-width: 0.01rem;
-  border-radius: 0.2rem;
-  padding: 0px;
-  width: 25%;
-}
-
-.range-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 90%;
-  position: relative;
-  left: 5%;
-}
-
-.range-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 25px;
-  height: 25px;
-  border-radius: 100%;
-  background: orange;
-  transform: translateY(calc(-50% + 0.25vh));
-}
-
-#slider {
-  background-color: gray;
-}
-
-.range-slider::-webkit-slider-runnable-track {
-  width: 100%;
-  height: 0.5vh;
-  cursor: pointer;
-  background: gray;
-  position: relative;
-  top: 0.25vh;
-}
-
-#your-bet {
-  display: flex;
-  flex-direction: column;
-  background-color: #2f2f2f;
-  border-radius: 0.5rem;
-  width: 30vw;
-  height: 8vh;
-  margin: 1%;
-  flex-basis: 50%;
-}
-
-#label {
-  font-size: 0.8rem;
-  color: gray;
-  text-align: center;
-  height: 20%;
-  margin: 0; 
-}
-
-#betInput {
-  text-align: center;
-  background: rgba(255,255,255,.04);
-  border-style: solid;
-  border-radius: 0.3rem;
-  border-width: 0.01rem;
-  color: white;
-  font-weight: bold; 
-  font-size: 1.8rem;
+/* ── Reset & Page ─────────────────────────────────── */
+* {
+  box-sizing: border-box;
+  margin: 0;
   padding: 0;
 }
 
-#label-and-buttons {
+:root {
+  --felt: #1a6b35;
+  --felt-dark: #0e4422;
+  --felt-border: #2a8a4a;
+  --bg: #111111;
+  --bg-surface: #1c1c1c;
+  --text: #e0e0e0;
+  --text-dim: #888;
+  --gold: #e6b800;
+  --green: #34d058;
+  --red: #e5534b;
+  --blue: #58a6ff;
   display: flex;
+  justify-content: center;
+  background-color: #0a0a0a;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── App Shell ───────────────────────────────────── */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  max-width: 900px;
+  background-color: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* ── Score Bar ───────────────────────────────────── */
+.score-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid #2a2a2a;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.score-item {
+  color: var(--text-dim);
+}
+
+.score-divider {
+  color: #333;
+}
+
+/* ── Poker Table ─────────────────────────────────── */
+.poker-table {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 12px;
+  padding: 16px 12px;
+  border-radius: 120px / 50px;
+  background: radial-gradient(ellipse at 50% 40%, var(--felt), var(--felt-dark));
+  border: 3px solid var(--felt-border);
+  box-shadow:
+    0 0 0 6px #0c0c0c,
+    0 0 40px rgba(0, 0, 0, 0.6);
+  min-height: 0;
+  gap: 4px;
+}
+
+/* ── Player Areas ────────────────────────────────── */
+.player-area {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.player-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 70px;
+}
+
+.player-name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.player-stack {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Cards ───────────────────────────────────────── */
+.hand-cards {
+  display: flex;
+  gap: 6px;
+}
+
+.card {
+  height: 80px;
+  width: auto;
+  border-radius: 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Action Text ─────────────────────────────────── */
+.action-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: center;
+  min-height: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Board Area ──────────────────────────────────── */
+.board-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+.board-cards {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.board-card {
+  height: 90px;
+}
+
+.pot-display {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+
+/* ── Action Buttons ──────────────────────────────── */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 16px;
+  flex-shrink: 0;
+}
+
+.action-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  min-width: 90px;
+  text-transform: uppercase;
+}
+
+.action-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.action-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.btn-fold {
+  background: var(--red);
+  color: #fff;
+}
+
+.btn-call {
+  background: var(--green);
+  color: #111;
+}
+
+.btn-raise {
+  background: var(--gold);
+  color: #111;
+}
+
+.btn-back {
+  background: #444;
+  color: #fff;
+}
+
+/* ── Raise Panel ─────────────────────────────────── */
+.actions.raise-mode {
+  flex-direction: column;
+  padding: 10px 16px 14px;
+}
+
+.raise-panel {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.raise-header {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.raise-input-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface);
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+
+.raise-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.raise-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.raise-confirm-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.raise-confirm-buttons .action-btn {
+  padding: 10px 18px;
+  font-size: 13px;
+}
+
+/* ── Slider ──────────────────────────────────────── */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.slider-min, .slider-max {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  min-width: 50px;
+}
+
+.slider-min { text-align: right; }
+.slider-max { text-align: left; }
+
+.raise-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #333;
+  outline: none;
+}
+
+.raise-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.raise-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+  border: none;
+}
+
+/* ── Preset Buttons ──────────────────────────────── */
+.preset-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.preset-btn {
+  flex: 1;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.preset-btn:hover:not(:disabled) {
+  background: #333;
+}
+
+.preset-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ── Responsive ──────────────────────────────────── */
+@media (min-width: 600px) {
+  .card {
+    height: 105px;
+  }
+
+  .board-card {
+    height: 115px;
+  }
+
+  .board-cards {
+    gap: 10px;
+  }
+
+  .hand-cards {
+    gap: 10px;
+  }
+
+  .player-stack {
+    font-size: 18px;
+  }
+
+  .action-btn {
+    padding: 14px 32px;
+    font-size: 15px;
+    min-width: 110px;
+  }
+
+  .pot-display {
+    font-size: 17px;
+  }
+
+  .action-text {
+    font-size: 16px;
+  }
+}
+
+@media (max-height: 700px) {
+  .card {
+    height: 65px;
+  }
+
+  .board-card {
+    height: 72px;
+  }
+
+  .poker-table {
+    margin: 8px;
+    padding: 12px 10px;
+    gap: 2px;
+  }
+
+  .action-text {
+    font-size: 12px;
+  }
+
+  .pot-display {
+    font-size: 13px;
+  }
 }

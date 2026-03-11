@@ -53,9 +53,9 @@ pub fn train(iters: usize, eval_every: usize, warm_start: bool) {
         let mut total: u64 = 0;
         let mut total_t: u64 = 0;
         for elem in &nodes.dashmap {
-            let history_nodes = elem.value();
-            for (card_bucket, n) in history_nodes.iter().enumerate() {
-                let node = n.lock().unwrap();
+            let node_vec = elem.value();
+            let nodes_lock = node_vec.nodes.lock().unwrap();
+            for node in nodes_lock.iter() {
                 total += 1;
                 total_t += node.t as u64;
                 if node.t == 0 {

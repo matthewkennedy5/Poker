@@ -58,6 +58,7 @@ pub struct ActionHistory {
     history: SmallVec<[Action; 10]>,
     last_action: Option<Action>,
     pub current_street_length: u8,
+    num_bets_this_street: u8, // Number of Bet actions on the current street
     stacks: [Amount; 2], // stacks doesn't take into account blinds, but stack_sizes() does
     pub street: usize,
     pub player: usize,
@@ -69,6 +70,7 @@ impl ActionHistory {
             history: SmallVec::with_capacity(10),
             last_action: None,
             current_street_length: 0,
+            num_bets_this_street: 0,
             stacks: [CONFIG.stack_size, CONFIG.stack_size],
             street: PREFLOP,
             player: DEALER,
@@ -135,6 +137,9 @@ impl ActionHistory {
             self
         );
         let action = action.clone();
+        if action.action == ActionType::Bet {
+            self.num_bets_this_street += 1;
+        }
         self.stacks[self.player] -= action.amount;
         self.player = 1 - self.player;
         self.last_action = Some(action.clone());
@@ -144,6 +149,7 @@ impl ActionHistory {
         if self.stacks[0] == self.stacks[1] && self.current_street_length >= 2 {
             self.street += 1;
             self.current_street_length = 0;
+            self.num_bets_this_street = 0;
             self.player = OPPONENT;
         }
         if self.stacks[0] == 0 && self.stacks[1] == 0 {
@@ -231,18 +237,22 @@ impl ActionHistory {
 
         let mut candidate_actions: SmallVec<[Action; NUM_ACTIONS]> =
             SmallVec::with_capacity(NUM_ACTIONS);
-        for pot_fraction in bet_abstraction[self.street].iter() {
-            let bet_size = if pot_fraction == &ALL_IN {
-                self.stacks[self.player]
-            } else {
-                (pot_fraction * (pot as f64)) as Amount + self.to_call()
-            };
-            let action = Action {
-                action: ActionType::Bet,
-                amount: bet_size,
-            };
-            if !candidate_actions.contains(&action) {
-                candidate_actions.push(action);
+        let raise_limit = if self.street == PREFLOP { 3 } else { CONFIG.raise_limit };
+        let at_raise_cap = raise_limit > 0 && self.num_bets_this_street >= raise_limit as u8;
+        if !at_raise_cap {
+            for pot_fraction in bet_abstraction[self.street].iter() {
+                let bet_size = if pot_fraction == &ALL_IN {
+                    self.stacks[self.player]
+                } else {
+                    (pot_fraction * (pot as f64)) as Amount + self.to_call()
+                };
+                let action = Action {
+                    action: ActionType::Bet,
+                    amount: bet_size,
+                };
+                if !candidate_actions.contains(&action) {
+                    candidate_actions.push(action);
+                }
             }
         }
 
@@ -396,6 +406,38 @@ fn find_closest_log(v: Vec<Amount>, n: Amount) -> Amount {
         }
     }
     closest_v
+}
+
+pub fn estimate_tree_size(bet_abstraction: &[Vec<f64>]) {
+    let mut counts = [0usize; 5]; // per-street decision point counts
+    count_decisions(&ActionHistory::new(), bet_abstraction, &mut counts);
+
+    let node_bytes = std::mem::size_of::<Node>();
+    let preflop_mem = counts[PREFLOP] * 169 * node_bytes;
+    let flop_mem = counts[FLOP] * CONFIG.flop_buckets as usize * node_bytes;
+    let turn_mem = counts[TURN] * CONFIG.turn_buckets as usize * node_bytes;
+    let river_mem = counts[RIVER] * CONFIG.river_buckets as usize * node_bytes;
+    let total = preflop_mem + flop_mem + turn_mem + river_mem;
+
+    println!("[INFO] Game tree size estimate:");
+    println!("  Node size:         {} bytes", node_bytes);
+    println!("  Preflop decisions: {}", counts[PREFLOP]);
+    println!("  Flop decisions:    {}", counts[FLOP]);
+    println!("  Turn decisions:    {}", counts[TURN]);
+    println!("  River decisions:   {}", counts[RIVER]);
+    println!("  Estimated memory:  {:.2} GB", total as f64 / 1e9);
+}
+
+fn count_decisions(history: &ActionHistory, bet_abstraction: &[Vec<f64>], counts: &mut [usize; 5]) {
+    if history.hand_over() {
+        return;
+    }
+    counts[history.street] += 1;
+    for action in history.next_actions(bet_abstraction).iter() {
+        let mut next = history.clone();
+        next.add(action);
+        count_decisions(&next, bet_abstraction, counts);
+    }
 }
 
 pub fn get_hand(deck: &[Card], player: usize, street: usize) -> Vec<Card> {
@@ -635,7 +677,7 @@ pub fn terminal_utility_vectorized_fast(
     //  - then in the loop, add or subtract from those total probs.
     // Go from the worst hand to the best hand, changing the probs as you go.
     let total_prob: f64 = opp_reach_probs.iter().sum();
-    let mut prob_equal = 0.0; // Total prob of opponent hands equal to current hand
+    let mut _prob_equal = 0.0; // Total prob of opponent hands equal to current hand
     let mut prob_worse = 0.0; // Total prob of opponent hands worse than current hand
     let mut prob_better: f64 = opp_reach_probs.iter().sum();
     let mut idx_equal = 0;
@@ -652,7 +694,7 @@ pub fn terminal_utility_vectorized_fast(
             if hand_data[idx_equal].strength >= d.strength {
                 break;
             }
-            prob_equal -= hand_data[idx_equal].prob;
+            _prob_equal -= hand_data[idx_equal].prob;
             prob_worse += hand_data[idx_equal].prob;
             idx_equal += 1;
         }
@@ -663,7 +705,7 @@ pub fn terminal_utility_vectorized_fast(
                 break;
             }
             prob_better -= hand_data[idx_better].prob;
-            prob_equal += hand_data[idx_better].prob;
+            _prob_equal += hand_data[idx_better].prob;
             idx_better += 1;
         }
 

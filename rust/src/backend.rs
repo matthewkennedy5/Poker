@@ -1,3 +1,4 @@
+use crate::config::CONFIG;
 use crate::readonly::{ReadOnlyAbstraction, ReadOnlyBot, ReadOnlyNodes};
 use crate::trainer_utils::*;
 use crate::{card_utils::*, OPPONENT};
@@ -103,23 +104,17 @@ async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responde
 
     let mut winnings = 0.0;
     if history.hand_over() {
-        let mut cards: Vec<Card> = Vec::new();
-        cards.extend(parse_cards(&json.dealerCards));
-        cards.extend(parse_cards(&json.opponentCards));
-        cards.extend(parse_cards(&json.boardCards));
-
-        winnings = terminal_utility(
+        winnings = server_terminal_utility(
             &parse_cards(&json.dealerCards),
             &parse_cards(&json.opponentCards),
             &parse_cards(&json.boardCards),
             &history,
             DEALER,
         );
-        // winnings = terminal_utility(&cards, &history, DEALER);
     }
 
     let history_info = HistoryInfo {
-        pot: history.pot(),
+        pot: (2 * CONFIG.stack_size as u32 - stack_sizes[DEALER] as u32 - stack_sizes[OPPONENT] as u32) as Amount,
         street: street.to_string(),
         callAmount: history.to_call(),
         minBetAmount: history.min_bet(),
@@ -154,6 +149,35 @@ fn parse_history(h: &[ActionJSON]) -> ActionHistory {
         history.add(&action);
     }
     history
+}
+
+/// Like terminal_utility() but uses rs_poker directly instead of the 1.5GB
+/// precomputed FAST_HAND_TABLE. Fine for the server which only evaluates
+/// one showdown at a time.
+fn server_terminal_utility(
+    player_hand: &[Card],
+    opp_hand: &[Card],
+    board: &[Card],
+    history: &ActionHistory,
+    player: usize,
+) -> f64 {
+    if history.last_action().unwrap().action == ActionType::Fold {
+        let winner = history.player;
+        let folder = 1 - winner;
+        let winnings = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
+        return if winner == player { winnings } else { -winnings };
+    }
+
+    let pot = history.pot();
+    let p_strength = hand_strength(&[player_hand, board].concat());
+    let o_strength = hand_strength(&[opp_hand, board].concat());
+    if p_strength > o_strength {
+        pot as f64 / 2.0
+    } else if p_strength < o_strength {
+        -(pot as f64) / 2.0
+    } else {
+        0.0
+    }
 }
 
 // Converts from the list ["5d", "7c", "Jh", "back", "back"] to the Vec<Card> representation

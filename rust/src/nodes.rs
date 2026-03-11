@@ -8,8 +8,14 @@ use std::sync::Mutex;
 pub const NUM_ACTIONS: usize = 5;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct NodeVec {
+    pub num_actions: u8,
+    pub nodes: Mutex<Vec<Node>>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Nodes {
-    pub dashmap: DashMap<ActionHistory, Vec<Mutex<Node>>>,
+    pub dashmap: DashMap<ActionHistory, NodeVec>,
     pub bet_abstraction: Vec<Vec<f64>>,
 }
 
@@ -22,17 +28,16 @@ impl Nodes {
         }
     }
 
-    pub fn get(&self, infoset: &InfoSet) -> Option<Node> {
-        let nodes = match self.dashmap.get(&infoset.history) {
+    pub fn get(&self, infoset: &InfoSet) -> Option<(Node, u8)> {
+        let node_vec = match self.dashmap.get(&infoset.history) {
             Some(n) => n,
             None => return None,
         };
-        let node_mutex = match nodes.value().get(infoset.card_bucket as usize) {
-            Some(mutex) => mutex,
-            None => return None,
-        };
-        let node_guard = node_mutex.lock().unwrap();
-        Some(node_guard.clone())
+        let num_actions = node_vec.num_actions;
+        let nodes = node_vec.nodes.lock().unwrap();
+        nodes
+            .get(infoset.card_bucket as usize)
+            .map(|n| (n.clone(), num_actions))
     }
 
     pub fn add_regret_vectorized(
@@ -44,12 +49,12 @@ impl Nodes {
     ) {
         let history = infosets[0].history.clone();
         let node_vec = self.dashmap.get(&history).unwrap();
+        let mut nodes = node_vec.nodes.lock().unwrap();
         for (hand_idx, utility) in action_utility.iter().enumerate() {
             let regret = utility - node_utility[hand_idx];
 
             let infoset = &infosets[hand_idx];
-            let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
-            let mut node = node_mutex.lock().unwrap();
+            let node = &mut nodes[infoset.card_bucket as usize];
             let mut accumulated_regret = node.regrets[action_index] + regret as f32;
 
             // DCFR
@@ -67,8 +72,8 @@ impl Nodes {
     pub fn add_regret(&self, infoset: &InfoSet, action_index: usize, regret: f64) {
         let history = infoset.history.clone();
         let node_vec = self.dashmap.get(&history).unwrap();
-        let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
-        let mut node = node_mutex.lock().unwrap();
+        let mut nodes = node_vec.nodes.lock().unwrap();
+        let node = &mut nodes[infoset.card_bucket as usize];
         let mut accumulated_regret = node.regrets[action_index] + regret as f32;
         // DCFR discounting (consistent with add_regret_vectorized)
         let t: f32 = node.t as f32;
@@ -83,13 +88,14 @@ impl Nodes {
     pub fn update_strategy_sum_vectorized(&self, infosets: &[InfoSet], probs: &[f64]) {
         let history = infosets[0].history.clone();
         let node_vec = self.dashmap.get(&history).unwrap();
+        let num_actions = node_vec.num_actions as usize;
+        let mut nodes = node_vec.nodes.lock().unwrap();
         for (infoset, &prob) in infosets.iter().zip(probs.iter()) {
-            let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
-            let mut node = node_mutex.lock().unwrap();
+            let node = &mut nodes[infoset.card_bucket as usize];
             let positive_regrets: SmallVecFloats = node
                 .regrets
                 .iter()
-                .take(node.num_actions)
+                .take(num_actions)
                 .map(|r| if *r >= 0.0 { *r } else { 0.0 })
                 .collect();
             let current_strategy: SmallVecFloats = normalize_smallvec(&positive_regrets);
@@ -111,12 +117,13 @@ impl Nodes {
     pub fn update_strategy_sum(&self, infoset: &InfoSet, prob: f32) {
         let history = infoset.history.clone();
         let node_vec = self.dashmap.get(&history).unwrap();
-        let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
-        let mut node = node_mutex.lock().unwrap();
+        let num_actions = node_vec.num_actions as usize;
+        let mut nodes = node_vec.nodes.lock().unwrap();
+        let node = &mut nodes[infoset.card_bucket as usize];
         let positive_regrets: SmallVecFloats = node
             .regrets
             .iter()
-            .take(node.num_actions)
+            .take(num_actions)
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
         let current_strategy: SmallVecFloats = normalize_smallvec(&positive_regrets);
@@ -135,8 +142,8 @@ impl Nodes {
     pub fn reset_strategy_sum(&self, infoset: &InfoSet) {
         let history = infoset.history.clone();
         let node_vec = self.dashmap.get(&history).unwrap();
-        let node_mutex = node_vec.get(infoset.card_bucket as usize).unwrap();
-        let mut node = node_mutex.lock().unwrap();
+        let mut nodes = node_vec.nodes.lock().unwrap();
+        let node = &mut nodes[infoset.card_bucket as usize];
         node.strategy_sum = [0.0; NUM_ACTIONS];
     }
 
@@ -144,15 +151,17 @@ impl Nodes {
         if !self.dashmap.contains_key(&infoset.history) {
             self.initialize_node_vec(&infoset.history);
         }
-        let node = self.get(infoset).unwrap();
+        let node_vec = self.dashmap.get(&infoset.history).unwrap();
+        let num_actions = node_vec.num_actions as usize;
+        let nodes = node_vec.nodes.lock().unwrap();
+        let node = &nodes[infoset.card_bucket as usize];
         let positive_regrets: SmallVecFloats = node
             .regrets
             .iter()
-            .take(node.num_actions)
+            .take(num_actions)
             .map(|r| if *r >= 0.0 { *r } else { 0.0 })
             .collect();
-        let regret_norm: SmallVecFloats = normalize_smallvec(&positive_regrets);
-        regret_norm
+        normalize_smallvec(&positive_regrets)
     }
 
     pub fn get_current_strategy_vectorized(&self, infosets: &[InfoSet]) -> Vec<SmallVecFloats> {
@@ -161,19 +170,16 @@ impl Nodes {
             self.initialize_node_vec(history);
         }
         let node_vec_ref = self.dashmap.get(history).unwrap();
-        let node_vec = node_vec_ref.value();
+        let num_actions = node_vec_ref.num_actions as usize;
+        let nodes = node_vec_ref.nodes.lock().unwrap();
         let regret_norms: Vec<SmallVecFloats> = infosets
             .iter()
             .map(|infoset| {
-                let node = node_vec
-                    .get(infoset.card_bucket as usize)
-                    .unwrap()
-                    .lock()
-                    .unwrap();
+                let node = &nodes[infoset.card_bucket as usize];
                 let positive_regrets: SmallVecFloats = node
                     .regrets
                     .iter()
-                    .take(node.num_actions)
+                    .take(num_actions)
                     .map(|&r| if r >= 0.0 { r } else { 0.0 })
                     .collect();
                 normalize_smallvec(&positive_regrets)
@@ -195,17 +201,22 @@ impl Nodes {
         } else {
             panic!("Bad street")
         } as usize;
-        let new_node: Node = Node::new(history.next_actions(&self.bet_abstraction).len());
-        let new_mutex_nodes: Vec<Mutex<Node>> = (0..n_buckets)
-            .map(|i| Mutex::new(new_node.clone()))
-            .collect();
-        self.dashmap.insert(history.clone(), new_mutex_nodes);
+        let num_actions = history.next_actions(&self.bet_abstraction).len();
+        let new_nodes: Vec<Node> = (0..n_buckets).map(|_| Node::new()).collect();
+        self.dashmap.insert(
+            history.clone(),
+            NodeVec {
+                num_actions: num_actions as u8,
+                nodes: Mutex::new(new_nodes),
+            },
+        );
     }
 
     pub fn len(&self) -> usize {
         let mut length = 0;
         self.dashmap.iter().for_each(|elem| {
-            let nodes = elem.value();
+            let node_vec = elem.value();
+            let nodes = node_vec.nodes.lock().unwrap();
             length += nodes.len();
         });
         length
@@ -213,17 +224,21 @@ impl Nodes {
 
     pub fn get_strategy(&self, hole: &[Card], board: &[Card], history: &ActionHistory) -> Strategy {
         let infoset = InfoSet::from_hand(hole, board, history);
-        let node = self
-            .get(&infoset)
-            .expect(&format!("Node not found for infoset {}", &infoset))
-            .clone(); // All nodes must be in infoset
+        let node_vec = self
+            .dashmap
+            .get(&infoset.history)
+            .expect(&format!("Node not found for infoset {}", &infoset));
+        let num_actions = node_vec.num_actions as usize;
+        let nodes = node_vec.nodes.lock().unwrap();
+        let node = nodes
+            .get(infoset.card_bucket as usize)
+            .expect(&format!("Bucket not found for infoset {}", &infoset));
         let mut strategy = Strategy::new();
         let actions = infoset.next_actions(&self.bet_abstraction);
-        let cumulative_strategy = node.cumulative_strategy();
-        for (action, prob) in actions.iter().zip(node.cumulative_strategy().iter()) {
+        let cumulative_strategy = node.cumulative_strategy(num_actions);
+        for (action, prob) in actions.iter().zip(cumulative_strategy.iter()) {
             strategy.insert(action.clone(), *prob as f64);
         }
-        let sum: f64 = strategy.values().sum();
         strategy
     }
 
@@ -237,13 +252,13 @@ impl Nodes {
         let actions = history.next_actions(&self.bet_abstraction);
         let action_idx = actions.iter().position(|a| a == action);
         let node_vec = self.dashmap.get(history)?;
-        let probs: Vec<f64> = node_vec
-            .value()
+        let num_actions = node_vec.num_actions as usize;
+        let nodes = node_vec.nodes.lock().unwrap();
+        let probs: Vec<f64> = nodes
             .iter()
-            .map(|mutex| match action_idx {
+            .map(|node| match action_idx {
                 Some(idx) => {
-                    let node = mutex.lock().unwrap();
-                    let strat = node.cumulative_strategy();
+                    let strat = node.cumulative_strategy(num_actions);
                     if idx < strat.len() {
                         strat[idx] as f64
                     } else {
@@ -262,17 +277,14 @@ impl Nodes {
             .dashmap
             .get(history)
             .expect(format!("History {} not found in blueprint", history).as_str());
-        let node_vec = node_vec_ref.value();
+        let num_actions = node_vec_ref.num_actions as usize;
+        let nodes = node_vec_ref.nodes.lock().unwrap();
 
         let strategies: Vec<SmallVecFloats> = infosets
             .iter()
             .map(|infoset| {
-                let node = node_vec
-                    .get(infoset.card_bucket as usize)
-                    .unwrap()
-                    .lock()
-                    .unwrap();
-                node.cumulative_strategy()
+                let node = &nodes[infoset.card_bucket as usize];
+                node.cumulative_strategy(num_actions)
             })
             .collect();
         strategies
@@ -283,23 +295,20 @@ impl Nodes {
 pub struct Node {
     pub regrets: [f32; NUM_ACTIONS],
     pub strategy_sum: [f32; NUM_ACTIONS],
-    pub num_actions: usize,
     pub t: i32,
 }
 
 impl Node {
-    pub fn new(num_actions: usize) -> Node {
-        debug_assert!(num_actions > 0 && num_actions <= NUM_ACTIONS);
+    pub fn new() -> Node {
         Node {
             regrets: [0.0; NUM_ACTIONS],
             strategy_sum: [0.0; NUM_ACTIONS],
-            num_actions,
             t: 0,
         }
     }
 
-    pub fn cumulative_strategy(&self) -> SmallVecFloats {
+    pub fn cumulative_strategy(&self, num_actions: usize) -> SmallVecFloats {
         // TODO: Should this round off low probabilities here? < 0.05
-        normalize_smallvec(&self.strategy_sum[..self.num_actions])
+        normalize_smallvec(&self.strategy_sum[..num_actions])
     }
 }
