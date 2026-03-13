@@ -329,7 +329,7 @@ def BotAction(response):
 
     while True:
         try:
-            response = requests.post('http://localhost/api/bot?', json=data)
+            response = requests.post('http://localhost:8080/api/bot', json=data)
             json = response.json()
             break
         except:

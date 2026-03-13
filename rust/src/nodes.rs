@@ -55,17 +55,15 @@ impl Nodes {
 
             let infoset = &infosets[hand_idx];
             let node = &mut nodes[infoset.card_bucket as usize];
-            let mut accumulated_regret = node.regrets[action_index] + regret as f32;
-
-            // DCFR
+            // DCFR: discount old regret, then add new regret at full weight
+            let mut old_regret = node.regrets[action_index];
             let t: f32 = node.t as f32;
-            if accumulated_regret > 0.0 {
-                accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
+            if old_regret > 0.0 {
+                old_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
             } else {
-                accumulated_regret *= t.powf(0.5) / (t.powf(0.5) + 1.0);
+                old_regret *= t.powf(0.5) / (t.powf(0.5) + 1.0);
             }
-
-            node.regrets[action_index] = accumulated_regret;
+            node.regrets[action_index] = old_regret + regret as f32;
         }
     }
 
@@ -74,15 +72,15 @@ impl Nodes {
         let node_vec = self.dashmap.get(&history).unwrap();
         let mut nodes = node_vec.nodes.lock().unwrap();
         let node = &mut nodes[infoset.card_bucket as usize];
-        let mut accumulated_regret = node.regrets[action_index] + regret as f32;
-        // DCFR discounting (consistent with add_regret_vectorized)
+        // DCFR: discount old regret, then add new regret at full weight
+        let mut old_regret = node.regrets[action_index];
         let t: f32 = node.t as f32;
-        if accumulated_regret > 0.0 {
-            accumulated_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
+        if old_regret > 0.0 {
+            old_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
         } else {
-            accumulated_regret *= t.powf(0.5) / (t.powf(0.5) + 1.0);
+            old_regret *= t.powf(0.5) / (t.powf(0.5) + 1.0);
         }
-        node.regrets[action_index] = accumulated_regret;
+        node.regrets[action_index] = old_regret + regret as f32;
     }
 
     pub fn update_strategy_sum_vectorized(&self, infosets: &[InfoSet], probs: &[f64]) {
@@ -224,17 +222,25 @@ impl Nodes {
 
     pub fn get_strategy(&self, hole: &[Card], board: &[Card], history: &ActionHistory) -> Strategy {
         let infoset = InfoSet::from_hand(hole, board, history);
-        let node_vec = self
-            .dashmap
-            .get(&infoset.history)
-            .expect(&format!("Node not found for infoset {}", &infoset));
+        let actions = infoset.next_actions(&self.bet_abstraction);
+        let node_vec = match self.dashmap.get(&infoset.history) {
+            Some(n) => n,
+            None => {
+                // Node not yet visited — return uniform strategy
+                let uniform = 1.0 / actions.len() as f64;
+                return actions.iter().map(|a| (a.clone(), uniform)).collect();
+            }
+        };
         let num_actions = node_vec.num_actions as usize;
         let nodes = node_vec.nodes.lock().unwrap();
-        let node = nodes
-            .get(infoset.card_bucket as usize)
-            .expect(&format!("Bucket not found for infoset {}", &infoset));
+        let node = match nodes.get(infoset.card_bucket as usize) {
+            Some(n) => n,
+            None => {
+                let uniform = 1.0 / actions.len() as f64;
+                return actions.iter().map(|a| (a.clone(), uniform)).collect();
+            }
+        };
         let mut strategy = Strategy::new();
-        let actions = infoset.next_actions(&self.bet_abstraction);
         let cumulative_strategy = node.cumulative_strategy(num_actions);
         for (action, prob) in actions.iter().zip(cumulative_strategy.iter()) {
             strategy.insert(action.clone(), *prob as f64);

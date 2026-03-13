@@ -28,33 +28,7 @@ export default function Buttons({
     return (
       <div className="actions raise-mode">
         <div className="raise-panel">
-          <div className="raise-header">
-            <div className="raise-input-group">
-              <span className="raise-label">Raise to</span>
-              <input
-                type="text"
-                className="raise-input"
-                value={betAmount}
-                onChange={updateBetAmountFromEvent}
-              />
-            </div>
-            <div className="raise-confirm-buttons">
-              <button
-                onClick={raiseButtonPressed}
-                className="action-btn btn-raise"
-                disabled={disabled || betAmount < minBetAmount || betAmount > allInAmount}
-              >
-                RAISE
-              </button>
-              <button
-                onClick={() => setRaiseUIVisible(false)}
-                className="action-btn btn-back"
-                disabled={disabled}
-              >
-                BACK
-              </button>
-            </div>
-          </div>
+          <div className="raise-bet-display">${betAmount}</div>
 
           <div className="slider-row">
             <span className="slider-min">${minBetAmount}</span>
@@ -84,6 +58,32 @@ export default function Buttons({
             </button>
             <button className="preset-btn" onClick={() => updateBetAmount(allInAmount)} disabled={disabled}>
               ALL IN
+            </button>
+          </div>
+
+          <div className="raise-confirm-row">
+            <div className="raise-input-group">
+              <span className="raise-label">Raise to</span>
+              <input
+                type="text"
+                className="raise-input"
+                value={betAmount}
+                onChange={updateBetAmountFromEvent}
+              />
+            </div>
+            <button
+              onClick={raiseButtonPressed}
+              className="action-btn btn-raise"
+              disabled={disabled || betAmount < minBetAmount || betAmount > allInAmount}
+            >
+              RAISE
+            </button>
+            <button
+              onClick={() => setRaiseUIVisible(false)}
+              className="action-btn btn-back"
+              disabled={disabled}
+            >
+              BACK
             </button>
           </div>
         </div>

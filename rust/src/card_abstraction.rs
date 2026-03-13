@@ -84,15 +84,14 @@ fn load_abstraction(path: &str, n_cards: usize, n_buckets: i32) -> HashMap<u64, 
         Err(_error) => make_abstraction(n_cards, n_buckets),
         Ok(_) => {
             let abstraction = read_serialized(path);
-            assert!(
-                {
-                    let max_bucket = abstraction.values().max().unwrap().clone();
-                    let min_bucket = abstraction.values().min().unwrap().clone();
-                    max_bucket >= n_buckets - 10 && min_bucket == 0
-                },
-                "Number of {n_cards} abstraction buckets in params.toml does not match the abstraction file."
-            );
-            abstraction
+            let max_bucket = abstraction.values().max().unwrap();
+            let min_bucket = abstraction.values().min().unwrap();
+            if *max_bucket >= n_buckets - 10 && *max_bucket < n_buckets && *min_bucket == 0 {
+                abstraction
+            } else {
+                eprintln!("[WARN] {path}: bucket count changed (file max={max_bucket}, config n_buckets={n_buckets}). Regenerating.");
+                make_abstraction(n_cards, n_buckets)
+            }
         }
     }
 }

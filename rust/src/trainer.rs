@@ -192,7 +192,7 @@ pub fn iterate(
                     traverser_reach_probs[i] *= probs[i] as f64;
                 }
             } else {
-                assert!(opp_reach_probs.len() == strategies.len());
+                debug_assert!(opp_reach_probs.len() == strategies.len());
                 for i in 0..opp_reach_probs.len() {
                     opp_reach_probs[i] *= probs[i] as f64;
                 }
