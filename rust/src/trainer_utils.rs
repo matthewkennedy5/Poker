@@ -57,6 +57,10 @@ impl fmt::Display for Action {
     }
 }
 
+fn default_starting_stacks() -> [Amount; 2] {
+    [CONFIG.stack_size, CONFIG.stack_size]
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ActionHistory {
     history: SmallVec<[Action; 10]>,
@@ -64,6 +68,8 @@ pub struct ActionHistory {
     pub current_street_length: u8,
     num_bets_this_street: u8, // Number of Bet actions on the current street
     stacks: [Amount; 2], // stacks doesn't take into account blinds, but stack_sizes() does
+    #[serde(skip, default = "default_starting_stacks")]
+    starting_stacks: [Amount; 2],
     pub street: usize,
     pub player: usize,
 }
@@ -76,9 +82,27 @@ impl ActionHistory {
             current_street_length: 0,
             num_bets_this_street: 0,
             stacks: [CONFIG.stack_size, CONFIG.stack_size],
+            starting_stacks: [CONFIG.stack_size, CONFIG.stack_size],
             street: PREFLOP,
             player: DEALER,
         }
+    }
+
+    pub fn new_with_stacks(stacks: [Amount; 2]) -> ActionHistory {
+        ActionHistory {
+            history: SmallVec::with_capacity(10),
+            last_action: None,
+            current_street_length: 0,
+            num_bets_this_street: 0,
+            stacks,
+            starting_stacks: stacks,
+            street: PREFLOP,
+            player: DEALER,
+        }
+    }
+
+    pub fn starting_stacks(&self) -> [Amount; 2] {
+        self.starting_stacks
     }
 
     // Example:
@@ -149,8 +173,12 @@ impl ActionHistory {
         self.last_action = Some(action.clone());
         self.history.push(action);
         self.current_street_length += 1;
-        // The street is over if both players have acted and the bet sizes are equal
-        if self.stacks[0] == self.stacks[1] && self.current_street_length >= 2 {
+        // The street is over if both players have invested equally and both have acted
+        let invested = [
+            self.starting_stacks[0] - self.stacks[0],
+            self.starting_stacks[1] - self.stacks[1],
+        ];
+        if invested[0] == invested[1] && self.current_street_length >= 2 {
             self.street += 1;
             self.current_street_length = 0;
             self.num_bets_this_street = 0;
@@ -181,17 +209,17 @@ impl ActionHistory {
 
     pub fn stack_sizes(&self) -> [Amount; 2] {
         let mut stacks = self.stacks;
-        if stacks[DEALER] == CONFIG.stack_size {
+        if stacks[DEALER] == self.starting_stacks[DEALER] {
             stacks[DEALER] -= CONFIG.small_blind;
         }
-        if stacks[OPPONENT] == CONFIG.stack_size {
+        if stacks[OPPONENT] == self.starting_stacks[OPPONENT] {
             stacks[OPPONENT] -= CONFIG.big_blind;
         }
         stacks
     }
 
     pub fn pot(&self) -> Amount {
-        let pot = 2 * CONFIG.stack_size - self.stacks[0] - self.stacks[1];
+        let pot = self.starting_stacks[0] + self.starting_stacks[1] - self.stacks[0] - self.stacks[1];
         if pot == 0 {
             CONFIG.big_blind
         } else {
@@ -204,7 +232,9 @@ impl ActionHistory {
         if self.street == PREFLOP && self.history.is_empty() {
             CONFIG.big_blind
         } else {
-            self.stacks[self.player] - self.stacks[1 - self.player]
+            let opp_invested = self.starting_stacks[1 - self.player] - self.stacks[1 - self.player];
+            let my_invested = self.starting_stacks[self.player] - self.stacks[self.player];
+            opp_invested - my_invested
         }
     }
 
@@ -290,7 +320,7 @@ impl ActionHistory {
         // There's a lot of complex rules, so just create a new history and add all the actions
         // in prev_history.
         let prev_history = &self.history[..self.history.len() - 1];
-        let mut history = ActionHistory::new();
+        let mut history = ActionHistory::new_with_stacks(self.starting_stacks);
         for action in prev_history {
             history.add(action);
         }
@@ -634,7 +664,7 @@ pub fn terminal_utility_vectorized_fast(
         // Someone folded -- assign the chips to the winner.
         let winner = history.player;
         let folder = 1 - winner;
-        let mut winnings: f64 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
+        let mut winnings: f64 = (history.starting_stacks()[folder] - history.stack_sizes()[folder]) as f64;
         if player == folder {
             winnings = -winnings;
         }
@@ -919,7 +949,7 @@ pub fn terminal_utility(
         // Someone folded -- assign the chips to the winner.
         let winner = history.player;
         let folder = 1 - winner;
-        let winnings: f64 = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
+        let winnings: f64 = (history.starting_stacks()[folder] - history.stack_sizes()[folder]) as f64;
         if winner == player {
             return winnings;
         } else {

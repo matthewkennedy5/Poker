@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import useGame from './useGame';
+import { getDisplayedBoard } from './utils';
 import Score from './components/score';
 import Table from './components/table';
 import Buttons from './components/buttons';
@@ -15,21 +16,12 @@ function getDisplayedCPUCards(cpuCards, street) {
   return ['back', 'back'];
 }
 
-function getDisplayedBoard(board, street) {
-  if (street === 'preflop') return ['back', 'back', 'back', 'back', 'back'];
-  if (street === 'flop') return [board[0], board[1], board[2], 'back', 'back'];
-  if (street === 'turn') return [board[0], board[1], board[2], board[3], 'back'];
-  if (street === 'river' || street === 'showdown') return board;
-  throw new Error('Bad street value');
-}
-
 function getEnabledButtons(street, history, callAmount, minBetAmount, allInAmount) {
   let prevAction;
   if (history.length > 0) {
     prevAction = history[history.length - 1];
   }
-  // eslint-disable-next-line no-mixed-operators
-  if (prevAction !== undefined && prevAction.action === 'Fold' || street === 'showdown') {
+  if ((prevAction !== undefined && prevAction.action === 'Fold') || street === 'showdown') {
     return ['nextHand'];
   }
   const enabled = ['Fold'];

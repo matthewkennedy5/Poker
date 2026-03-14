@@ -1,4 +1,3 @@
-use crate::config::CONFIG;
 use crate::readonly::{ReadOnlyAbstraction, ReadOnlyBot, ReadOnlyNodes};
 use crate::trainer_utils::*;
 use crate::{card_utils::*, OPPONENT};
@@ -38,12 +37,13 @@ struct InfoSetJSON {
     cpuCards: Vec<String>,
     board: Vec<String>,
     history: Vec<ActionJSON>,
+    stacks: Option<StacksJSON>,
 }
 
 async fn get_cpu_action(infoset: web::Json<InfoSetJSON>) -> impl Responder {
     let cpu_cards = parse_cards(&infoset.cpuCards);
     let board = parse_cards(&infoset.board);
-    let history = parse_history(&infoset.history);
+    let history = parse_history(&infoset.history, &infoset.stacks);
 
     println!("[BOT] cards={:?} board={:?} history={}", infoset.cpuCards, infoset.board, format_history(&infoset.history));
 
@@ -77,12 +77,13 @@ struct HistoryAndCardsJSON {
     dealerCards: Vec<String>,
     opponentCards: Vec<String>,
     boardCards: Vec<String>,
+    stacks: Option<StacksJSON>,
 }
 
 async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responder {
     println!("[GAME] history={} dealer={:?} opponent={:?} board={:?}",
         format_history(&json.history), json.dealerCards, json.opponentCards, json.boardCards);
-    let history = parse_history(&json.history);
+    let history = parse_history(&json.history, &json.stacks);
     let street = match history.street {
         0 => "preflop",
         1 => "flop",
@@ -114,7 +115,7 @@ async fn get_history_info(json: web::Json<HistoryAndCardsJSON>) -> impl Responde
     }
 
     let history_info = HistoryInfo {
-        pot: (2 * CONFIG.stack_size as u32 - stack_sizes[DEALER] as u32 - stack_sizes[OPPONENT] as u32) as Amount,
+        pot: history.pot(),
         street: street.to_string(),
         callAmount: history.to_call(),
         minBetAmount: history.min_bet(),
@@ -133,8 +134,11 @@ fn format_history(h: &[ActionJSON]) -> String {
     }).collect::<Vec<_>>().join(" → ")
 }
 
-fn parse_history(h: &[ActionJSON]) -> ActionHistory {
-    let mut history = ActionHistory::new();
+fn parse_history(h: &[ActionJSON], stacks: &Option<StacksJSON>) -> ActionHistory {
+    let mut history = match stacks {
+        Some(s) => ActionHistory::new_with_stacks([s.dealer, s.opponent]),
+        None => ActionHistory::new(),
+    };
     for action_json in h {
         let action = Action {
             action: match action_json.action.as_str() {
@@ -164,7 +168,7 @@ fn server_terminal_utility(
     if history.last_action().unwrap().action == ActionType::Fold {
         let winner = history.player;
         let folder = 1 - winner;
-        let winnings = (CONFIG.stack_size - history.stack_sizes()[folder]) as f64;
+        let winnings = (history.starting_stacks()[folder] - history.stack_sizes()[folder]) as f64;
         return if winner == player { winnings } else { -winnings };
     }
 
