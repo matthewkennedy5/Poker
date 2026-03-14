@@ -145,6 +145,17 @@ impl Nodes {
         node.strategy_sum = [0.0; NUM_ACTIONS];
     }
 
+    pub fn reset_all_strategy_sums(&self) {
+        for entry in self.dashmap.iter() {
+            let node_vec = entry.value();
+            let mut nodes = node_vec.nodes.lock().unwrap();
+            for node in nodes.iter_mut() {
+                node.strategy_sum = [0.0; NUM_ACTIONS];
+                node.t = 0;
+            }
+        }
+    }
+
     pub fn get_current_strategy(&self, infoset: &InfoSet) -> SmallVecFloats {
         if !self.dashmap.contains_key(&infoset.history) {
             self.initialize_node_vec(&infoset.history);
@@ -227,6 +238,39 @@ impl Nodes {
             Some(n) => n,
             None => {
                 // Node not yet visited — return uniform strategy
+                let uniform = 1.0 / actions.len() as f64;
+                return actions.iter().map(|a| (a.clone(), uniform)).collect();
+            }
+        };
+        let num_actions = node_vec.num_actions as usize;
+        let nodes = node_vec.nodes.lock().unwrap();
+        let node = match nodes.get(infoset.card_bucket as usize) {
+            Some(n) => n,
+            None => {
+                let uniform = 1.0 / actions.len() as f64;
+                return actions.iter().map(|a| (a.clone(), uniform)).collect();
+            }
+        };
+        let mut strategy = Strategy::new();
+        let cumulative_strategy = node.cumulative_strategy(num_actions);
+        for (action, prob) in actions.iter().zip(cumulative_strategy.iter()) {
+            strategy.insert(action.clone(), *prob as f64);
+        }
+        strategy
+    }
+
+    pub fn get_strategy_with_abstraction(
+        &self,
+        hole: &[Card],
+        board: &[Card],
+        history: &ActionHistory,
+        abstraction: &dyn CardAbstraction,
+    ) -> Strategy {
+        let infoset = InfoSet::from_hand_with_abstraction(hole, board, history, abstraction);
+        let actions = infoset.next_actions(&self.bet_abstraction);
+        let node_vec = match self.dashmap.get(&infoset.history) {
+            Some(n) => n,
+            None => {
                 let uniform = 1.0 / actions.len() as f64;
                 return actions.iter().map(|a| (a.clone(), uniform)).collect();
             }

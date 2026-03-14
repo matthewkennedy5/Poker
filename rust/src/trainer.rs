@@ -115,6 +115,8 @@ pub fn cfr_iteration(deck: &[Card], history: &ActionHistory, nodes: &Nodes, dept
             nodes,
             -1,
             None,
+            &*ABSTRACTION,
+            None,
         );
     });
 }
@@ -129,6 +131,8 @@ pub fn iterate(
     nodes: &Nodes,
     depth_limit: i32,
     depth_limit_nodes: Option<&Nodes>,
+    abstraction: &dyn CardAbstraction,
+    precomputed_strengths: Option<&HashMap<[Card; 2], i32>>,
 ) -> Vec<f64> {
     let N = preflop_hands.len();
     if N == 0 {
@@ -142,6 +146,7 @@ pub fn iterate(
             &board,
             history,
             traverser,
+            precomputed_strengths,
         );
     }
 
@@ -165,7 +170,7 @@ pub fn iterate(
     let history = history.clone();
     let infosets: Vec<InfoSet> = preflop_hands
         .iter()
-        .map(|h| InfoSet::from_hand(h, &board, &history))
+        .map(|h| InfoSet::from_hand_with_abstraction(h, &board, &history, abstraction))
         .collect();
 
     let strategies: Vec<SmallVecFloats> = nodes.get_current_strategy_vectorized(&infosets);
@@ -222,6 +227,8 @@ pub fn iterate(
                 nodes,
                 depth_limit - 1,
                 depth_limit_nodes,
+                abstraction,
+                precomputed_strengths,
             );
 
             // Hacky GPT-4 code sorry
@@ -276,6 +283,8 @@ fn depth_limit_utility(
     traverser_reach_probs: Vec<f64>,
     opp_reach_probs: Vec<f64>,
     depth_limit_nodes: &Nodes,
+    abstraction: &dyn CardAbstraction,
+    precomputed_strengths: Option<&HashMap<[Card; 2], i32>>,
 ) -> Vec<f64> {
     let translated_history = history.translate(&depth_limit_nodes.bet_abstraction);
     if translated_history.hand_over() {
@@ -285,11 +294,12 @@ fn depth_limit_utility(
             &board,
             history,
             traverser,
+            precomputed_strengths,
         );
     }
     let translated_infosets: Vec<InfoSet> = preflop_hands
         .iter()
-        .map(|h| InfoSet::from_hand(h, &board, &translated_history))
+        .map(|h| InfoSet::from_hand_with_abstraction(h, &board, &translated_history, abstraction))
         .collect();
 
     let strategies: Vec<SmallVecFloats> =
@@ -382,6 +392,8 @@ fn depth_limit_utility(
             nonzero_traverser_reach_probs,
             nonzero_opp_reach_probs,
             depth_limit_nodes,
+            abstraction,
+            precomputed_strengths,
         );
 
         // Hacky GPT-4 code sorry

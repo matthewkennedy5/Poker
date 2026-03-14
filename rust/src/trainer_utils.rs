@@ -25,6 +25,10 @@ pub const ALL_IN: f64 = -1.0;
 
 pub static ABSTRACTION: Lazy<Abstraction> = Lazy::new(Abstraction::new);
 
+pub trait CardAbstraction: Send + Sync {
+    fn bin(&self, cards: &[Card]) -> i32;
+}
+
 pub type Strategy = HashMap<Action, f64>;
 pub type Amount = u16;
 pub type SmallVecFloats = SmallVec<[f32; NUM_ACTIONS]>;
@@ -469,6 +473,20 @@ pub fn board_length(street: usize) -> usize {
     }
 }
 
+/// Precompute 7-card hand strengths for all non-blocking 2-card holdings on a
+/// fixed river board.  Uses `rs_poker` (no FAST_HAND_TABLE dependency).
+pub fn precompute_river_strengths(board: &[Card]) -> HashMap<[Card; 2], i32> {
+    debug_assert_eq!(board.len(), 5);
+    let hands = non_blocking_preflop_hands(board);
+    let mut strengths = HashMap::with_capacity(hands.len());
+    for hand in hands {
+        let full_hand = [hand[0], hand[1], board[0], board[1], board[2], board[3], board[4]];
+        let strength = hand_strength(&full_hand);
+        strengths.insert(hand, strength);
+    }
+    strengths
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub struct InfoSet {
     pub history: ActionHistory,
@@ -495,6 +513,22 @@ impl InfoSet {
         InfoSet {
             history: history.clone(),
             card_bucket: ABSTRACTION.bin(&hand),
+        }
+    }
+
+    pub fn from_hand_with_abstraction(
+        hole: &[Card],
+        board: &[Card],
+        history: &ActionHistory,
+        abstraction: &dyn CardAbstraction,
+    ) -> InfoSet {
+        debug_assert!(!board.contains(&hole[0]) && !board.contains(&hole[1]));
+        let expected = board_length(history.street);
+        let board = &board[..expected.min(board.len())];
+        let hand: SmallVecHand = hole.iter().chain(board.iter()).cloned().collect();
+        InfoSet {
+            history: history.clone(),
+            card_bucket: abstraction.bin(&hand),
         }
     }
 
@@ -593,6 +627,7 @@ pub fn terminal_utility_vectorized_fast(
     board: &[Card],
     history: &ActionHistory,
     player: usize,
+    precomputed_strengths: Option<&HashMap<[Card; 2], i32>>,
 ) -> Vec<f64> {
     // https://www.cs.cmu.edu/~waugh/publications/johanson11.pdf "Example 3" at end of page 4
     if history.last_action().unwrap().action == ActionType::Fold {
@@ -631,8 +666,12 @@ pub fn terminal_utility_vectorized_fast(
     let mut hand_data: Vec<HandData> = (0..preflop_hands.len())
         .map(|i| {
             let h = preflop_hands[i];
-            let river_hand = [h[0], h[1], board[0], board[1], board[2], board[3], board[4]];
-            let strength = FAST_HAND_TABLE.hand_strength(&river_hand).unwrap().clone();
+            let strength = if let Some(strengths) = precomputed_strengths {
+                *strengths.get(&h).unwrap()
+            } else {
+                let river_hand = [h[0], h[1], board[0], board[1], board[2], board[3], board[4]];
+                FAST_HAND_TABLE.hand_strength(&river_hand).unwrap().clone()
+            };
             HandData {
                 hand: h,
                 strength,
@@ -833,6 +872,7 @@ pub fn terminal_utility_vectorized(
     board: &[Card],
     history: &ActionHistory,
     player: usize,
+    precomputed_strengths: Option<&HashMap<[Card; 2], i32>>,
 ) -> Vec<f64> {
     let fast = terminal_utility_vectorized_fast(
         preflop_hands.clone(),
@@ -840,9 +880,11 @@ pub fn terminal_utility_vectorized(
         board,
         history,
         player,
+        precomputed_strengths,
     );
     // TODO Refactor: make this an automated test instead of assert
-    debug_assert!({
+    // Only run the slow cross-check when using FAST_HAND_TABLE (training path)
+    debug_assert!(precomputed_strengths.is_some() || {
         let slow = terminal_utility_vectorized_slow(
             preflop_hands.clone(),
             opp_reach_probs.clone(),

@@ -5,6 +5,7 @@
 // the number of possibilities in the game.
 
 use crate::config::CONFIG;
+use crate::trainer_utils::CardAbstraction;
 use crate::{card_utils::*, ABSTRACTION};
 use ahash::AHashMap as HashMap;
 use dashmap::DashMap;
@@ -76,6 +77,12 @@ impl Abstraction {
             _ => panic!("Bad number of cards"),
         };
         *bin_result.unwrap()
+    }
+}
+
+impl CardAbstraction for Abstraction {
+    fn bin(&self, cards: &[Card]) -> i32 {
+        Abstraction::bin(self, cards)
     }
 }
 

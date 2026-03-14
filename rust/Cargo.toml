@@ -21,7 +21,6 @@ actix-rt = "*"
 actix-files = "*"
 toml = "*"
 rs_poker = "*"
-moka = { version = "*", features = ["sync"] }
 criterion = { version = "*", features = ["html_reports"] }
 smallvec = { version = "*", features = ["serde"] }
 dashmap = { version = "*", features = ["serde"] }

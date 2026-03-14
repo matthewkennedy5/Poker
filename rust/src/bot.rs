@@ -3,18 +3,14 @@ use crate::config::CONFIG;
 use crate::nodes::*;
 use crate::trainer::*;
 use crate::trainer_utils::*;
-use moka::sync::Cache;
 use rand::seq::SliceRandom;
 use rayon::prelude::*;
 use smallvec::*;
-
-type PreflopCache = Cache<(i32, ActionHistory), Strategy>;
 
 pub struct Bot {
     // Right now the blueprint stores the mixed strategy for each infoset. To reduce
     // memory usage, we could pre-sample actions and just store a mapping of infoset -> action.
     blueprint: Nodes,
-    preflop_cache: PreflopCache,
     subgame_solving: bool,
     depth_limit: i32,
 }
@@ -23,9 +19,8 @@ impl Bot {
     pub fn new(blueprint: Nodes, subgame_solving: bool, depth_limit: i32) -> Bot {
         Bot {
             blueprint,
-            preflop_cache: Cache::new(10_000),
-            subgame_solving: subgame_solving,
-            depth_limit: depth_limit,
+            subgame_solving,
+            depth_limit,
         }
     }
 
@@ -54,18 +49,7 @@ impl Bot {
         if !self.subgame_solving || history.is_empty() || history.street < RIVER {
             self.get_strategy_action_translation(hole, board, history)
         } else {
-            // Preflop cache
-            let key = (ABSTRACTION.bin(hole), history.clone());
-            match self.preflop_cache.get(&key) {
-                Some(strategy) => strategy,
-                None => {
-                    let strategy = self.unsafe_nested_subgame_solving(hole, board, history);
-                    if history.street == PREFLOP {
-                        self.preflop_cache.insert(key, strategy.clone());
-                    }
-                    strategy
-                }
-            }
+            self.unsafe_nested_subgame_solving(hole, board, history)
         }
     }
 
@@ -106,12 +90,9 @@ impl Bot {
         hole.sort();
 
         // Works as follows:
-        // (1) Get beliefs of the opponent's range, using the bllueprint and action translation
+        // (1) Get beliefs of the opponent's range, using the blueprint and action translation
         // (2) Solve the subgame given the beliefs from (1)
 
-        let get_strategy = |hole: &[Card], board: &[Card], history: &ActionHistory| {
-            self.get_strategy_action_translation(hole, board, history)
-        };
         let nodes = Nodes::new(&CONFIG.bet_abstraction);
         let infoset = InfoSet::from_hand(&hole, &board, history);
         // Get reach probs for each player based on their actions
@@ -122,13 +103,11 @@ impl Bot {
         let mut history_iter = ActionHistory::new();
         for action in translated_history.get_actions() {
             for (i, preflop_hand) in preflop_hands.iter().enumerate() {
-                // TODO: Don't need to call action translation multiple times. Just a single
-                // translated history will do.
+                // Bug fix: use blueprint.get_strategy directly since history_iter
+                // is already translated (avoids double translation and action mismatch)
                 let strat =
-                    self.get_strategy_action_translation(preflop_hand, &board, &history_iter);
-                let prob = strat
-                    .get(&action)
-                    .expect(format!("Action {} not in strategy {:?}", action, strat).as_str());
+                    self.blueprint.get_strategy(preflop_hand, &board, &history_iter);
+                let prob = strat.get(&action).copied().unwrap_or(0.0);
                 if history_iter.player == DEALER {
                     dealer_reach_probs[i] *= prob;
                 } else {
@@ -138,24 +117,12 @@ impl Bot {
             history_iter.add(&action);
         }
 
-        // let normalize = |reach_probs: &mut Vec<f64>| {
-        //     let sum: f64 = reach_probs.iter().sum();
-        //     for prob in reach_probs.iter_mut() {
-        //         *prob /= sum;
-        //     }
-        // };
-        // normalize(&mut dealer_reach_probs);
-        // normalize(&mut oop_reach_probs);
-        // for i in 0..preflop_hands.len() {
-        //     dealer_reach_probs[i] += 0.1 / preflop_hands.len() as f64;
-        //     oop_reach_probs[i] += 0.1 / preflop_hands.len() as f64;
-        // }
-
         let num_epochs = 2;
         let epoch = CONFIG.subgame_iters / num_epochs;
         for i in 0..num_epochs {
             if i == 1 {
-                nodes.reset_strategy_sum(&infoset);
+                // Bug fix: reset ALL strategy sums, not just the root infoset
+                nodes.reset_all_strategy_sums();
             }
             let bar = pbar(epoch as usize);
             (0..epoch).into_par_iter().for_each(|_| {
@@ -216,6 +183,8 @@ impl Bot {
                         &nodes,
                         self.depth_limit,
                         Some(&self.blueprint),
+                        &*ABSTRACTION,
+                        None,
                     );
                 }
                 bar.inc(1);

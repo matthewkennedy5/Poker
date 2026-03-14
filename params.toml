@@ -37,9 +37,9 @@ bet_abstraction = [
 # Small test abstraction
 # bet_abstraction = [[1.0, -1.0], [1.0, -1.0], [1.0, -1.0], [1.0, -1.0]]
 raise_limit = 2
-flop_buckets = 200
-turn_buckets = 200
-river_buckets = 200
+flop_buckets = 10_000
+turn_buckets = 10_000
+river_buckets = 10_000
 
 # Filenames
 nodes_path = "products/nodes.bin"
@@ -48,16 +48,16 @@ nodes_path = "products/nodes.bin"
 # train_iters = 5_000_000
 # lbr_iters = 100_000
 # eval_every = 10_000
-train_iters = 100_000
-lbr_iters = 10_000
+train_iters = 1_000_000
+lbr_iters = 100_000
 eval_every = 10_000
-warm_start = false
+warm_start = true
 k_means_iters = 1000
 
 # Realtime solving
-subgame_solving = false
-subgame_iters = 10_000
-depth_limit = 3         # -1 means always solve to the end of the game
+subgame_solving = true
+subgame_iters = 200
+depth_limit = 3        # -1 means always solve to the end of the game
 
 # Preflop chart
 preflop_strategy_path = "products/preflop_strategy.json"
