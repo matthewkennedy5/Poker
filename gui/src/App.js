@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import useGame from './useGame';
-import { getDisplayedBoard } from './utils';
+import { getDisplayedBoard, annotateHistory } from './utils';
 import Score from './components/score';
 import Table from './components/table';
 import Buttons from './components/buttons';
@@ -37,35 +37,10 @@ function getEnabledButtons(street, history, callAmount, minBetAmount, allInAmoun
   return enabled;
 }
 
-function getCPUActionText(game) {
-  const { street, winner, pot, history, whoseTurn, humanPosition } = game;
-
-  if (street === 'showdown') {
-    if (winner === 'human') return 'You win $' + pot;
-    if (winner === 'cpu') return 'CPU wins $' + pot;
-  }
-
-  let prevAction;
-  if (whoseTurn === humanPosition && history.length >= 1) {
-    prevAction = history[history.length - 1];
-  } else if (whoseTurn !== humanPosition && history.length >= 2) {
-    prevAction = history[history.length - 2];
-  }
-
-  if (prevAction === undefined) {
-    return whoseTurn === humanPosition ? 'Your turn' : '';
-  }
-  if (prevAction.action === 'Fold') return 'CPU folds';
-  if (prevAction.action === 'Call') {
-    return prevAction.amount === 0 ? 'CPU checks' : 'CPU calls $' + prevAction.amount;
-  }
-  if (prevAction.action === 'Bet') return 'CPU bets $' + prevAction.amount;
-  return 'Your turn';
-}
-
 export default function App() {
   const game = useGame();
   const [betAmount, setBetAmount] = useState(0);
+  const logRef = useRef(null);
 
   const humanStack = game.stacks[game.humanPosition];
   const cpuStack = game.stacks[game.humanPosition === 'dealer' ? 'opponent' : 'dealer'];
@@ -73,7 +48,18 @@ export default function App() {
   const displayedHumanCards = getDisplayedHumanCards(game.humanCards);
   const displayedCPUCards = getDisplayedCPUCards(game.cpuCards, game.street);
   const enabledButtons = getEnabledButtons(game.street, game.history, game.callAmount, game.minBetAmount, game.allInAmount);
-  const cpuActionText = getCPUActionText(game);
+
+  const humanIsDealer = game.humanPosition === 'dealer';
+  const handInProgress = game.street !== 'showdown' && game.winner === '';
+  const isHumanTurn = handInProgress && game.whoseTurn === game.humanPosition;
+  const isCPUTurn = handInProgress && game.whoseTurn !== game.humanPosition;
+  const logEntries = annotateHistory(game.history, game.humanPosition, game.winner, game.pot);
+
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight;
+    }
+  }, [logEntries.length]);
 
   const updateBetAmount = (amount) => setBetAmount(amount);
   const updateBetAmountFromEvent = (e) => {
@@ -84,15 +70,33 @@ export default function App() {
   return (
     <div className="app">
       <Score score={game.score} hands={game.numHands} />
-      <Table
-        pot={game.pot}
-        cpuStack={cpuStack}
-        humanStack={humanStack}
-        cpuActionText={cpuActionText}
-        humanCards={displayedHumanCards}
-        cpuCards={displayedCPUCards}
-        board={displayedBoard}
-      />
+      <div className="game-area">
+        <Table
+          pot={game.pot}
+          cpuStack={cpuStack}
+          humanStack={humanStack}
+          humanCards={displayedHumanCards}
+          cpuCards={displayedCPUCards}
+          board={displayedBoard}
+          humanIsDealer={humanIsDealer}
+          isHumanTurn={isHumanTurn}
+          isCPUTurn={isCPUTurn}
+          humanContribution={game.humanContribution}
+          cpuContribution={game.cpuContribution}
+        />
+        <div className="action-log" ref={logRef}>
+          {logEntries.map((entry, i) => (
+            <div key={i} className={`log-entry log-${entry.type}`}>
+              {entry.player && (
+                <span className={`log-player ${entry.player === 'You' ? 'log-you' : 'log-cpu'}`}>
+                  {entry.player}
+                </span>
+              )}
+              <span className="log-text">{entry.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
       <Buttons
         nextHand={game.nextHand}
         fold={game.fold}
