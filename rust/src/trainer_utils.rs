@@ -219,12 +219,8 @@ impl ActionHistory {
     }
 
     pub fn pot(&self) -> Amount {
-        let pot = self.starting_stacks[0] + self.starting_stacks[1] - self.stacks[0] - self.stacks[1];
-        if pot == 0 {
-            CONFIG.big_blind
-        } else {
-            pot
-        }
+        let stacks = self.stack_sizes();
+        self.starting_stacks[0] + self.starting_stacks[1] - stacks[0] - stacks[1]
     }
 
     // Returns the amount needed to call, so 0 for checking
