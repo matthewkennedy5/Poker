@@ -4,6 +4,7 @@ export default function Buttons({
   nextHand, fold, check, call, callAmount, bet,
   updateBetAmount, updateBetAmountFromEvent, betAmount,
   minBetAmount, allInAmount, pot, enabledButtons, disabled,
+  peeking, setPeeking, street,
 }) {
   const [raiseUIVisible, setRaiseUIVisible] = useState(false);
 
@@ -17,6 +18,14 @@ export default function Buttons({
   if (enabled.includes("nextHand")) {
     return (
       <div className="actions">
+        {street !== 'showdown' && (
+          <button
+            className="action-btn btn-back peek-btn"
+            onClick={() => setPeeking(p => !p)}
+          >
+            {peeking ? 'HIDE' : 'PEEK'}
+          </button>
+        )}
         <button onClick={nextHand} className="action-btn btn-call" disabled={disabled}>
           NEXT HAND
         </button>

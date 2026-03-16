@@ -5,7 +5,7 @@
 // the number of possibilities in the game.
 
 use crate::config::CONFIG;
-use crate::trainer_utils::CardAbstraction;
+use crate::trainer_utils::{CardAbstraction, FLOP, TURN, RIVER};
 use crate::{card_utils::*, ABSTRACTION};
 use ahash::AHashMap as HashMap;
 use dashmap::DashMap;
@@ -35,10 +35,16 @@ pub struct Abstraction {
 
 impl Abstraction {
     pub fn new() -> Abstraction {
+        let last = match CONFIG.last_street.as_str() {
+            "flop" => FLOP,
+            "turn" => TURN,
+            "river" => RIVER,
+            _ => panic!("Invalid last_street: {}", CONFIG.last_street),
+        };
         Abstraction {
             flop: load_abstraction(FLOP_ABSTRACTION_PATH, 5, CONFIG.flop_buckets),
-            turn: load_abstraction(TURN_ABSTRACTION_PATH, 6, CONFIG.turn_buckets),
-            river: load_abstraction(RIVER_ABSTRACTION_PATH, 7, CONFIG.river_buckets),
+            turn: if last >= TURN { load_abstraction(TURN_ABSTRACTION_PATH, 6, CONFIG.turn_buckets) } else { HashMap::new() },
+            river: if last >= RIVER { load_abstraction(RIVER_ABSTRACTION_PATH, 7, CONFIG.river_buckets) } else { HashMap::new() },
         }
     }
 

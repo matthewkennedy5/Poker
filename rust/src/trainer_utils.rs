@@ -8,6 +8,15 @@ use rand::{prelude::SliceRandom, thread_rng};
 use smallvec::SmallVec;
 use std::{cmp::Eq, collections::HashSet, fmt, hash::Hash};
 
+pub fn showdown_board_len() -> usize {
+    match CONFIG.last_street.as_str() {
+        "flop" => 3,
+        "turn" => 4,
+        "river" => 5,
+        _ => panic!("Invalid last_street: {}", CONFIG.last_street),
+    }
+}
+
 pub const PREFLOP: usize = 0;
 pub const FLOP: usize = 1;
 pub const TURN: usize = 2;
@@ -694,9 +703,14 @@ pub fn terminal_utility_vectorized_fast(
             let h = preflop_hands[i];
             let strength = if let Some(strengths) = precomputed_strengths {
                 *strengths.get(&h).unwrap()
-            } else {
+            } else if showdown_board_len() == 5 {
                 let river_hand = [h[0], h[1], board[0], board[1], board[2], board[3], board[4]];
-                FAST_HAND_TABLE.hand_strength(&river_hand).unwrap().clone()
+                FAST_HAND_TABLE.hand_strength(&river_hand).unwrap()
+            } else {
+                let sb = showdown_board_len();
+                let mut showdown_hand = vec![h[0], h[1]];
+                showdown_hand.extend_from_slice(&board[..sb]);
+                hand_strength(&showdown_hand)
             };
             HandData {
                 hand: h,
@@ -955,10 +969,16 @@ pub fn terminal_utility(
 
     // Showdown time -- both players have contributed equally to the pot
     let pot = history.pot();
+    let sb = showdown_board_len();
+    let board = &board[..sb];
     let player_hand = [player_preflop_hand, board].concat();
     let opponent_hand = [opp_preflop_hand, board].concat();
-    let player_strength = FAST_HAND_TABLE.hand_strength(&player_hand);
-    let opponent_strength = FAST_HAND_TABLE.hand_strength(&opponent_hand);
+    let (player_strength, opponent_strength) = if sb == 5 {
+        (FAST_HAND_TABLE.hand_strength(&player_hand).unwrap(),
+         FAST_HAND_TABLE.hand_strength(&opponent_hand).unwrap())
+    } else {
+        (hand_strength(&player_hand), hand_strength(&opponent_hand))
+    };
 
     if player_strength > opponent_strength {
         pot as f64 / 2.0

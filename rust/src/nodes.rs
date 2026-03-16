@@ -50,20 +50,24 @@ impl Nodes {
         let history = infosets[0].history.clone();
         let node_vec = self.dashmap.get(&history).unwrap();
         let mut nodes = node_vec.nodes.lock().unwrap();
+        // Track which buckets have already been discounted this iteration
+        // to avoid re-discounting when multiple hands map to the same bucket.
+        let mut discounted = vec![false; nodes.len()];
         for (hand_idx, utility) in action_utility.iter().enumerate() {
             let regret = utility - node_utility[hand_idx];
-
-            let infoset = &infosets[hand_idx];
-            let node = &mut nodes[infoset.card_bucket as usize];
-            // DCFR: discount old regret, then add new regret at full weight
-            let mut old_regret = node.regrets[action_index];
-            let t: f32 = node.t as f32;
-            if old_regret > 0.0 {
-                old_regret *= t.powf(1.5) / (t.powf(1.5) + 1.0);
-            } else {
-                old_regret *= t.powf(0.5) / (t.powf(0.5) + 1.0);
+            let bucket = infosets[hand_idx].card_bucket as usize;
+            let node = &mut nodes[bucket];
+            // DCFR: discount old regret once per bucket, then accumulate new regrets
+            if !discounted[bucket] {
+                discounted[bucket] = true;
+                let t: f32 = node.t as f32;
+                if node.regrets[action_index] > 0.0 {
+                    node.regrets[action_index] *= t.powf(1.5) / (t.powf(1.5) + 1.0);
+                } else {
+                    node.regrets[action_index] *= t.powf(0.5) / (t.powf(0.5) + 1.0);
+                }
             }
-            node.regrets[action_index] = old_regret + regret as f32;
+            node.regrets[action_index] += regret as f32;
         }
     }
 
@@ -88,8 +92,11 @@ impl Nodes {
         let node_vec = self.dashmap.get(&history).unwrap();
         let num_actions = node_vec.num_actions as usize;
         let mut nodes = node_vec.nodes.lock().unwrap();
+        // Track which buckets have been visited to increment t and discount once per bucket.
+        let mut visited = vec![false; nodes.len()];
         for (infoset, &prob) in infosets.iter().zip(probs.iter()) {
-            let node = &mut nodes[infoset.card_bucket as usize];
+            let bucket = infoset.card_bucket as usize;
+            let node = &mut nodes[bucket];
             let positive_regrets: SmallVecFloats = node
                 .regrets
                 .iter()
@@ -97,15 +104,19 @@ impl Nodes {
                 .map(|r| if *r >= 0.0 { *r } else { 0.0 })
                 .collect();
             let current_strategy: SmallVecFloats = normalize_smallvec(&positive_regrets);
-            node.t += 1;
-            if prob > 0.0 {
-                // DCFR strategy sum weighting: discount old strategy sum so that
-                // iteration t's contribution is weighted by t^gamma (gamma=2).
-                // Equivalent to multiplying old sum by (t/(t+1))^2 before adding.
+            if !visited[bucket] {
+                visited[bucket] = true;
+                node.t += 1;
+                // DCFR strategy sum weighting: discount old strategy sum once per bucket
+                // so that iteration t's contribution is weighted by t^gamma (gamma=2).
                 let t = node.t as f32;
                 let discount = (t / (t + 1.0)).powi(2);
-                for i in 0..current_strategy.len() {
+                for i in 0..num_actions {
                     node.strategy_sum[i] *= discount;
+                }
+            }
+            if prob > 0.0 {
+                for i in 0..num_actions {
                     node.strategy_sum[i] += current_strategy[i] * prob as f32;
                 }
             }

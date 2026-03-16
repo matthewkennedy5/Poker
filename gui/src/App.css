@@ -351,6 +351,7 @@ body {
   justify-content: center;
   gap: 10px;
   padding: 14px 16px;
+  padding-right: 208px; /* 16px base + 180px log + 12px log margin */
   flex-shrink: 0;
 }
 
@@ -412,6 +413,7 @@ body {
 .actions.raise-mode {
   flex-direction: column;
   padding: 10px 16px 14px;
+  padding-right: 208px;
 }
 
 .raise-panel {
@@ -563,6 +565,57 @@ body {
   font-size: 13px;
 }
 
+/* ── Peek Button ────────────────────────────────── */
+.peek-btn {
+  min-width: 80px;
+}
+
+/* ── Game Over ───────────────────────────────────── */
+.game-over {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 16px;
+  padding-right: 208px;
+  flex-shrink: 0;
+}
+
+.game-over-result {
+  font-size: 28px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  text-shadow: 0 0 20px var(--gold-glow);
+}
+
+.game-over-score {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-over-score.score-win {
+  color: var(--green);
+}
+
+.game-over-score.score-loss {
+  color: var(--red);
+}
+
+.game-over-hands {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.game-over-btn {
+  margin-top: 4px;
+  min-width: 140px;
+}
+
 /* ── Responsive ──────────────────────────────────── */
 @media (min-width: 600px) {
   .card {
@@ -620,6 +673,12 @@ body {
 
   .log-street {
     width: 100%;
+  }
+
+  .actions,
+  .actions.raise-mode,
+  .game-over {
+    padding-right: 16px;
   }
 }
 

@@ -5,7 +5,7 @@ small_blind = 50
 last_street = "river"
 
 # Bet abstractions, expressed as multiples of the pot size. -1 means "all-in".
-# This does not include the call and fold actions. 
+# This does not include the call and fold actions.
 # Full abstraction
 bet_abstraction = [
     [
@@ -29,29 +29,19 @@ bet_abstraction = [
         -1.0,
     ],
 ]
-# raise_limit = 2
-# flop_buckets = 10_000 # Max:   1342562
-# turn_buckets = 10_000 # Max:  14403610
-# river_buckets = 10_000 # Max: 125756657
-
-# Small test abstraction
-# bet_abstraction = [[1.0, -1.0], [1.0, -1.0], [1.0, -1.0], [1.0, -1.0]]
 raise_limit = 2
-flop_buckets = 10_000
-turn_buckets = 10_000
-river_buckets = 10_000
+flop_buckets = 200
+turn_buckets = 200
+river_buckets = 200
 
 # Filenames
 nodes_path = "products/nodes.bin"
 
 # Training
-# train_iters = 5_000_000
-# lbr_iters = 100_000
-# eval_every = 10_000
 train_iters = 1_000_000
 lbr_iters = 100_000
 eval_every = 10_000
-warm_start = true
+warm_start = false
 k_means_iters = 1000
 
 # Realtime solving

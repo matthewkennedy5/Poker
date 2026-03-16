@@ -11,8 +11,8 @@ function getDisplayedHumanCards(humanCards) {
   return humanCards;
 }
 
-function getDisplayedCPUCards(cpuCards, street) {
-  if (street === 'showdown') return cpuCards;
+function getDisplayedCPUCards(cpuCards, street, peeking) {
+  if (street === 'showdown' || peeking) return cpuCards;
   return ['back', 'back'];
 }
 
@@ -40,13 +40,14 @@ function getEnabledButtons(street, history, callAmount, minBetAmount, allInAmoun
 export default function App() {
   const game = useGame();
   const [betAmount, setBetAmount] = useState(0);
+  const [peeking, setPeeking] = useState(false);
   const logRef = useRef(null);
 
   const humanStack = game.stacks[game.humanPosition];
   const cpuStack = game.stacks[game.humanPosition === 'dealer' ? 'opponent' : 'dealer'];
   const displayedBoard = getDisplayedBoard(game.board, game.street);
   const displayedHumanCards = getDisplayedHumanCards(game.humanCards);
-  const displayedCPUCards = getDisplayedCPUCards(game.cpuCards, game.street);
+  const displayedCPUCards = getDisplayedCPUCards(game.cpuCards, game.street, peeking);
   const enabledButtons = getEnabledButtons(game.street, game.history, game.callAmount, game.minBetAmount, game.allInAmount);
 
   const humanIsDealer = game.humanPosition === 'dealer';
@@ -56,6 +57,10 @@ export default function App() {
   const logEntries = annotateHistory(game.history, game.humanPosition, game.winner, game.pot);
 
   useEffect(() => {
+    setPeeking(false);
+  }, [game.numHands]);
+
+  useEffect(() => {
     if (logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
     }
@@ -63,8 +68,8 @@ export default function App() {
 
   const updateBetAmount = (amount) => setBetAmount(amount);
   const updateBetAmountFromEvent = (e) => {
-    const amount = parseInt(e.target.value);
-    if (amount > 0) setBetAmount(amount);
+    const amount = parseInt(e.target.value) || 0;
+    setBetAmount(amount);
   };
 
   return (
@@ -97,22 +102,42 @@ export default function App() {
           ))}
         </div>
       </div>
-      <Buttons
-        nextHand={game.nextHand}
-        fold={game.fold}
-        check={game.check}
-        call={game.call}
-        callAmount={game.callAmount}
-        bet={() => game.bet(betAmount)}
-        updateBetAmount={updateBetAmount}
-        updateBetAmountFromEvent={updateBetAmountFromEvent}
-        betAmount={betAmount}
-        minBetAmount={game.minBetAmount}
-        allInAmount={game.allInAmount}
-        pot={game.pot}
-        enabledButtons={enabledButtons}
-        disabled={game.loading}
-      />
+      {game.gameOver ? (
+        <div className="game-over">
+          <div className="game-over-result">
+            {game.score > 0 ? 'You Win' : 'CPU Wins'}
+          </div>
+          <div className={`game-over-score ${game.score > 0 ? 'score-win' : 'score-loss'}`}>
+            {game.score > 0 ? '+' : ''}{game.score}
+          </div>
+          <div className="game-over-hands">
+            {game.numHands} hands played
+          </div>
+          <button className="action-btn btn-call game-over-btn" onClick={game.resetGame}>
+            New Game
+          </button>
+        </div>
+      ) : (
+        <Buttons
+          nextHand={() => { setPeeking(false); game.nextHand(); }}
+          fold={game.fold}
+          check={game.check}
+          call={game.call}
+          callAmount={game.callAmount}
+          bet={() => game.bet(betAmount)}
+          updateBetAmount={updateBetAmount}
+          updateBetAmountFromEvent={updateBetAmountFromEvent}
+          betAmount={betAmount}
+          minBetAmount={game.minBetAmount}
+          allInAmount={game.allInAmount}
+          pot={game.pot}
+          enabledButtons={enabledButtons}
+          disabled={game.loading}
+          peeking={peeking}
+          setPeeking={setPeeking}
+          street={game.street}
+        />
+      )}
     </div>
   );
 }

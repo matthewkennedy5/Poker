@@ -30,8 +30,8 @@ xxhash-rust = { version = "*", features = ["xxh3"] }
 
 [profile.release]
 debug = 1
-# lto = "fat"
-# codegen-units = 1
+lto = "fat"
+codegen-units = 1
 
 [profile.dev]
 opt-level = 1

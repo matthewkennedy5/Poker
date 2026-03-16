@@ -270,6 +270,16 @@ impl FastHandTable {
     }
 }
 
+/// Evaluate hand strength for any size hand. Uses FAST_HAND_TABLE for
+/// 7-card hands, falls back to rs_poker for others.
+pub fn eval_strength(hand: &[Card]) -> i32 {
+    if hand.len() == 7 {
+        FAST_HAND_TABLE.hand_strength(hand).unwrap()
+    } else {
+        hand_strength(hand)
+    }
+}
+
 // Uses the rs_poker library to evaluate the strength of a hand
 pub fn hand_strength(cards: &[Card]) -> i32 {
     let step: i32 = 100_000_000;

@@ -19,6 +19,8 @@ pub fn train(iters: usize, eval_every: usize, warm_start: bool) {
         Nodes::new(&CONFIG.bet_abstraction)
     };
     println!("[INFO] Beginning training.");
+    let mut csv = BufWriter::new(File::create("products/exploitability.csv").expect("Failed to create CSV"));
+    writeln!(csv, "iteration,exploitability").unwrap();
     let num_epochs = iters / eval_every;
     for epoch in 0..num_epochs {
         println!("[INFO] Training epoch {}/{}", epoch + 1, num_epochs);
@@ -30,15 +32,9 @@ pub fn train(iters: usize, eval_every: usize, warm_start: bool) {
         });
         bar.finish_with_message("Done");
         serialize_nodes(&nodes);
-        blueprint_exploitability(&nodes, CONFIG.lbr_iters);
-
-        let infoset = InfoSet::from_hand(
-            &str2cards("6h6d"),
-            &str2cards("2s3dAc6c2h"),
-            &ActionHistory::from_strings(vec![
-                "Bet 300", "Call 300", "Call 0", "Call 0", "Call 0", "Call 0", "Call 0",
-            ]),
-        );
+        let exploit = blueprint_exploitability(&nodes, CONFIG.lbr_iters);
+        writeln!(csv, "{},{}", (epoch + 1) * eval_every, exploit).unwrap();
+        csv.flush().unwrap();
 
         let infoset = InfoSet::from_hand(&str2cards("2c7h"), &Vec::new(), &ActionHistory::new());
         println!("InfoSet: {infoset}");
