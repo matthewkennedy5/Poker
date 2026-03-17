@@ -44,6 +44,21 @@ pub fn train(iters: usize, eval_every: usize, warm_start: bool) {
         );
         println!("Node: {:?}", nodes.get(&infoset));
 
+        // River convergence check: nut hand facing bet should never fold
+        let river_infoset = InfoSet::from_hand(
+            &str2cards("AhKh"),
+            &str2cards("QhJhTh5c3d"),
+            &ActionHistory::from_strings(vec![
+                "Bet 250", "Call 250", "Call 0", "Call 0", "Call 0", "Call 0", "Bet 250",
+            ]),
+        );
+        println!("River InfoSet: {river_infoset}");
+        println!(
+            "River Actions: {:?}",
+            river_infoset.next_actions(&CONFIG.bet_abstraction)
+        );
+        println!("River Node: {:?}", nodes.get(&river_infoset));
+
         // Check what percent of nodes have t = 0
         let mut zero = 0;
         let mut total: u64 = 0;
@@ -199,50 +214,19 @@ pub fn iterate(
                 }
             }
 
-            let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
-            let mut nonzero_traverser_reach_probs: Vec<f64> = Vec::with_capacity(N);
-            let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
-            let mut zeros: Vec<usize> = Vec::with_capacity(N);
-            for i in 0..preflop_hands.len() {
-                if traverser_reach_probs[i] > 1e-10 || opp_reach_probs[i] > 1e-10 {
-                    nonzero_preflop_hands.push(preflop_hands[i]);
-                    nonzero_traverser_reach_probs.push(traverser_reach_probs[i]);
-                    nonzero_opp_reach_probs.push(opp_reach_probs[i]);
-                } else {
-                    zeros.push(i);
-                }
-            }
-
-            let mut utility: Vec<f64> = iterate(
+            let utility: Vec<f64> = iterate(
                 traverser,
-                nonzero_preflop_hands,
+                preflop_hands.clone(),
                 board,
                 &next_history,
-                nonzero_traverser_reach_probs,
-                nonzero_opp_reach_probs,
+                traverser_reach_probs.clone(),
+                opp_reach_probs.clone(),
                 nodes,
                 depth_limit - 1,
                 depth_limit_nodes,
                 abstraction,
                 precomputed_strengths,
             );
-
-            // Hacky GPT-4 code sorry
-            let mut result_utilities: Vec<f64> = vec![0.0; preflop_hands.len()];
-            let mut utility_idx = 0;
-            let mut zeros_idx = 0;
-            for i in 0..preflop_hands.len() {
-                if zeros_idx < zeros.len() && zeros[zeros_idx] == i {
-                    // If the current index is in `zeros`, we just increment zeros_idx to move to the next zero
-                    zeros_idx += 1;
-                } else {
-                    // Otherwise, insert the utility value from the `utility` vector
-                    result_utilities[i] = utility[utility_idx];
-                    utility_idx += 1;
-                }
-            }
-            utility = result_utilities;
-            // End hacky GPT-4 code
 
             for n in 0..node_utility.len() {
                 let prob: f32 = if history.player == traverser {
@@ -358,56 +342,17 @@ fn depth_limit_utility(
             }
         }
 
-        if traverser_reach_probs.iter().all(|&x| x < 1e-10)
-            && opp_reach_probs.iter().all(|&x| x < 1e-10)
-        {
-            return vec![0.0; N];
-        }
-
-        // TODO REFACTOR: Creating the nonzeros can be a helper funciton,
-        // can also use in iterate()
-        let mut nonzero_preflop_hands: Vec<[Card; 2]> = Vec::with_capacity(N);
-        let mut nonzero_traverser_reach_probs: Vec<f64> = Vec::with_capacity(N);
-        let mut nonzero_opp_reach_probs: Vec<f64> = Vec::with_capacity(N);
-        let mut zeros: Vec<usize> = Vec::with_capacity(N);
-        for i in 0..preflop_hands.len() {
-            if traverser_reach_probs[i] > 1e-10 || opp_reach_probs[i] > 1e-10 {
-                nonzero_preflop_hands.push(preflop_hands[i]);
-                nonzero_traverser_reach_probs.push(traverser_reach_probs[i]);
-                nonzero_opp_reach_probs.push(opp_reach_probs[i]);
-            } else {
-                zeros.push(i);
-            }
-        }
-
-        let mut utility = depth_limit_utility(
+        let utility = depth_limit_utility(
             traverser,
-            nonzero_preflop_hands,
+            preflop_hands.clone(),
             board,
             &next_history,
-            nonzero_traverser_reach_probs,
-            nonzero_opp_reach_probs,
+            traverser_reach_probs.clone(),
+            opp_reach_probs.clone(),
             depth_limit_nodes,
             abstraction,
             precomputed_strengths,
         );
-
-        // Hacky GPT-4 code sorry
-        let mut result_utilities: Vec<f64> = vec![0.0; preflop_hands.len()];
-        let mut utility_idx = 0;
-        let mut zeros_idx = 0;
-        for i in 0..preflop_hands.len() {
-            if zeros_idx < zeros.len() && zeros[zeros_idx] == i {
-                // If the current index is in `zeros`, we just increment zeros_idx to move to the next zero
-                zeros_idx += 1;
-            } else {
-                // Otherwise, insert the utility value from the `utility` vector
-                result_utilities[i] = utility[utility_idx];
-                utility_idx += 1;
-            }
-        }
-        utility = result_utilities;
-        // End hacky GPT-4 code
 
         for n in 0..node_utility.len() {
             let prob: f64 = if history.player == traverser {
