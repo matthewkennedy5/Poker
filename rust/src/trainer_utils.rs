@@ -40,7 +40,7 @@ pub trait CardAbstraction: Send + Sync {
 
 pub type Strategy = HashMap<Action, f64>;
 pub type Amount = u16;
-pub type SmallVecFloats = SmallVec<[f32; NUM_ACTIONS]>;
+pub type SmallVecFloats = SmallVec<[f64; NUM_ACTIONS]>;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, serde::Serialize, serde::Deserialize)]
 pub enum ActionType {
@@ -613,26 +613,26 @@ pub fn normalize<T: Eq + Hash + Clone>(map: &HashMap<T, f64>) -> HashMap<T, f64>
     result
 }
 
-pub fn normalize_smallvec(v: &[f32]) -> SmallVecFloats {
+pub fn normalize_smallvec(v: &[f64]) -> SmallVecFloats {
     for elem in v {
         debug_assert!(*elem >= 0.0);
     }
-    let sum: f32 = v.iter().sum();
+    let sum: f64 = v.iter().sum();
     debug_assert!(!v.is_empty());
     let norm: SmallVecFloats = v
         .iter()
         .map(|e| {
             if sum == 0.0 {
                 // If all values are 0, then just return a uniform distribution
-                1.0 / v.len() as f32
+                1.0 / v.len() as f64
             } else {
                 e / sum
             }
         })
         .collect();
-    let norm_sum: f32 = norm.iter().sum();
+    let norm_sum: f64 = norm.iter().sum();
     debug_assert!(
-        (norm_sum - 1.0).abs() < 1e-6,
+        (norm_sum - 1.0).abs() < 1e-12,
         "Sum of normalized vector: {}. Input vector: {:?}",
         norm_sum,
         v

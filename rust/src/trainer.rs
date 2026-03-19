@@ -196,7 +196,7 @@ pub fn iterate(
     let action_utilities: Vec<Vec<f64>> = (0..actions.len())
         .map(|i| -> Vec<f64> {
             // Maps traverser_preflop_hand to prob of taking this action
-            let probs: Vec<f32> = strategies.iter().map(|s| s[i]).collect();
+            let probs: Vec<f64> = strategies.iter().map(|s| s[i]).collect();
             let mut next_history = history.clone();
             next_history.add(&actions[i]);
 
@@ -205,12 +205,12 @@ pub fn iterate(
 
             if history.player == traverser {
                 for i in 0..N {
-                    traverser_reach_probs[i] *= probs[i] as f64;
+                    traverser_reach_probs[i] *= probs[i];
                 }
             } else {
                 debug_assert!(opp_reach_probs.len() == strategies.len());
                 for i in 0..opp_reach_probs.len() {
-                    opp_reach_probs[i] *= probs[i] as f64;
+                    opp_reach_probs[i] *= probs[i];
                 }
             }
 
@@ -229,12 +229,12 @@ pub fn iterate(
             );
 
             for n in 0..node_utility.len() {
-                let prob: f32 = if history.player == traverser {
+                let prob: f64 = if history.player == traverser {
                     probs[n]
                 } else {
                     1.0
                 };
-                node_utility[n] += prob as f64 * utility[n];
+                node_utility[n] += prob * utility[n];
             }
             utility
         })
@@ -295,7 +295,7 @@ fn depth_limit_utility(
         .map(|(action_index, action)| {
             let mut prob_sum: f64 = 0.0;
             for i in 0..N {
-                let action_prob = strategies[i].get(action_index).unwrap().clone() as f64;
+                let action_prob = *strategies[i].get(action_index).unwrap();
                 let reach_prob = if history.player == traverser {
                     traverser_reach_probs[i]
                 } else {
@@ -322,7 +322,7 @@ fn depth_limit_utility(
     for (action_index, action) in next_actions.iter().enumerate() {
         let probs: Vec<f64> = strategies
             .iter()
-            .map(|strategy| strategy.get(action_index).unwrap().clone() as f64)
+            .map(|strategy| *strategy.get(action_index).unwrap())
             .collect();
 
         let mut next_history = translated_history.clone();
@@ -333,12 +333,12 @@ fn depth_limit_utility(
 
         if history.player == traverser {
             for i in 0..N {
-                traverser_reach_probs[i] *= probs[i] as f64;
+                traverser_reach_probs[i] *= probs[i];
             }
         } else {
             assert!(opp_reach_probs.len() == strategies.len());
             for i in 0..opp_reach_probs.len() {
-                opp_reach_probs[i] *= probs[i] as f64;
+                opp_reach_probs[i] *= probs[i];
             }
         }
 

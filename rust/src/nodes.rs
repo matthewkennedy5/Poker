@@ -54,7 +54,7 @@ impl Nodes {
             let regret = utility - node_utility[hand_idx];
             let bucket = infosets[hand_idx].card_bucket as usize;
             let node = &mut nodes[bucket];
-            node.regrets[action_index] += regret as f32;
+            node.regrets[action_index] += regret;
         }
     }
 
@@ -63,7 +63,7 @@ impl Nodes {
         let node_vec = self.dashmap.get(&history).unwrap();
         let mut nodes = node_vec.nodes.lock().unwrap();
         let node = &mut nodes[infoset.card_bucket as usize];
-        node.regrets[action_index] += regret as f32;
+        node.regrets[action_index] += regret;
     }
 
     pub fn update_strategy_sum_vectorized(&self, infosets: &[InfoSet], probs: &[f64]) {
@@ -89,13 +89,13 @@ impl Nodes {
             }
             if prob > 0.0 {
                 for i in 0..num_actions {
-                    node.strategy_sum[i] += current_strategy[i] * prob as f32;
+                    node.strategy_sum[i] += current_strategy[i] * prob;
                 }
             }
         }
     }
 
-    pub fn update_strategy_sum(&self, infoset: &InfoSet, prob: f32) {
+    pub fn update_strategy_sum(&self, infoset: &InfoSet, prob: f64) {
         let history = infoset.history.clone();
         let node_vec = self.dashmap.get(&history).unwrap();
         let num_actions = node_vec.num_actions as usize;
@@ -233,7 +233,7 @@ impl Nodes {
         let mut strategy = Strategy::new();
         let cumulative_strategy = node.cumulative_strategy(num_actions);
         for (action, prob) in actions.iter().zip(cumulative_strategy.iter()) {
-            strategy.insert(action.clone(), *prob as f64);
+            strategy.insert(action.clone(), *prob);
         }
         strategy
     }
@@ -266,7 +266,7 @@ impl Nodes {
         let mut strategy = Strategy::new();
         let cumulative_strategy = node.cumulative_strategy(num_actions);
         for (action, prob) in actions.iter().zip(cumulative_strategy.iter()) {
-            strategy.insert(action.clone(), *prob as f64);
+            strategy.insert(action.clone(), *prob);
         }
         strategy
     }
@@ -289,7 +289,7 @@ impl Nodes {
                 Some(idx) => {
                     let strat = node.cumulative_strategy(num_actions);
                     if idx < strat.len() {
-                        strat[idx] as f64
+                        strat[idx]
                     } else {
                         0.0
                     }
@@ -322,8 +322,8 @@ impl Nodes {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
-    pub regrets: [f32; NUM_ACTIONS],
-    pub strategy_sum: [f32; NUM_ACTIONS],
+    pub regrets: [f64; NUM_ACTIONS],
+    pub strategy_sum: [f64; NUM_ACTIONS],
     pub t: i32,
 }
 

@@ -2,11 +2,11 @@
 stack_size = 20000
 big_blind = 100
 small_blind = 50
-last_street = "river"
 
 # Bet abstractions, expressed as multiples of the pot size. -1 means "all-in".
 # This does not include the call and fold actions.
 # Full abstraction
+last_street = "river"
 bet_abstraction = [
     [
         1.0,
@@ -33,6 +33,15 @@ raise_limit = 2
 flop_buckets = 200
 turn_buckets = 200
 river_buckets = 200
+
+
+# Flop holdem test
+# last_street = "flop"
+# bet_abstraction = [[1.0, -1.0], [0.5, -1.0]]
+# flop_buckets = 10
+# turn_buckets = 10
+# river_buckets = 10
+# raise_limit = 1
 
 # Filenames
 nodes_path = "products/nodes.bin"
