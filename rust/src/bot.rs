@@ -27,8 +27,6 @@ impl Bot {
     pub fn get_action(&self, hand: &[Card], board: &[Card], history: &ActionHistory) -> Action {
         let mut strategy = self.get_strategy(hand, board, history);
 
-        // Smoothing - if an action prob is below 3%, make it 0%. sample_action_from_strategy doesn't
-        // need a normalized strategy
         for (action, prob) in strategy.clone() {
             if prob < 0.05 {
                 strategy.insert(action, 0.0);
@@ -105,8 +103,9 @@ impl Bot {
             for (i, preflop_hand) in preflop_hands.iter().enumerate() {
                 // Bug fix: use blueprint.get_strategy directly since history_iter
                 // is already translated (avoids double translation and action mismatch)
-                let strat =
-                    self.blueprint.get_strategy(preflop_hand, &board, &history_iter);
+                let strat = self
+                    .blueprint
+                    .get_strategy(preflop_hand, &board, &history_iter);
                 let prob = strat.get(&action).copied().unwrap_or(0.0);
                 if history_iter.player == DEALER {
                     dealer_reach_probs[i] *= prob;
