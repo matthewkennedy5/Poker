@@ -21,6 +21,9 @@ fn main() {
         println!("Warning: last_street is {}", CONFIG.last_street);
     }
     estimate_tree_size(&CONFIG.bet_abstraction);
+    if std::env::var("POKER_ESTIMATE_ONLY").is_ok() {
+        return;
+    }
     train(CONFIG.train_iters, CONFIG.eval_every, CONFIG.warm_start);
     // subgame_solving_beats_blueprint();
 }

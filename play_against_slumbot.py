@@ -36,7 +36,6 @@ import sys
 import os
 import argparse
 import time
-from tqdm import trange, tqdm
 import multiprocessing as mp
 import numpy as np
 
@@ -48,7 +47,10 @@ BIG_BLIND = 100
 STACK_SIZE = 20000
 
 PRINT = False
-SUBGAME_SOLVING = False
+BOT_URL = 'http://127.0.0.1:8080/api/bot'
+# The local bot server must not go through any HTTP proxy from the environment.
+LOCAL = requests.Session()
+LOCAL.trust_env = False
 
 def ParseAction(action):
     """
@@ -218,7 +220,7 @@ def NewHand(token):
     # Use verify=false to avoid SSL Error
     # If porting this code to another language, make sure that the Content-Type header is
     # set to application/json.
-    response = requests.post(f'https://{host}/api/new_hand', headers={}, json=data)
+    response = requests.post(f'https://{host}/api/new_hand', headers={}, json=data, timeout=30)
     success = getattr(response, 'status_code') == 200
     if not success:
         print('Status code: %s' % repr(response.status_code))
@@ -226,17 +228,17 @@ def NewHand(token):
             print('Error response: %s' % repr(response.json()))
         except ValueError:
             pass
-        sys.exit(-1)
+        raise RuntimeError('new_hand failed: HTTP %s' % response.status_code)
 
     try:
         r = response.json()
     except ValueError:
         print('Could not get JSON from response')
-        sys.exit(-1)
+        raise RuntimeError('new_hand: could not parse JSON')
 
     if 'error_msg' in r:
         print('Error: %s' % r['error_msg'])
-        sys.exit(-1)
+        raise RuntimeError('new_hand error: %s' % r.get('error_msg'))
         
     return r
 
@@ -246,7 +248,7 @@ def Act(token, action):
     # Use verify=false to avoid SSL Error
     # If porting this code to another language, make sure that the Content-Type header is
     # set to application/json.
-    response = requests.post(f'https://{host}/api/act', headers={}, json=data)
+    response = requests.post(f'https://{host}/api/act', headers={}, json=data, timeout=30)
     success = getattr(response, 'status_code') == 200
     if not success:
         print('Status code: %s' % repr(response.status_code))
@@ -254,17 +256,16 @@ def Act(token, action):
             print('Error response: %s' % repr(response.json()))
         except ValueError:
             pass
-        sys.exit(-1)
+        raise RuntimeError('act failed: HTTP %s' % response.status_code)
 
     try:
         r = response.json()
     except ValueError:
         print('Could not get JSON from response')
-        sys.exit(-1)
+        raise RuntimeError('act: could not parse JSON')
 
     if 'error_msg' in r:
-        print('Error: %s' % r['error_msg'])
-        raise ValueError
+        raise ValueError('Slumbot rejected action %r: %s' % (action, r['error_msg']))
         
     return r
 
@@ -313,33 +314,46 @@ def TranslateAction(action):
     return optimus_history, street_bets[player]
 
 
-def BotAction(response):
-    """Gets Optimus's action in the given situation."""
-    board = response.get('board')
+def BotAction(response, record):
+    """Gets Optimus's action in the given situation. Appends timing info to record."""
+    board = list(response.get('board'))
     if len(board) < 5:
         board += ['back'] * (5 - len(board))
-    
+
     optimus_history, bet_so_far = TranslateAction(response.get('action'))
 
     data = {
         'cpuCards': response.get('hole_cards'),
         'board': board,
-        'history': optimus_history 
+        'history': optimus_history
     }
 
+    t0 = time.time()
+    attempts = 0
     while True:
         try:
-            response = requests.post('http://localhost:8080/api/bot', json=data)
-            json = response.json()
+            attempts += 1
+            resp = LOCAL.post(BOT_URL, json=data, timeout=600)
+            json_resp = resp.json()
             break
-        except:
-            delay = 10
-            if SUBGAME_SOLVING:
-                delay = 600
-            time.sleep(delay)
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            if attempts >= 6:
+                raise RuntimeError(f'bot server unreachable: {e}')
+            time.sleep(10)
+    latency = time.time() - t0
+    street = len([c for c in board if c != 'back'])
+    decision = {'street_cards': street, 'latency': round(latency, 3)}
+    # Decision detail for variance reduction (sampling distribution and per-action
+    # values); absent for older servers.
+    for key in ('source', 'sampled', 'legalized', 'probs', 'values'):
+        if key in json_resp:
+            decision[key] = json_resp[key]
+    record['decisions'].append(decision)
 
-    action = json['action']
-    amount = json['amount']
+    action = json_resp['action']
+    amount = json_resp['amount']
     if action == 'Call' and amount == 0:
         return 'k'
     elif action == 'Call':
@@ -349,12 +363,13 @@ def BotAction(response):
     elif action == 'Fold':
         return 'f'
     else:
-        raise ValueError
+        raise ValueError(f'unknown bot action {action}')
 
 
 def PlayHand(token):
+    """Plays one hand. Returns (token, record) where record has the hand details."""
+    record = {'decisions': [], 'error': None}
     r = NewHand(token)
-    # We may get a new token back from /api/new_hand
     new_token = r.get('token')
     if new_token:
         token = new_token
@@ -363,38 +378,31 @@ def PlayHand(token):
             print('-----------------')
             print(repr(r))
         action = r.get('action')
-        client_pos = r.get('client_pos')
-        hole_cards = r.get('hole_cards')
-        board = r.get('board')
+        record['client_pos'] = r.get('client_pos')
+        record['hole_cards'] = r.get('hole_cards')
+        record['board'] = r.get('board')
+        record['action'] = action
         winnings = r.get('winnings')
-        # print('Action: %s' % action)
-        # if client_pos:
-            # print('Client pos: %i' % client_pos)
-        # print('Client hole cards: %s' % repr(hole_cards))
-        # print('Board: %s' % repr(board))
         if winnings is not None:
-            if PRINT:
-                print('Hand winnings: %i' % winnings)
-            return (token, winnings)
-        # Need to check or call
+            record['winnings'] = winnings
+            record['bot_hole_cards'] = r.get('bot_hole_cards')
+            return (token, record)
         a = ParseAction(action)
         if 'error' in a:
-            print('Error parsing action %s: %s' % (action, a['error']))
-            sys.exit(-1)
-        incr = BotAction(r)
-
+            raise RuntimeError('Error parsing action %s: %s' % (action, a['error']))
+        incr = BotAction(r, record)
         if PRINT:
             print('Sending incremental action: %s' % incr)
-        r = Act(token, incr)
-        
-    # Should never get here
+        try:
+            r = Act(token, incr)
+        except ValueError as e:
+            raise RuntimeError('%s | hand so far: %s hole=%s board=%s' % (
+                e, action, record.get('hole_cards'), record.get('board')))
 
-        
+
 def Login(username, password):
     data = {"username": username, "password": password}
-    # If porting this code to another language, make sure that the Content-Type header is
-    # set to application/json.
-    response = requests.post(f'https://{host}/api/login', json=data)
+    response = requests.post(f'https://{host}/api/login', json=data, timeout=30)
     success = getattr(response, 'status_code') == 200
     if not success:
         print('Login failed: status code: %s' % repr(response.status_code))
@@ -403,17 +411,14 @@ def Login(username, password):
         except ValueError:
             pass
         sys.exit(-1)
-
     try:
         r = response.json()
     except ValueError:
         print('Could not get JSON from response')
         sys.exit(-1)
-
     if 'error_msg' in r:
         print('Error: %s' % r['error_msg'])
         sys.exit(-1)
-        
     token = r.get('token')
     if not token:
         print('Did not get token in response to /api/login')
@@ -421,52 +426,158 @@ def Login(username, password):
     return token
 
 
-def play_hands(num_hands):
-    token = None
-    scores = []
-    for i in range(num_hands):
-        token, score = PlayHand(token)
-        scores.append(score)
-    return scores
+def summarize(winnings_list, num_failed):
+    n = len(winnings_list)
+    if n == 0:
+        return 'no completed hands'
+    arr = np.array(winnings_list, dtype=float) / BIG_BLIND * 1000.0  # mbb per hand
+    mean = arr.mean()
+    se = arr.std(ddof=1) / np.sqrt(n) if n > 1 else float('nan')
+    return (f'{n} hands: {mean:+.1f} +/- {1.96 * se:.1f} mbb/hand '
+            f'(95% CI), {num_failed} failed hands')
+
+
+def load_existing(log_path):
+    """Returns the winnings of hands already in the log (for --resume)."""
+    winnings = []
+    if not log_path or not os.path.exists(log_path):
+        return winnings
+    with open(log_path) as f:
+        for line in f:
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            if rec.get('winnings') is not None:
+                winnings.append(rec['winnings'])
+    return winnings
+
+
+def worker(worker_id, num_hands, log_path, bot_url, username, password, stop_event):
+    """Plays up to num_hands hands in its own Slumbot session, appending to log_path."""
+    global BOT_URL, LOCAL
+    BOT_URL = bot_url
+    LOCAL = requests.Session()
+    LOCAL.trust_env = False
+    token = Login(username, password) if username and password else None
+    consecutive_failures = 0
+    played = 0
+    with open(log_path, 'a') as log:
+        while played < num_hands and not stop_event.is_set():
+            try:
+                token, record = PlayHand(token)
+            except KeyboardInterrupt:
+                return
+            except Exception as e:
+                consecutive_failures += 1
+                log.write(json.dumps({'error': str(e), 'worker': worker_id, 'time': time.time()}) + '\n')
+                log.flush()
+                if consecutive_failures >= 5:
+                    print(f'[worker {worker_id}] too many consecutive failures, stopping: {e}', flush=True)
+                    return
+                token = None
+                time.sleep(5)
+                continue
+            consecutive_failures = 0
+            record['worker'] = worker_id
+            record['time'] = time.time()
+            log.write(json.dumps(record) + '\n')  # one line per hand, < 4 KB, so appends don't interleave
+            log.flush()
+            played += 1
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Slumbot API example')
+    global BOT_URL, PRINT
+    parser = argparse.ArgumentParser(description='Play Optimus against Slumbot')
     parser.add_argument('--username', type=str)
     parser.add_argument('--password', type=str)
-    parser.add_argument('--num_hands', type=int)
-    parser.add_argument('--subgame_solving', type=bool)
+    parser.add_argument('--num_hands', type=int, default=1000, help='Total hands across all sessions')
+    parser.add_argument('--sessions', type=int, default=1,
+                        help='Parallel Slumbot sessions (each is its own process and token)')
+    parser.add_argument('--bot_url', type=str, default=BOT_URL)
+    parser.add_argument('--log', type=str, default=None,
+                        help='JSONL file to append hand records to (default results/slumbot_<timestamp>.jsonl)')
+    parser.add_argument('--resume', action='store_true',
+                        help='Count hands already in --log towards --num_hands and the summary')
+    parser.add_argument('--report_every', type=int, default=25, help='Hands between progress reports')
+    parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args()
-    username = args.username
-    password = args.password
-    if username and password:
-        token = Login(username, password)
+
+    BOT_URL = args.bot_url
+    PRINT = args.verbose
+
+    log_path = args.log
+    if log_path is None:
+        os.makedirs('results', exist_ok=True)
+        log_path = time.strftime('results/slumbot_%Y%m%d_%H%M%S.jsonl')
     else:
-        token = None
-    
-    num_hands = args.num_hands
-    SUBGAME_SOLVING = args.subgame_solving
+        os.makedirs(os.path.dirname(log_path) or '.', exist_ok=True)
+    print(f'Logging hands to {log_path}', flush=True)
 
-    num_procs = 1
-    inputs = [1 for _ in range(num_hands)]  # Prepare inputs for play_hands function
+    existing = load_existing(log_path) if args.resume else []
+    if existing:
+        print(f'Resuming: {summarize(existing, 0)}', flush=True)
+    remaining = max(0, args.num_hands - len(existing))
+    sessions = max(1, args.sessions)
+    per_worker = [remaining // sessions + (1 if i < remaining % sessions else 0) for i in range(sessions)]
 
-    with mp.Pool(processes=num_procs) as pool:
-        total_scores = []
-        for result in tqdm(pool.imap_unordered(play_hands, inputs), total=len(inputs), desc="Playing Hands"):
-            total_scores.extend(result)
-            if len(total_scores) > 2:
-                mean = np.mean(total_scores) / BIG_BLIND
-                std = np.std(total_scores) / BIG_BLIND
-                conf = 1.96 * std / np.sqrt(len(total_scores))
-                print(f'Current Winnings: {mean:.2f} +/- {conf:.2f} BB/h')
-    scores = total_scores
+    stop_event = mp.Event()
+    procs = []
+    for i in range(sessions):
+        if per_worker[i] == 0:
+            continue
+        p = mp.Process(target=worker, args=(i, per_worker[i], log_path, BOT_URL,
+                                            args.username, args.password, stop_event))
+        p.start()
+        procs.append(p)
+        time.sleep(0.5)  # stagger session starts
 
-    if len(scores) > 2:
-        mean = np.mean(scores) / BIG_BLIND
-        std = np.std(scores) / BIG_BLIND
-        conf = 1.96 * std / np.sqrt(len(scores))
-        print(f'Winnings: {mean} +/- {conf} BB/h')
-    
-    
+    start = time.time()
+    last_reported = len(existing)
+    try:
+        while any(p.is_alive() for p in procs):
+            time.sleep(5)
+            done = count_hands(log_path)
+            if done - last_reported >= args.report_every:
+                last_reported = done
+                winnings, failed = read_log(log_path)
+                elapsed = time.time() - start
+                rate = (len(winnings) - len(existing)) / (elapsed / 3600.0) if elapsed > 0 else 0.0
+                print(f'[{elapsed/60:.1f} min, {rate:.0f} hands/h] {summarize(winnings, failed)}', flush=True)
+    except KeyboardInterrupt:
+        print('Stopping sessions...', flush=True)
+        stop_event.set()
+    for p in procs:
+        p.join(timeout=60)
+    winnings, failed = read_log(log_path)
+    print('Final: ' + summarize(winnings, failed), flush=True)
+    print(f'Log: {log_path}', flush=True)
+
+
+def read_log(log_path):
+    winnings, failed = [], 0
+    if not os.path.exists(log_path):
+        return winnings, failed
+    with open(log_path) as f:
+        for line in f:
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            if rec.get('winnings') is not None:
+                winnings.append(rec['winnings'])
+            elif rec.get('error'):
+                failed += 1
+    return winnings, failed
+
+
+def count_hands(log_path):
+    try:
+        with open(log_path) as f:
+            return sum(1 for _ in f)
+    except OSError:
+        return 0
+
+
 if __name__ == '__main__':
     main()

@@ -1,0 +1,26 @@
+# Small "flop hold'em" game used to validate the trainer: the hand ends after the
+# flop betting round with a showdown on the 3-card board.
+stack_size = 20000
+big_blind = 100
+small_blind = 50
+last_street = "flop"
+bet_abstraction = [[1.0, -1.0], [0.5, -1.0], [0.5, -1.0], [0.5, -1.0]]
+raise_limit = 1
+preflop_raise_limit = 2
+flop_buckets = 3000000
+turn_buckets = 10
+river_buckets = 10
+nodes_path = "products/nodes_floplossless.bin"
+train_iters = 30000
+lbr_iters = 2000
+eval_every = 2000
+warm_start = false
+k_means_iters = 100
+regret_floor = false
+exploit_method = "br"
+br_boards = 400
+subgame_solving = false
+subgame_iters = 100
+turn_subgame_iters = 100
+depth_limit = 3
+preflop_strategy_path = "products/preflop_strategy_floptest.json"

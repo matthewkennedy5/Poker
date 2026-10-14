@@ -5,3 +5,11 @@ params.json
 gui/package-lock.json
 rust/products/*
 
+results/
+
+.DS_Store
+gui/build/
+gui/node_modules/
+*.tar.gz
+rust/target/
+target/

@@ -1,0 +1,18 @@
+[Unit]
+Description=brrrbot public poker bot server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/Poker/rust
+Environment=POKER_PORT=8081
+Environment=POKER_PARAMS=/root/Poker/params.toml
+Environment=POKER_MAX_SEARCHES=2
+Environment=POKER_SEARCH_WAIT_MS=5000
+Environment=POKER_RATE_PER_MIN=120
+ExecStart=/root/Poker/rust/target/release/server
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

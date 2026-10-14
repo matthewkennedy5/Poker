@@ -13,7 +13,7 @@ itertools = "*"
 indicatif = "*"
 rand = "*"
 rayon = "*"
-bincode = "*"
+bincode = "1"
 statistical = "*"
 once_cell = "*"
 actix-web = "*"
@@ -27,6 +27,7 @@ dashmap = { version = "*", features = ["serde"] }
 ahash = { version = "*", features = ["serde"] }
 memmap2 = "*"
 xxhash-rust = { version = "*", features = ["xxh3"] }
+postflop-solver = { git = "https://github.com/b-inary/postflop-solver", rev = "9d1509fe5077d019825f833eed04b16d342dfda1", default-features = false, features = ["rayon"] }
 
 [profile.release]
 debug = 1
@@ -59,3 +60,23 @@ path = "src/bin/preflop_chart.rs"
 [[bin]]
 name = "convert"
 path = "src/bin/convert.rs"
+
+[[bin]]
+name = "bench-search"
+path = "src/bin/bench_search.rs"
+
+[[bin]]
+name = "play-match"
+path = "src/bin/play_match.rs"
+
+[[bin]]
+name = "match-nodes"
+path = "src/bin/match_nodes.rs"
+
+[[bin]]
+name = "flop-book"
+path = "src/bin/flop_book.rs"
+
+[[bin]]
+name = "aivat"
+path = "src/bin/aivat.rs"

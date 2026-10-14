@@ -1,0 +1,106 @@
+# Game
+stack_size = 20000
+big_blind = 100
+small_blind = 50
+
+# Bet abstractions, expressed as multiples of the pot size. -1 means "all-in".
+# This does not include the call and fold actions.
+# Full abstraction
+last_street = "river"
+bet_abstraction = [
+    [
+        0.667,
+        1.0,
+        1.5,
+        -1.0,
+    ],
+    [
+        0.33,
+        0.75,
+        -1.0,
+    ],
+    [
+        0.5,
+        0.75,
+        -1.0,
+    ],
+    [
+        0.5,
+        1.5,
+        -1.0,
+    ],
+]
+raise_limit = 2
+preflop_raise_limit = 4
+flop_buckets = 500
+turn_buckets = 1000
+river_buckets = 2000
+
+
+# Flop holdem test
+# last_street = "flop"
+# bet_abstraction = [[1.0, -1.0], [0.5, -1.0]]
+# flop_buckets = 10
+# turn_buckets = 10
+# river_buckets = 10
+# raise_limit = 1
+
+# Filenames
+nodes_path = "products/nodes_v2.bin"
+
+# Training
+train_iters = 1_000_000
+lbr_iters = 100_000
+exploit_method = "br"
+br_boards = 200
+regret_floor = false
+eval_every = 20_000
+warm_start = false
+k_means_iters = 1000
+
+# Realtime solving
+subgame_solving = false   # old bucketed turn/river re-solve; superseded by [search]
+subgame_iters = 200
+turn_subgame_iters = 100
+depth_limit = 3          # -1 means always solve to the end of the game
+
+# Preflop chart
+preflop_strategy_path = "products/preflop_strategy.json"
+
+# Real-time search on flop/turn/river using postflop-solver (exact hands, no card
+# abstraction). Must stay the last table in this file. Bet sizes use postflop-solver
+# syntax: "33%" of pot, "2.5x" previous bet, "e" geometric, "a" all-in.
+[search]
+enabled = true
+first_search_street = 2   # 1 = flop, 2 = turn, 3 = river; earlier streets use the blueprint
+flop_search_seats = "none"   # "none", "bb", "sb" or "both": seats that also search the flop
+# Flop-rooted solves contain every turn and river, so they use a smaller tree.
+flop_tree_max_raises = 1
+flop_tree_turn_bet_sizes = "50%"
+flop_tree_turn_raise_sizes = "a"
+flop_tree_river_bet_sizes = "50%, a"
+flop_tree_river_raise_sizes = "a"
+threads = 0
+compression = true
+flop_time_ms = 30000
+turn_time_ms = 4000
+river_time_ms = 2000
+target_exploitability = 0.005
+max_iters = 5000
+min_iters = 30
+flop_bet_sizes = "33%, 75%"
+flop_raise_sizes = "60%"
+turn_bet_sizes = "50%, 100%"
+turn_raise_sizes = "2.5x"
+river_bet_sizes = "50%, 100%, a"
+river_raise_sizes = "2.5x"
+add_allin_threshold = 1.5
+force_allin_threshold = 0.15
+merging_threshold = 0.1
+max_raises_per_street = 2
+purify_threshold = 0.03
+cache_hands = 16
+max_memory_mb = 8000
+own_hand_floor = 0.0001
+range_prune_threshold = 0.0   # drop combos below this fraction of the max range weight
+log = true

@@ -138,6 +138,13 @@ export default function App() {
           street={game.street}
         />
       )}
+      <footer className="site-footer">
+        brrrbot · heads-up no-limit hold'em AI ·{' '}
+        <a href="https://github.com/matthewkennedy5/Poker" target="_blank" rel="noopener noreferrer">
+          source code
+        </a>{' '}
+        (AGPL-3.0)
+      </footer>
     </div>
   );
 }

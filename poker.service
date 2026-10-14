@@ -1,0 +1,13 @@
+[Unit]
+Description=Poker Bot Server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/Poker/rust
+ExecStart=/root/Poker/rust/target/release/server
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target

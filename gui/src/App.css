@@ -709,3 +709,16 @@ body {
     padding: 6px 12px;
   }
 }
+
+.site-footer {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.site-footer a {
+  color: inherit;
+  text-decoration: underline;
+}

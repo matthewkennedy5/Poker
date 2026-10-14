@@ -1,0 +1,18 @@
+brrrbot.com {
+    encode zstd gzip
+    request_body {
+        max_size 64KB
+    }
+    handle /api/* {
+        reverse_proxy 127.0.0.1:8081
+    }
+    handle {
+        root * /var/www/brrrbot
+        try_files {path} /index.html
+        file_server
+    }
+}
+
+www.brrrbot.com {
+    redir https://brrrbot.com{uri} permanent
+}

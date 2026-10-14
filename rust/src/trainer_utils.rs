@@ -276,7 +276,11 @@ impl ActionHistory {
 
         let mut candidate_actions: SmallVec<[Action; NUM_ACTIONS]> =
             SmallVec::with_capacity(NUM_ACTIONS);
-        let raise_limit = if self.street == PREFLOP { 3 } else { CONFIG.raise_limit };
+        let raise_limit = if self.street == PREFLOP {
+            CONFIG.preflop_raise_limit
+        } else {
+            CONFIG.raise_limit
+        };
         let at_raise_cap = raise_limit > 0 && self.num_bets_this_street >= raise_limit as u8;
         if !at_raise_cap {
             for pot_fraction in bet_abstraction[self.street].iter() {
@@ -406,10 +410,18 @@ impl ActionHistory {
         if action.action == ActionType::Call {
             adjusted.amount = self.to_call();
         } else if action.action == ActionType::Bet {
+            // Real-game legality: at least a big blind when opening, at least the
+            // min-raise when raising, never more than the stack. A bet equal to the
+            // call amount is a call, so it must be strictly larger.
+            let mut min_legal = self.min_bet().max(CONFIG.big_blind);
+            if self.to_call() > 0 {
+                min_legal = min_legal.max(self.to_call() + CONFIG.big_blind);
+            }
+            let min_legal = min_legal.min(self.max_bet());
             if action.amount > self.max_bet() {
                 adjusted.amount = self.max_bet();
-            } else if action.amount < self.min_bet() {
-                adjusted.amount = self.min_bet();
+            } else if action.amount < min_legal {
+                adjusted.amount = min_legal;
             }
         }
         adjusted
@@ -506,6 +518,22 @@ pub fn board_length(street: usize) -> usize {
         RIVER => 5,
         _ => panic!("Bad street"),
     }
+}
+
+/// Precompute showdown strengths (using the first `showdown_board_len()` board
+/// cards) for every non-blocking holding. Uses `rs_poker`, so the 1.6 GB
+/// FAST_HAND_TABLE is never needed.
+pub fn precompute_showdown_strengths(board: &[Card]) -> HashMap<[Card; 2], i32> {
+    let sb = showdown_board_len();
+    let board = &board[..sb];
+    let hands = non_blocking_preflop_hands(board);
+    let mut strengths = HashMap::with_capacity(hands.len());
+    for hand in hands {
+        let mut full = vec![hand[0], hand[1]];
+        full.extend_from_slice(board);
+        strengths.insert(hand, hand_strength(&full));
+    }
+    strengths
 }
 
 /// Precompute 7-card hand strengths for all non-blocking 2-card holdings on a
@@ -647,6 +675,115 @@ pub fn sample_action_from_strategy(strategy: &Strategy) -> Action {
         .unwrap()
         .clone();
     action
+}
+
+/// Per-board showdown evaluator: hands sorted by strength once, then each leaf
+/// is an O(n) sweep with 52 per-card accumulators for card removal.
+pub struct BoardEval {
+    n: usize,
+    /// card indices (0..52) of each hand, original order
+    cards: Vec<(usize, usize)>,
+    /// hand indices sorted by showdown strength ascending
+    order: Vec<usize>,
+    /// strength of each hand, original order
+    strength: Vec<i32>,
+}
+
+impl BoardEval {
+    pub fn new(hands: &[[Card; 2]], board: &[Card]) -> BoardEval {
+        let sb = showdown_board_len();
+        let board = &board[..sb];
+        let strength: Vec<i32> = hands
+            .iter()
+            .map(|h| {
+                let mut full = vec![h[0], h[1]];
+                full.extend_from_slice(board);
+                hand_strength(&full)
+            })
+            .collect();
+        let mut order: Vec<usize> = (0..hands.len()).collect();
+        order.sort_by_key(|&i| strength[i]);
+        let cards = hands
+            .iter()
+            .map(|h| (card_index(&h[0]), card_index(&h[1])))
+            .collect();
+        BoardEval {
+            n: hands.len(),
+            cards,
+            order,
+            strength,
+        }
+    }
+
+    /// Counterfactual utility of every hand (original order) for the player to be
+    /// paid at this terminal history, given the opponent's reach probabilities.
+    /// Same normalization as `terminal_utility_vectorized` (divided by n).
+    pub fn utility(&self, opp_reach: &[f64], history: &ActionHistory, player: usize) -> Vec<f64> {
+        let n = self.n;
+        let total: f64 = opp_reach.iter().sum();
+        let mut by_card = [0.0f64; 52];
+        for i in 0..n {
+            let (c1, c2) = self.cards[i];
+            by_card[c1] += opp_reach[i];
+            by_card[c2] += opp_reach[i];
+        }
+        let mut utils = vec![0.0; n];
+        let last = history.last_action().unwrap();
+        if last.action == ActionType::Fold {
+            // Winner is the player to act after the fold (the non-folder).
+            let winner = history.player;
+            let folder = 1 - winner;
+            let mut winnings = (history.starting_stacks()[folder] - history.stack_sizes()[folder]) as f64;
+            if player == folder {
+                winnings = -winnings;
+            }
+            for i in 0..n {
+                let (c1, c2) = self.cards[i];
+                let unblocked = total - by_card[c1] - by_card[c2] + opp_reach[i];
+                utils[i] = unblocked * winnings / n as f64;
+            }
+            return utils;
+        }
+        let half_pot = history.pot() as f64 / 2.0;
+        let mut worse_total = 0.0;
+        let mut worse_by_card = [0.0f64; 52];
+        let mut k = 0;
+        while k < n {
+            // group of equal strength [k, j)
+            let s = self.strength[self.order[k]];
+            let mut j = k;
+            let mut group_total = 0.0;
+            let mut group_by_card = [0.0f64; 52];
+            while j < n && self.strength[self.order[j]] == s {
+                let i = self.order[j];
+                let (c1, c2) = self.cards[i];
+                group_total += opp_reach[i];
+                group_by_card[c1] += opp_reach[i];
+                group_by_card[c2] += opp_reach[i];
+                j += 1;
+            }
+            let better_total = total - worse_total - group_total;
+            for t in k..j {
+                let i = self.order[t];
+                let (c1, c2) = self.cards[i];
+                let p_worse = worse_total - worse_by_card[c1] - worse_by_card[c2];
+                let better_c1 = by_card[c1] - worse_by_card[c1] - group_by_card[c1];
+                let better_c2 = by_card[c2] - worse_by_card[c2] - group_by_card[c2];
+                let p_better = better_total - better_c1 - better_c2;
+                utils[i] = half_pot * (p_worse - p_better) / n as f64;
+            }
+            worse_total += group_total;
+            for c in 0..52 {
+                worse_by_card[c] += group_by_card[c];
+            }
+            k = j;
+        }
+        utils
+    }
+}
+
+pub fn card_index(c: &Card) -> usize {
+    (c.rank as usize - 2) * 4 + c.suit as usize
 }
 
 #[derive(Debug, Clone)]
@@ -987,5 +1124,45 @@ pub fn terminal_utility(
     } else {
         // It's a tie: player_strength == opponent_strength
         return 0.0;
+    }
+}
+
+#[cfg(test)]
+mod board_eval_tests {
+    use super::*;
+    use rand::prelude::*;
+
+    #[test]
+    fn board_eval_matches_legacy_terminal_utility() {
+        let mut rng = thread_rng();
+        for trial in 0..20 {
+            let mut deck = deck();
+            deck.shuffle(&mut rng);
+            let board = [deck[0], deck[1], deck[2], deck[3], deck[4]];
+            let hands = non_blocking_preflop_hands(&board[..showdown_board_len()]);
+            let reach: Vec<f64> = hands.iter().map(|_| rng.gen::<f64>()).collect();
+            let strengths = precompute_showdown_strengths(&board);
+            let eval = BoardEval::new(&hands, &board);
+            let histories = vec![
+                ActionHistory::from_strings(vec!["Bet 250", "Call 250", "Call 0", "Call 0", "Call 0", "Call 0", "Bet 250", "Call 250"]),
+                ActionHistory::from_strings(vec!["Bet 250", "Call 250", "Call 0", "Bet 250", "Fold 0"]),
+                ActionHistory::from_strings(vec!["Bet 250", "Bet 775", "Fold 0"]),
+            ];
+            for history in &histories {
+                for player in [DEALER, OPPONENT] {
+                    let legacy = terminal_utility_vectorized_fast(
+                        hands.clone(), reach.clone(), &board, history, player, Some(&strengths),
+                    );
+                    let fast = eval.utility(&reach, history, player);
+                    for i in 0..hands.len() {
+                        assert!(
+                            (legacy[i] - fast[i]).abs() < 1e-6,
+                            "trial {} history {} player {} hand {}: {} vs {}",
+                            trial, history, player, i, legacy[i], fast[i]
+                        );
+                    }
+                }
+            }
+        }
     }
 }

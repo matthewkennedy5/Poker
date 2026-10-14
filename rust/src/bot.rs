@@ -174,7 +174,7 @@ impl Bot {
 
                     iterate(
                         traverser,
-                        nonzero_preflop_hands,
+                        &nonzero_preflop_hands,
                         board,
                         history,
                         nonzero_traverser_reach_probs,
@@ -183,6 +183,9 @@ impl Bot {
                         self.depth_limit,
                         Some(&self.blueprint),
                         &*ABSTRACTION,
+                        None,
+                        None,
+                        None,
                         None,
                     );
                 }
