@@ -275,6 +275,7 @@ struct HistoryInfo {
     whoseTurn: String,
     stacks: StacksJSON,
     winnings: f64,
+    handOver: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -348,6 +349,7 @@ fn history_info(json: &HistoryAndCardsJSON) -> String {
         whoseTurn: whose_turn.to_string(),
         stacks,
         winnings,
+        handOver: history.hand_over(),
     };
 
     serde_json::to_string(&history_info).unwrap()

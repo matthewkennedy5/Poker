@@ -77,9 +77,9 @@ function resolveHand(gameState, history, humanPosition, currentScore, currentNum
   let numHands = currentNumHands;
   let street = gameState.street;
 
-  if (gameState.winnings !== 0) {
+  if (gameState.handOver) {
     const humanProfit = humanPosition === 'dealer' ? gameState.winnings : -gameState.winnings;
-    winner = humanProfit > 0 ? 'human' : (humanProfit < 0 ? 'cpu' : '');
+    winner = humanProfit > 0 ? 'human' : (humanProfit < 0 ? 'cpu' : 'split');
     score += humanProfit;
     numHands += 1;
     if (history[history.length - 1].action !== 'Fold') {
@@ -110,14 +110,14 @@ export default function useGame() {
 
   // Run CPU actions one at a time, dispatching after each so the UI shows it
   async function runCPULoop(history, humanPosition, humanCards, cpuCards, board, gameState, stacks) {
-    while (gameState.winnings === 0 && gameState.whoseTurn !== humanPosition) {
+    while (!gameState.handOver && gameState.whoseTurn !== humanPosition) {
       const displayedBoard = getDisplayedBoard(board, gameState.street);
       const cpuAction = await fetchCPUAction(cpuCards, displayedBoard, history, stacks);
       history = [...history, cpuAction];
       gameState = await fetchHistoryInfo(history, humanPosition, humanCards, cpuCards, board, stacks);
 
       // If there are MORE CPU actions coming, show this one and pause
-      if (gameState.winnings === 0 && gameState.whoseTurn !== humanPosition) {
+      if (!gameState.handOver && gameState.whoseTurn !== humanPosition) {
         dispatch(makeGameDispatch(gameState, history, { loading: true }));
         await sleep(CPU_ACTION_PAUSE_MS);
       }
@@ -187,7 +187,7 @@ export default function useGame() {
       let gameState = await fetchHistoryInfo(history, humanPosition, humanCards, cpuCards, board, stacks);
 
       // Show updated state after human action before CPU acts
-      if (gameState.winnings === 0 && gameState.whoseTurn !== humanPosition) {
+      if (!gameState.handOver && gameState.whoseTurn !== humanPosition) {
         dispatch(makeGameDispatch(gameState, history, { loading: true }));
       }
 

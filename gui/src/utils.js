@@ -12,8 +12,8 @@ export function annotateHistory(history, humanPosition, winner, pot) {
   const opponentLabel = isHumanDealer ? 'CPU' : 'You';
 
   const entries = [];
-  entries.push({ type: 'blind', player: dealerLabel, text: 'SB $50' });
-  entries.push({ type: 'blind', player: opponentLabel, text: 'BB $100' });
+  entries.push({ type: 'blind', player: dealerLabel, text: 'posted SB $50' });
+  entries.push({ type: 'blind', player: opponentLabel, text: 'posted BB $100' });
 
   const streetNames = ['Flop', 'Turn', 'River'];
   let streetIdx = 0;
@@ -27,14 +27,14 @@ export function annotateHistory(history, humanPosition, winner, pot) {
 
     let text;
     if (action === 'Fold') {
-      text = 'folds';
+      text = 'folded';
     } else if (action === 'Call') {
-      text = amount === 0 ? 'checks' : `calls $${amount}`;
+      text = amount === 0 ? 'checked' : `called $${amount}`;
     } else if (action === 'Bet') {
       if (streetHasBet) {
-        text = `raises $${amount}`;
+        text = `raised $${amount}`;
       } else {
-        text = `bets $${amount}`;
+        text = `bet $${amount}`;
         streetHasBet = true;
       }
     }
@@ -60,9 +60,11 @@ export function annotateHistory(history, humanPosition, winner, pot) {
   }
 
   if (winner === 'human') {
-    entries.push({ type: 'result', text: `You win $${pot}` });
+    entries.push({ type: 'result', text: `You won $${pot}` });
   } else if (winner === 'cpu') {
-    entries.push({ type: 'result', text: `CPU wins $${pot}` });
+    entries.push({ type: 'result', text: `CPU won $${pot}` });
+  } else if (winner === 'split') {
+    entries.push({ type: 'result', text: `Split pot: $${pot / 2} each` });
   }
 
   return entries;
