@@ -11,7 +11,7 @@ serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 itertools = "*"
 indicatif = "*"
-rand = "*"
+rand = "0.8"
 rayon = "*"
 bincode = "1"
 statistical = "*"
