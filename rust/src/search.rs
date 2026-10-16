@@ -851,7 +851,7 @@ pub fn build_tree(
 /// Removes bet/raise actions (other than all-in) at nodes where the current street
 /// already has `cap` bets (the first bet counts), so the tree does not explode at deep
 /// stacks. `caps` = [root street, later streets].
-fn cap_raises(tree: &mut ActionTree, caps: [usize; 2], later: bool, raises_this_street: usize) -> Result<(), String> {
+pub fn cap_raises(tree: &mut ActionTree, caps: [usize; 2], later: bool, raises_this_street: usize) -> Result<(), String> {
     if tree.is_terminal_node() {
         return Ok(());
     }

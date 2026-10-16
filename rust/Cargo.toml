@@ -80,3 +80,11 @@ path = "src/bin/flop_book.rs"
 [[bin]]
 name = "aivat"
 path = "src/bin/aivat.rs"
+
+[[bin]]
+name = "street-validate"
+path = "src/bin/street_validate.rs"
+
+[[bin]]
+name = "datagen-bench"
+path = "src/bin/datagen_bench.rs"
