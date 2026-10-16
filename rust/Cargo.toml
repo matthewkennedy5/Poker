@@ -88,3 +88,7 @@ path = "src/bin/street_validate.rs"
 [[bin]]
 name = "datagen-bench"
 path = "src/bin/datagen_bench.rs"
+
+[[bin]]
+name = "datagen"
+path = "src/bin/datagen.rs"
