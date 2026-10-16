@@ -17,7 +17,8 @@
 //! "All-in only" applies just the terms after both players are all in; that is
 //! exactly the classic all-in EV adjustment.
 //!
-//! Usage: aivat [--samples 20000] [--k <fixed K>] log1.jsonl log2.jsonl ...
+//! Usage: aivat [--samples 20000] [--k <fixed K>] [--csv per_hand.csv] log1.jsonl ...
+//! `--csv` also writes per-hand street attribution terms (see `street_terms`).
 use optimus::Card;
 use rand::prelude::*;
 use rand::rngs::StdRng;
@@ -161,6 +162,79 @@ fn street_end_pots(action: &str) -> Vec<i64> {
     pots
 }
 
+/// Pot and per-seat contributions [SB, BB] at the end of each street's betting
+/// (index 0 = preflop), and the street on which someone folded, if anyone did.
+fn street_states(action: &str) -> (Vec<(i64, [i64; 2])>, Option<usize>) {
+    let mut total = [0i64; 2];
+    let mut states = Vec::new();
+    for (street, s) in action.split('/').enumerate() {
+        let mut bets: [i64; 2] = if street == 0 { [50, 100] } else { [0, 0] };
+        let mut p = if street == 0 { 0 } else { 1 };
+        let bytes = s.as_bytes();
+        let mut i = 0;
+        let mut folded = false;
+        while i < bytes.len() {
+            match bytes[i] {
+                b'b' => {
+                    let mut j = i + 1;
+                    while j < bytes.len() && bytes[j].is_ascii_digit() {
+                        j += 1;
+                    }
+                    bets[p] = s[i + 1..j].parse().unwrap();
+                    i = j;
+                }
+                b'c' => {
+                    bets[p] = bets[1 - p];
+                    i += 1;
+                }
+                b'k' => i += 1,
+                b'f' => {
+                    folded = true;
+                    i += 1;
+                }
+                _ => i += 1,
+            }
+            p = 1 - p;
+        }
+        if folded {
+            return (states, Some(street));
+        }
+        total[0] += bets[0];
+        total[1] += bets[1];
+        states.push((total[0] + total[1], total));
+    }
+    (states, None)
+}
+
+/// Street attribution: with W = equity * pot - our chips in (our showdown share
+/// with no more betting), raw = W(blinds) + sum of chance moves (zero mean)
+/// + sum over streets of the W change caused by that street's betting. The
+/// betting terms are zero-sum, so averaged over both seats they are exactly 0
+/// when both players use the same strategy.
+fn street_terms(raw: f64, seat: usize, eqs: &[f64], action: &str) -> [f64; 4] {
+    let (states, fold_street) = street_states(action);
+    let mut out = [0.0; 4];
+    let blinds = [50i64, 100];
+    let mut prev_pot = 150i64;
+    let mut prev_c = blinds[seat];
+    for k in 0..4 {
+        let eq = match eqs.get(k) {
+            Some(&e) => e,
+            None => break,
+        };
+        let w_start = eq * prev_pot as f64 - prev_c as f64;
+        if fold_street == Some(k) {
+            out[k] = raw - w_start;
+            break;
+        }
+        let Some(&(pot, c)) = states.get(k) else { break };
+        out[k] = eq * pot as f64 - c[seat] as f64 - w_start;
+        prev_pot = pot;
+        prev_c = c[seat];
+    }
+    out
+}
+
 struct HandRes {
     raw: f64,
     allin: f64,       // raw + post-all-in chance terms (classic all-in EV)
@@ -168,6 +242,9 @@ struct HandRes {
     x: f64,           // eq_preflop - 0.5 (regressor for the deal term)
     act: f64,         // sum of our-decision terms: E_sigma[v] - v(sampled)
     n_act: usize,     // decisions that had values
+    seat: usize,      // 0 = SB, 1 = BB
+    streets: [f64; 4],
+    action: String,
 }
 
 /// Our-decision AIVAT terms from the logged sampling distribution and values.
@@ -250,7 +327,10 @@ fn evaluate(rec: &serde_json::Value, samples: usize, seed: u64) -> Option<HandRe
         }
     }
     let (act, n_act) = action_terms(rec);
-    Some(HandRes { raw, allin, post, x: eq_pre - 0.5, act, n_act })
+    // Slumbot's client_pos 0 means we are the big blind.
+    let seat = if rec.get("client_pos")?.as_i64()? == 0 { 1 } else { 0 };
+    let streets = street_terms(raw, seat, &eqs, action);
+    Some(HandRes { raw, allin, post, x: eq_pre - 0.5, act, n_act, seat, streets, action: action.to_string() })
 }
 
 fn mean_ci(v: &[f64]) -> (f64, f64, f64) {
@@ -264,12 +344,17 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut samples = 20000usize;
     let mut fixed_k: Option<f64> = None;
+    let mut csv: Option<String> = None;
     let mut files = Vec::new();
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--samples" => {
                 samples = args[i + 1].parse().unwrap();
+                i += 2;
+            }
+            "--csv" => {
+                csv = Some(args[i + 1].clone());
                 i += 2;
             }
             "--k" => {
@@ -299,6 +384,22 @@ fn main() {
             .collect();
         eprintln!("[AIVAT] {}: {} hands evaluated", f, res.len());
         per_file.push((f.clone(), res));
+    }
+
+    if let Some(path) = &csv {
+        use std::io::Write;
+        let mut w = std::io::BufWriter::new(std::fs::File::create(path).expect("create csv"));
+        writeln!(w, "file,seat,action,raw,post,x,pre,flop,turn,river").unwrap();
+        for (name, res) in &per_file {
+            for h in res {
+                writeln!(
+                    w, "{},{},{},{},{:.3},{:.5},{:.3},{:.3},{:.3},{:.3}",
+                    name, ["SB", "BB"][h.seat], h.action, h.raw, h.post, h.x,
+                    h.streets[0], h.streets[1], h.streets[2], h.streets[3]
+                ).unwrap();
+            }
+        }
+        eprintln!("[AIVAT] wrote per-hand street terms to {}", path);
     }
 
     // Deal-term coefficient K per file, regressed on the other files.
