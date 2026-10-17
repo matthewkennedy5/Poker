@@ -1347,6 +1347,7 @@ dependencies = [
  "bincode",
  "criterion",
  "dashmap",
+ "half",
  "indicatif",
  "itertools 0.13.0",
  "memmap2",

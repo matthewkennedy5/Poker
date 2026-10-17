@@ -31,6 +31,75 @@ pub struct Spot {
     pub source: u8,
 }
 
+/// Number of per-hand features from `hand_features`.
+pub const N_HAND_FEATURES: usize = 10;
+
+/// Range-free strength features of each hand on a turn board, against a uniformly
+/// random opponent hand: over every river card, the hand's showdown percentile
+/// (0 = weakest, 1 = strongest, ties count half); features are its mean, its mean
+/// square and an 8-bin histogram (the equity distribution, which shows draws).
+/// All zeros for hands that overlap the board.
+pub fn hand_features(board: &[u8], hands: &Hands) -> Vec<[f32; N_HAND_FEATURES]> {
+    assert_eq!(board.len(), 4);
+    let mut acc = vec![[0.0f64; N_HAND_FEATURES]; hands.len()];
+    let mut count = vec![0u32; hands.len()];
+    let mut full = board.to_vec();
+    full.push(0);
+    for river in 0..52u8 {
+        if board.contains(&river) {
+            continue;
+        }
+        full[4] = river;
+        let keys = strength_keys(&full, hands);
+        let max = keys.iter().flatten().cloned().max().unwrap_or(0) as usize;
+        let mut per_key = vec![0u32; max + 1];
+        for k in keys.iter().flatten() {
+            per_key[*k as usize] += 1;
+        }
+        let n: u32 = per_key.iter().sum();
+        let mut below = vec![0u32; max + 1];
+        for k in 1..=max {
+            below[k] = below[k - 1] + per_key[k - 1];
+        }
+        for (i, k) in keys.iter().enumerate() {
+            let Some(k) = k else { continue };
+            let k = *k as usize;
+            let pct = (below[k] as f64 + 0.5 * (per_key[k] - 1) as f64) / (n - 1).max(1) as f64;
+            let a = &mut acc[i];
+            a[0] += pct;
+            a[1] += pct * pct;
+            a[2 + ((pct * 8.0) as usize).min(7)] += 1.0;
+            count[i] += 1;
+        }
+    }
+    acc.iter()
+        .zip(&count)
+        .map(|(a, &c)| {
+            let mut f = [0.0f32; N_HAND_FEATURES];
+            if c > 0 {
+                for (x, y) in f.iter_mut().zip(a) {
+                    *x = (*y / c as f64) as f32;
+                }
+            }
+            f
+        })
+        .collect()
+}
+
+/// A solved spot: one value-net training record (`datagen` output, bincode).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Sample {
+    pub index: u64,
+    pub spot: Spot,
+    /// [OOP, IP] per-hand values in pot units, `Hands::new(board)` order.
+    pub values: [Vec<f32>; 2],
+    pub iters: u32,
+    /// Exploitability in pot units.
+    pub exploitability: f32,
+    pub seconds: f32,
+    pub tree: String,
+}
+
 /// Flop-end ranges from the book: becomes a turn spot once a turn card is added.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FlopEnd {

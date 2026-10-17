@@ -11,7 +11,7 @@
 //! Usage: datagen --out <dir> [--count N] [--shard k/n] [--workers W]
 //!                [--tree live|rich] [--target 0.005] [--book <dir> --book-share 0.5]
 //!        datagen --verify <file>   (checks zero-sum and prints statistics)
-use optimus::spots::{harvest_flop_ends, random_spot, turn_spot, FlopEnd, Spot};
+use optimus::spots::{harvest_flop_ends, random_spot, turn_spot, FlopEnd, Sample, Spot};
 use optimus::{cap_raises, FlopBook, Hands};
 use postflop_solver::{
     compute_exploitability, finalize, solve_step, ActionTree, BetSizeOptions, BoardState,
@@ -19,25 +19,11 @@ use postflop_solver::{
 };
 use rand::prelude::*;
 use rand::rngs::StdRng;
-use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
 use std::io::{BufReader, BufWriter, Write};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::time::Instant;
-
-#[derive(Serialize, Deserialize)]
-pub struct Sample {
-    pub index: u64,
-    pub spot: Spot,
-    /// [OOP, IP] per-hand values in pot units, `Hands::new(board)` order.
-    pub values: [Vec<f32>; 2],
-    pub iters: u32,
-    /// Exploitability in pot units.
-    pub exploitability: f32,
-    pub seconds: f32,
-    pub tree: String,
-}
 
 fn sizes(b: &str, r: &str) -> BetSizeOptions {
     BetSizeOptions::try_from((b, r)).unwrap()

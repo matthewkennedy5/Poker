@@ -13,3 +13,4 @@ gui/node_modules/
 *.tar.gz
 rust/target/
 target/
+nets/__pycache__/

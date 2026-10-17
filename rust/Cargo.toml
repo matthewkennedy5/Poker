@@ -14,6 +14,7 @@ indicatif = "*"
 rand = "0.8"
 rayon = "*"
 bincode = "1"
+half = "2"
 statistical = "*"
 once_cell = "*"
 actix-web = "*"
@@ -92,3 +93,7 @@ path = "src/bin/datagen_bench.rs"
 [[bin]]
 name = "datagen"
 path = "src/bin/datagen.rs"
+
+[[bin]]
+name = "datagen-export"
+path = "src/bin/datagen_export.rs"
